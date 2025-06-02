@@ -766,6 +766,45 @@ a.active {
   .app-icon-list {
     justify-content: center; /* Mobil görünümde uygulama ikonlarını ortalar */
   }
+    /* Sekmeli sayfa: Mobil görünüm düzeni */
+.tabs-container {
+  flex-direction: column;
+  padding: 20px;
+  gap: 20px;
+}
+
+.tab-menu {
+  border-right: none;
+  border-bottom: 1px solid #ccc;
+  display: flex;
+  justify-content: space-around;
+  flex-wrap: wrap;
+}
+
+.tab-menu button {
+  text-align: center;
+  font-size: 14px;
+  padding: 10px 8px;
+  flex: 1;
+  border-bottom: 2px solid transparent;
+  transition: border-color 0.2s;
+}
+
+.tab-menu button.active {
+  position: relative;
+}
+
+.tab-menu button.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 10%;
+  width: 80%;
+  height: 2px;
+  background-color: #3dc0d3;
+  border-radius: 2px;
+}
+
 }
 
 
