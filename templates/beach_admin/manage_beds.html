@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+{% block title %}Şezlong Yönetimi{% endblock %}
+
+{% block content %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<div class="container my-5">
+  <h2 class="mb-4">🛏️ Şezlong Sayısı Yönetimi</h2>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+          {{ message }}
+          <button type="button" class="close" data-dismiss="alert" aria-label="Kapat">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  <form method="POST" id="manageBedsForm">
+    <div class="table-responsive">
+      <table class="table table-bordered table-hover align-middle">
+        <thead class="table-light text-center">
+          <tr>
+            <th>Plaj Adı</th>
+            <th>Mevcut Şezlong Sayısı</th>
+            <th>Bugün Aktif Rez.</th>
+            <th>Bugünkü Doluluk (%)</th>
+            <th>Yeni Sayı</th>
+          </tr>
+        </thead>
+        <tbody class="text-center">
+          {% for beach_data in beaches %} {# Backend'den gelen güncellenmiş beach listesi #}
+          <tr>
+            <td>{{ beach_data.name }}</td>
+            <td>{{ beach_data.bed_count }}</td>
+            <td>{{ beach_data.active_reservations_today }}</td>
+            <td>
+              <div class="progress" style="height: 20px; background-color: #e9ecef;">
+                <div class="progress-bar 
+                  {% if beach_data.occupancy_rate_today >= 80 %}bg-danger
+                  {% elif beach_data.occupancy_rate_today >= 50 %}bg-warning
+                  {% else %}bg-success
+                  {% endif %}" 
+                  role="progressbar" 
+                  style="width: {{ beach_data.occupancy_rate_today }}%;" 
+                  aria-valuenow="{{ beach_data.occupancy_rate_today }}" 
+                  aria-valuemin="0" 
+                  aria-valuemax="100">
+                  {{ beach_data.occupancy_rate_today }}%
+                </div>
+              </div>
+            </td>
+            <td>
+              <input type="number" 
+                     name="bed_count_{{ beach_data.id }}" 
+                     class="form-control form-control-sm text-center" 
+                     value="{{ beach_data.bed_count }}" 
+                     min="0"
+                     aria-label="Yeni şezlong sayısı {{ beach_data.name }}">
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <button type="submit" class="btn btn-primary mt-3">Değişiklikleri Kaydet</button>
+  </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('manageBedsForm');
+    if (form) {
+        form.addEventListener('submit', function(event) {
+            event.preventDefault(); // Formun normal gönderimini engelle
+
+            let changesSummary = "Aşağıdaki değişiklikler yapılacak:\n";
+            let hasChanges = false;
+            const inputs = form.querySelectorAll('input[type="number"]');
+            
+            inputs.forEach(input => {
+                const beachName = input.closest('tr').querySelector('td:first-child').textContent;
+                const originalValue = parseInt(input.getAttribute('value')); // Başlangıçtaki değer
+                const newValue = parseInt(input.value);
+
+                if (originalValue !== newValue) {
+                    changesSummary += `- ${beachName}: ${originalValue} → ${newValue}\n`;
+                    hasChanges = true;
+                }
+            });
+
+            if (!hasChanges) {
+                Swal.fire({
+                    title: 'Bilgi',
+                    text: 'Herhangi bir değişiklik yapılmadı.',
+                    icon: 'info'
+                });
+                return;
+            }
+
+            Swal.fire({
+                title: 'Değişiklikleri Onayla',
+                html: `<p>Şezlong sayılarında değişiklik yapmak üzeresiniz.</p><pre style="text-align:left; font-size:0.9em; max-height:200px; overflow-y:auto;">${changesSummary}</pre><p>Devam etmek istiyor musunuz?</p>`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Evet, Kaydet!',
+                cancelButtonText: 'Hayır, Vazgeç'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    form.submit(); // Onaylanırsa formu gerçekten gönder
+                }
+            });
+        });
+    }
+});
+</script>
+{% endblock %}

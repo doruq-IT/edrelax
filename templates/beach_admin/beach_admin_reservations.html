@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% block title %}Rezervasyonlar{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+  <h2 class="mb-4">📅 Rezervasyon Listesi</h2>
+
+  {% if reservations %}
+    <div class="table-responsive">
+      <table class="table table-striped table-bordered align-middle">
+        <thead class="table-dark text-center"> {# Başlıkları ortalamak için text-center eklendi #}
+          <tr>
+            <th scope="col">🏖️ Plaj</th>
+            <th scope="col">👤 Kullanıcı</th>
+            <th scope="col">📆 Tarih</th>
+            <th scope="col">⏰ Saat</th>
+            <th scope="col">🛏️ Şezlong Numarası</th>
+            <th scope="col">🔒 Rezervasyon Durumu</th>
+          </tr>
+        </thead>
+        <tbody class="text-center"> {# Hücre içeriklerini ortalamak için text-center eklendi #}
+          {% for r in reservations %}
+            <tr>
+              <td>{{ r.beach.name }}</td>
+              <td>{{ r.user.first_name }} {{ r.user.last_name }}</td>
+              <td>{{ r.date.strftime('%Y-%m-%d') }}</td>
+              <td>{{ r.start_time.strftime('%H:%M') }} - {{ r.end_time.strftime('%H:%M') }}</td>
+              <td>{{ r.bed_number }}</td>
+              <td>
+                {# Duruma göre farklı etiket (badge) gösterimi #}
+                {% if r.status == 'reserved' %}
+                  <span class="badge bg-warning text-dark">🟡 Rezerve Edildi</span>
+                {% elif r.status == 'used' %}
+                  <span class="badge bg-info text-dark">🔵 Şu Anda Kullanımda</span>
+                {% elif r.status == 'cancelled' %}
+                  <span class="badge bg-danger">🔴 İptal Edildi</span>
+                {% elif r.status == 'free' %} {# Normalde 'free' bir rezervasyon durumu olmaz ama eklemiş olalım #}
+                  <span class="badge bg-success">🟢 Boş (Yönetici Tarafından)</span>
+                {% else %}
+                  <span class="badge bg-secondary">{{ r.status | capitalize if r.status else 'Bilinmiyor' }}</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="alert alert-info text-center mt-4">
+      Bu plaj(lar) için henüz bir rezervasyon yapılmamış.
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

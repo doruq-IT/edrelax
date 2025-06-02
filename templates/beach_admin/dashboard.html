@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+{% block title %}Plaj Yönetim Paneli{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-5 py-4" style="min-height: 100vh;">
+  <h2 class="mb-4 ms-2">
+    🏖️ <span class="fw-semibold">Plaj Yönetim Paneli</span>
+  </h2>
+
+  <!-- Bildirim Alanı -->
+  <div class="row ms-2 me-2">
+    <div class="col-lg-12">
+      <div class="alert alert-info shadow-sm rounded mb-4">
+        👋 Merhaba <strong>{{ session.get('user_name') }}</strong>, yöneticisi olduğunuz plaj(lar) aşağıda listelenmiştir.
+      </div>
+    </div>
+  </div>
+
+  {% if beaches %}
+  <div class="row ms-2 me-2">
+    {% for beach in beaches %}
+    <!-- Sol Kart: Plaj Bilgileri -->
+    <div class="col-lg-6 col-md-12 mb-4">
+      <div class="card border-0 shadow-lg rounded-4 h-100">
+        <div class="card-body pb-0">
+          <h4 class="card-title text-primary fw-bold mb-3">{{ beach.name }}</h4>
+          <ul class="list-unstyled text-muted mb-4 small">
+            <li>📍 <strong>Lokasyon:</strong> {{ beach.location }}</li>
+            <li>📝 <strong>Açıklama:</strong> {{ beach.description }}</li>
+            <li>🛏️ <strong>Toplam Şezlong:</strong> {{ beach.bed_count }}</li>
+            <li>📅 <strong>Anlık Rezervasyon:</strong> {{ beach.reservations | length }}</li>
+          </ul>
+        </div>
+        <div class="px-4 pb-4">
+          <div class="d-grid gap-2">
+            <a href="{{ url_for('beach_admin.reservations') }}" class="btn btn-primary fw-semibold w-100">
+              📅 Rezervasyonlar
+            </a>
+            <a href="{{ url_for('beach_admin.manage_beds') }}" class="btn btn-dark fw-semibold w-100">
+              🛏️ Şezlonglar
+            </a>
+            <a href="{{ url_for('beach_admin.bed_occupancy') }}" class="btn btn-info fw-semibold text-white w-100">
+              📊 Doluluk
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sağ Panel: Plaj Durumu -->
+    <div class="col-lg-6 col-md-12 mb-4">
+      <div class="card bg-light shadow-sm rounded-4 p-4 h-100">
+        <h5 class="text-secondary fw-bold mb-3">📈 Plaj Durumu</h5>
+        <ul class="list-group list-group-flush">
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            🌡️ <span>Doluluk Oranı</span>
+            <strong>
+              %{{ beach.bed_count > 0 and (beach.reservations|length * 100 // beach.bed_count) or 0 }}
+            </strong>
+          </li>
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            ⏰ <span>Aktif Rezervasyon</span>
+            <strong>{{ beach.reservations | length }}</strong>
+          </li>
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            🧘 <span>Boş Şezlong</span>
+            <strong>
+              {{
+                (beach.bed_count - beach.reservations|length) if (beach.bed_count - beach.reservations|length) >= 0 else 0
+              }}
+            </strong>
+          </li>
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            📢 <span>Rezervasyon Durumu</span>
+            <strong>
+              {% set occupancy = (beach.reservations|length * 100 // beach.bed_count) if beach.bed_count > 0 else 0 %}
+              {% if occupancy >= 80 %}
+                Yoğun
+              {% elif occupancy >= 50 %}
+                Orta
+              {% else %}
+                Uygun
+              {% endif %}
+            </strong>
+          </li>
+        </ul>
+        <div class="mt-4 text-center">
+          <span class="text-muted fst-italic">Güncellenme zamanı: {{ current_time }}</span>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="alert alert-warning mt-4 text-center fs-5">
+    ⛱️ Henüz size atanmış bir plaj yok. Lütfen sistem yöneticisiyle iletişime geçin.
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

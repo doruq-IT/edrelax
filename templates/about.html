@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% block title %}Hakkımızda - Edrelax{% endblock %}
+{% block content %}
+<style>
+  .tabs-container {
+    display: flex;
+    gap: 40px;
+    padding: 40px;
+  }
+  .tab-menu {
+    min-width: 200px;
+    border-right: 1px solid #ccc;
+  }
+  .tab-menu button {
+    display: block;
+    background: none;
+    border: none;
+    padding: 10px 15px;
+    width: 100%;
+    text-align: left;
+    font-size: 16px;
+    color: #0a4857;
+    cursor: pointer;
+  }
+  .tab-menu button.active {
+    font-weight: bold;
+    color: #3dc0d3;
+    background-color: #f0f0f0;
+  }
+  .tab-content {
+    flex: 1;
+  }
+  .tab-pane {
+    display: none;
+  }
+  .tab-pane.active {
+    display: block;
+  }
+</style>
+
+<div class="tabs-container">
+  <div class="tab-menu">
+    <button onclick="showTab('about')" id="btn-about">Hakkımızda</button>
+    <button onclick="showTab('help')" id="btn-help">Yardım</button>
+    <button onclick="showTab('terms')" id="btn-terms">Şartlar</button>
+    <button onclick="showTab('privacy')" id="btn-privacy">Gizlilik</button>
+  </div>
+  <div class="tab-content">
+    <div id="about" class="tab-pane">{% include 'about/about_us.html' %}</div>
+    <div id="help" class="tab-pane">{% include 'about/help.html' %}</div>
+    <div id="terms" class="tab-pane">{% include 'about/terms.html' %}</div>
+    <div id="privacy" class="tab-pane">{% include 'about/privacy.html' %}</div>
+  </div>
+</div>
+
+<script>
+  const initialTab = "{{ request.args.get('tab', 'about') }}";
+
+  function showTab(tabId) {
+    document.querySelectorAll(".tab-pane").forEach((pane) => {
+      pane.classList.remove("active");
+    });
+    document.querySelectorAll(".tab-menu button").forEach((btn) => {
+      btn.classList.remove("active");
+    });
+
+    const tab = document.getElementById(tabId);
+    const btn = document.getElementById("btn-" + tabId);
+    if (tab) tab.classList.add("active");
+    if (btn) btn.classList.add("active");
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    showTab(initialTab);
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,201 @@
+{% extends 'base.html' %}
+{% block title %}Rezervasyonlarım - Edrelax{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+
+  <h2 class="mb-4 text-center">📅 Plaj Rezervasyonlarım</h2>
+
+  <div class="row text-center mb-5">
+    <div class="col-md-4 mb-3">
+      <div class="card border-success shadow-sm h-100">
+        <div class="card-body d-flex flex-column justify-content-center align-items-center">
+          <h5 class="card-title text-success mb-2"><i class="fas fa-calendar-check fa-fw"></i> Toplam Rezervasyon</h5>
+          <p class="display-4 fw-bold text-success mb-0">{{ stats.total_reservations }}</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4 mb-3">
+      <div class="card border-primary shadow-sm h-100">
+        <div class="card-body d-flex flex-column justify-content-center align-items-center">
+          <h5 class="card-title text-primary mb-2"><i class="fas fa-wallet fa-fw"></i> Toplam Harcama</h5>
+          <p class="display-4 fw-bold text-primary mb-0">{{ stats.total_spent }} ₺</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4 mb-3">
+      <div class="card border-warning shadow-sm h-100">
+        <div class="card-body d-flex flex-column justify-content-center align-items-center">
+          <h5 class="card-title text-warning mb-2"><i class="fas fa-trophy fa-fw"></i> Favori Plajın</h5>
+          <p class="display-5 fw-bold text-warning mb-0" style="font-size: 2.2rem;">{{ stats.top_beach if stats.top_beach != "Yok" else "-" }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% if stats.monthly_data %}
+  <div class="mb-5 p-3 border rounded shadow-sm bg-light">
+    <h4 class="text-center mb-3">📊 Aylık Rezervasyon Trendi</h4>
+    <div style="height: 300px;"> {# Grafik için bir yükseklik sınırı veya aspect ratio ayarı #}
+        <canvas id="reservationChart"></canvas>
+    </div>
+  </div>
+  {% endif %}
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button> {# Bootstrap 5 için btn-close #}
+        </div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  <h4 class="mb-3 mt-5">📋 Rezervasyon Detayları</h4>
+  {% if reservations %}
+    <div class="table-responsive">
+      <table class="table table-hover table-bordered align-middle">
+        <thead class="table-dark text-center">
+          <tr>
+            <th>Plaj</th>
+            <th>Tarih</th>
+            <th>Saat</th>
+            <th>Şezlong No</th>
+            <th>Durum</th> {# YENİ SÜTUN #}
+            <th>Oluşturulma</th>
+            <th>İşlemler</th>
+          </tr>
+        </thead>
+        <tbody class="text-center">
+          {% for r in reservations %}
+            <tr>
+              <td>{{ r.beach.name if r.beach else 'Bilinmeyen Plaj' }}</td>
+              <td>{{ r.date.strftime('%d-%m-%Y') }}</td>
+              <td>{{ r.start_time.strftime('%H:%M') }} - {{ r.end_time.strftime('%H:%M') }}</td>
+              <td>#{{ r.bed_number }}</td>
+              <td>
+                {# Duruma göre farklı etiket (badge) gösterimi #}
+                {% if r.status == 'reserved' %}
+                  <span class="badge bg-warning text-dark">🟡 Rezerve</span>
+                {% elif r.status == 'used' %}
+                  <span class="badge bg-info text-dark">🔵 Kullanımda</span>
+                {% elif r.status == 'cancelled' %}
+                  <span class="badge bg-danger">🔴 İptal Edildi</span>
+                {% else %}
+                  <span class="badge bg-secondary">{{ r.status | capitalize if r.status else 'Bilinmiyor' }}</span>
+                {% endif %}
+              </td>
+              <td>{{ r.created_at.strftime('%d-%m-%Y %H:%M') }}</td>
+              <td>
+                {% if r.status == 'reserved' %} {# Sadece 'reserved' durumundakiler iptal edilebilir varsayımı #}
+                  <form
+                    method="POST"
+                    action="{{ url_for('reservations.cancel_reservation', res_id=r.id) }}"
+                    onsubmit="return confirm('Bu rezervasyonu iptal etmek istediğinizden emin misiniz?');"
+                  >
+                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                        <i class="fas fa-times-circle fa-fw"></i> İptal Et
+                    </button>
+                  </form>
+                {% else %}
+                  <span class="text-muted fst-italic">-</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p class="text-muted text-center mt-4">Henüz hiç rezervasyon yapmadınız.</p>
+  {% endif %}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const monthlyData = {{ stats.monthly_data | tojson | safe }};
+    const monthlyLabels = Object.keys(monthlyData);
+    const monthlyCounts = Object.values(monthlyData);
+
+    if (monthlyLabels.length > 0 && monthlyCounts.length > 0) {
+        const ctx = document.getElementById('reservationChart')?.getContext('2d');
+        if (!ctx) return;
+
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: monthlyLabels,
+                datasets: [{
+                    label: 'Aylık Rezervasyon Sayısı',
+                    data: monthlyCounts,
+                    backgroundColor: 'rgba(54, 162, 235, 0.7)', // Biraz daha canlı bir mavi
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1,
+                    borderRadius: 5, // Bar kenarlarını yuvarlat
+                    hoverBackgroundColor: 'rgba(54, 162, 235, 0.9)'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false, // Konteyner yüksekliğine uyması için false
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Rezervasyon Sayısı'
+                        },
+                        ticks: {
+                            stepSize: 1 // Y ekseninde tam sayı adımları
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Aylar'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: true, // Tek dataset için de gösterilebilir veya false
+                        position: 'top',
+                    },
+                    tooltip: {
+                        enabled: true,
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleFont: { size: 14 },
+                        bodyFont: { size: 12 },
+                        padding: 10,
+                        cornerRadius: 4,
+                        callbacks: {
+                            title: function(tooltipItems) {
+                                // Tooltip başlığını "Ay Yıl" formatında göster
+                                return tooltipItems[0].label;
+                            },
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.parsed.y !== null) {
+                                    label += context.parsed.y;
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                },
+                animation: {
+                    duration: 800,
+                    easing: 'easeOutQuart'
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+{% block title %}Ana Sayfa - Edrelax{% endblock %}
+{% block content %}
+<div class="container">
+  <!-- 🔍 Arama Alanı -->
+  <section class="search-area" style="position: relative">
+    <h2>Favori plaj noktanızı rezerve edin</h2>
+    <div class="search-form">
+      <div class="search-box-wrapper">
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input
+            type="text"
+            id="search-input"
+            placeholder="Plaj Ara"
+            autocomplete="off"
+          />
+          <div id="suggestions-box" class="suggestions"></div>
+        </div>
+        <a href="{{ url_for('public.advanced_search') }}" class="advanced-search">
+          <i class="fa-solid fa-map-location-dot"></i> Gelişmiş Arama
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- 🌊 Öne Çıkan Plajlar Karuseli -->
+  {% if latest_beaches %}
+  <section class="carousel-section">
+    <div class="text-center mb-4">
+      <small class="text-uppercase text-muted">Plajları Keşfet</small>
+      <h2 class="main-title" style="color: #3dc0d3; font-weight: bold">
+        Yeni Eklenen Plajlar
+      </h2>
+      <hr style="width: 100px; border: 1px solid #3dc0d3" />
+    </div>
+
+    <div id="plazzCarousel" class="carousel slide" data-ride="carousel">
+      {% if latest_beaches|length > 1 %}
+      <ol class="carousel-indicators">
+        {% for beach in latest_beaches %}
+        <li
+          data-target="#plazzCarousel"
+          data-slide-to="{{ loop.index0 }}"
+          class="{% if loop.first %}active{% endif %}"
+        ></li>
+        {% endfor %}
+      </ol>
+      {% endif %}
+
+      <div class="carousel-inner">
+        {% for beach in latest_beaches %}
+        <div class="carousel-item {% if loop.first %}active{% endif %}">
+          <div class="carousel-box">
+            <div class="beache-box-holder">
+              <div class="beache-image">
+                <a href="{{ url_for('public.beach_detail', slug=beach.slug) }}">
+                  <img
+                    src="{{ beach.image_url or url_for('static', filename='images/default.jpg') }}"
+                    alt="{{ beach.name }}"
+                  />
+                </a>
+                <div class="beache-info">
+                  <strong class="name">
+                    <a href="{{ url_for('public.beach_detail', slug=beach.slug) }}">
+                      {{ beach.name }}
+                    </a>
+                  </strong>
+                  <address>{{ beach.location }}</address>
+                </div>
+              </div>
+              <div class="beache-detail">
+                <h3>
+                  <a
+                    href="{{ url_for('public.beach_detail', slug=beach.slug) }}"
+                    style="color: #fff; text-decoration: none"
+                  >
+                    {{ beach.name }}
+                  </a>
+                </h3>
+                <strong class="sub-title-info">
+                  {{ beach.description or "Rahatlatıcı bir plaj." }}
+                </strong>
+                <a
+                  href="{{ url_for('public.beach_detail', slug=beach.slug) }}"
+                  class="link-learn"
+                >
+                  Daha fazla bilgi edin
+                </a>
+                <span class="price-info">
+                  Başlayan fiyatlarla
+                  <span class="price">{{ beach.price or "?" }} TL</span>
+                </span>
+                <a
+                  href="{{ url_for('public.beach_detail', slug=beach.slug) }}"
+                  class="btn-reserve-main"
+                >
+                  Şimdi Rezervasyon Yapın
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      {% if latest_beaches|length > 1 %}
+      <a
+        class="carousel-control-prev"
+        href="#plazzCarousel"
+        role="button"
+        data-slide="prev"
+      >
+        <span class="carousel-control-prev-icon"></span>
+      </a>
+      <a
+        class="carousel-control-next"
+        href="#plazzCarousel"
+        role="button"
+        data-slide="next"
+      >
+        <span class="carousel-control-next-icon"></span>
+      </a>
+      {% endif %}
+    </div>
+  </section>
+
+  {% else %}
+  <div class="text-center py-5">
+    <h4 style="color: #999">Henüz plaj eklenmedi 🏖️</h4>
+  </div>
+  {% endif %}
+
+  <!-- 🏖️ Edremit Plajlarını Keşfet -->
+  <section id="Explore-Greece">
+    <div class="explore-beaches container">
+      <div class="text-center mb-5">
+        <small class="text-uppercase text-muted">EN İYİ PLAJLARI KEŞFET</small>
+        <h2 class="main-title" style="color: #3dc0d3">Edremit’i Keşfet</h2>
+      </div>
+
+      <div class="beach-grid" id="beach-grid">
+        {% for beach in beaches %}
+        <div class="beach-card" data-index="{{ loop.index0 }}" style="{% if loop.index0 >= 6 %}display: none;{% endif %}">
+          <div class="card-img">
+            <img
+              src="{{ beach.image_url or url_for('static', filename='images/default.jpg') }}"
+              alt="{{ beach.name }}"
+            />
+            <span class="price-tag">BAŞLANGIÇ {{ beach.price or "?" }} TL</span>
+          </div>
+          <div class="card-content">
+            <strong class="beach-name">{{ beach.name }}</strong>
+            <p class="beach-location">{{ beach.location }}</p>
+            <a
+              href="{{ url_for('public.beach_detail', slug=beach.slug) }}"
+              class="btn-book-card"
+            >Hemen Rezerve Et</a>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <div class="text-center mt-4">
+        <button id="show-more-btn" class="btn btn-info px-4 py-2" style="border-radius: 25px;">
+          Daha Fazla Plaj
+        </button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- 🔤 Live search JS -->
+<script>
+  const input = document.getElementById("search-input");
+  const suggestionsBox = document.getElementById("suggestions-box");
+
+  input.addEventListener("input", async () => {
+    const term = input.value.trim();
+    if (!term) {
+      suggestionsBox.innerHTML = "";
+      suggestionsBox.style.display = "none";
+      return;
+    }
+
+    try {
+      const res = await fetch(`/search_suggestions?term=${encodeURIComponent(term)}`);
+      const suggestions = await res.json();
+
+      if (suggestions.length === 0) {
+        suggestionsBox.innerHTML = '<div class="suggestion-item">No matches found</div>';
+      } else {
+        suggestionsBox.innerHTML = suggestions.map(
+          (item) => `<div class="suggestion-item" onclick="window.location='/beach/${item.slug}'">
+            ${item.name} (${item.location})
+          </div>`
+        ).join("");
+      }
+      suggestionsBox.style.display = "block";
+    } catch (error) {
+      suggestionsBox.innerHTML = '<div class="suggestion-item">Error loading suggestions</div>';
+      suggestionsBox.style.display = "block";
+    }
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest(".search-box")) {
+      suggestionsBox.innerHTML = "";
+      suggestionsBox.style.display = "none";
+    }
+  });
+
+  const showMoreBtn = document.getElementById("show-more-btn");
+  const beachCards = document.querySelectorAll(".beach-card");
+  let visibleCount = 6;
+  const batchSize = 6;
+
+  if (showMoreBtn) {
+    showMoreBtn.addEventListener("click", () => {
+      let revealed = 0;
+      for (let i = visibleCount; i < beachCards.length && revealed < batchSize; i++) {
+        const card = beachCards[i];
+        if (card.style.display === "none") {
+          card.style.display = "block";
+          revealed++;
+        }
+      }
+      visibleCount += revealed;
+
+      if (visibleCount >= beachCards.length) {
+        showMoreBtn.disabled = true;
+        showMoreBtn.innerText = "All Beaches Displayed";
+        showMoreBtn.classList.add("btn-secondary");
+        showMoreBtn.classList.remove("btn-info");
+      }
+    });
+  }
+</script>
+{% endblock %}

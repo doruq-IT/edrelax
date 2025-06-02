@@ -1,0 +1,167 @@
+{% extends 'base.html' %}
+{% block title %}Şezlong Doluluk Durumu{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+  <h2 class="mb-4 text-center">📊 Bugünkü Şezlong Doluluk Durumu</h2>
+
+  {% if labels and data %}
+    <div style="width: 80%; margin: auto; max-width: 700px;">
+      <canvas id="occupancyChart"></canvas>
+    </div>
+
+    {% if detailed_beach_data %}
+      <hr class="my-5">
+      <h4 class="mb-3 text-center">🏖️ Plajlara Ait Detaylı Bilgiler (Bugün)</h4>
+      <div class="table-responsive">
+        <table class="table table-hover table-bordered align-middle">
+          <thead class="table-light text-center">
+            <tr>
+              <th>Plaj Adı</th>
+              <th>Toplam Şezlong Sayısı</th>
+              <th>Aktif Rezervasyon Sayısı</th>
+              <th>Doluluk Oranı</th>
+            </tr>
+          </thead>
+          <tbody class="text-center">
+            {% for beach_info in detailed_beach_data %}
+            <tr>
+              <td>{{ beach_info.name }}</td>
+              <td>{{ beach_info.total_beds }}</td>
+              <td>{{ beach_info.active_reservations }}</td>
+              <td>
+                <div class="progress" style="height: 22px; font-size: 0.85rem; background-color: #e9ecef;">
+                  <div class="progress-bar fw-bold
+                    {% if beach_info.occupancy_rate >= 80 %}bg-danger
+                    {% elif beach_info.occupancy_rate >= 50 %}bg-warning text-dark
+                    {% else %}bg-success
+                    {% endif %}"
+                    role="progressbar"
+                    style="width: {{ beach_info.occupancy_rate }}%;"
+                    aria-valuenow="{{ beach_info.occupancy_rate }}"
+                    aria-valuemin="0"
+                    aria-valuemax="100">
+                    {{ beach_info.occupancy_rate }}%
+                  </div>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
+
+  {% else %}
+    <div class="alert alert-info text-center mt-4">
+      Görüntülenecek plaj ya da doluluk bilgisi bulunamadı.
+    </div>
+  {% endif %}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const labels = {{ labels | tojson | safe }};
+    const occupancyData = {{ data | tojson | safe }};
+    const detailedBeachData = {{ detailed_beach_data | tojson | safe }};
+
+    if (labels && occupancyData && labels.length > 0) {
+      const ctx = document.getElementById('occupancyChart')?.getContext('2d');
+      if (!ctx) return;
+
+      const backgroundColors = occupancyData.map(rate => {
+        if (rate >= 80) return 'rgba(220, 53, 69, 0.7)';
+        if (rate >= 50) return 'rgba(255, 193, 7, 0.7)';
+        return 'rgba(25, 135, 84, 0.7)';
+      });
+
+      const borderColors = occupancyData.map(rate => {
+        if (rate >= 80) return 'rgba(220, 53, 69, 1)';
+        if (rate >= 50) return 'rgba(255, 193, 7, 1)';
+        return 'rgba(25, 135, 84, 1)';
+      });
+
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Doluluk Oranı (%)',
+            data: occupancyData,
+            backgroundColor: backgroundColors,
+            borderColor: borderColors,
+            borderWidth: 1,
+            borderRadius: 5,
+            barPercentage: 0.7,
+            categoryPercentage: 0.8
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          indexAxis: 'y',
+          scales: {
+            x: {
+              beginAtZero: true,
+              max: 100,
+              title: {
+                display: true,
+                text: 'Doluluk (%)'
+              },
+              ticks: {
+                stepSize: 10
+              }
+            },
+            y: {
+              title: {
+                display: true,
+                text: 'Plajlar'
+              }
+            }
+          },
+          plugins: {
+            legend: {
+              display: false
+            },
+            tooltip: {
+              enabled: true,
+              backgroundColor: 'rgba(0, 0, 0, 0.8)',
+              titleFont: { size: 14, weight: 'bold' },
+              bodyFont: { size: 12 },
+              padding: 10,
+              cornerRadius: 4,
+              displayColors: false,
+              callbacks: {
+                label: function(context) {
+                  let label = context.dataset.label || '';
+                  if (label) {
+                    label += ': ';
+                  }
+                  if (context.parsed.x !== null) {
+                    label += context.parsed.x + '%';
+                  }
+                  const beachName = context.label;
+                  const beachDetail = detailedBeachData.find(b => b.name === beachName);
+                  if (beachDetail) {
+                    return [
+                        `${beachName}`,
+                        `Doluluk Oranı: ${context.parsed.x}%`,
+                        `Aktif Rezervasyon: ${beachDetail.active_reservations} / ${beachDetail.total_beds} şezlong`
+                    ];
+                  }
+                  return label;
+                }
+              }
+            }
+          },
+          animation: {
+            duration: 1000,
+            easing: 'easeInOutQuart'
+          }
+        }
+      });
+    }
+  });
+</script>
+{% endblock %}

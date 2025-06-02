@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>{% block title %}Edrelax{% endblock %}</title>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- 🌐 CSS Dosyaları -->
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/style.css') }}"
+    />
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+    />
+
+    <!-- ✨ Fancy Font for Logo -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap"
+      rel="stylesheet"
+    />
+    
+  </head>
+  <body class="{% block body_class %}{% endblock %}">
+
+    <!-- 🔝 Navbar -->
+    <header class="top-nav">
+      <div class="nav-section left">
+        <a href="{{ url_for('public.index') }}" class="logo">
+          <img
+            src="{{ url_for('static', filename='images/logo_edrelax.png') }}"
+            alt="Edrelax Logo"
+            style="
+              height: 42px;
+              vertical-align: middle;
+              filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.2));
+            "
+          />
+        </a>
+      </div>
+
+      <!-- Hamburger Menü (Mobil) -->
+      <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation">
+        <i class="fas fa-bars"></i>
+      </button>
+
+      <!-- Navigation Links -->
+      <div class="nav-links" id="nav-links">
+        {% if session.get('user_role') == 'beach_admin' %}
+        <a
+          href="{{ url_for('beach_admin.dashboard') }}"
+          class="{% if request.path == url_for('beach_admin.dashboard') %}active{% endif %}"
+        >
+          🏖️ Plaj Paneli
+        </a>
+        <a
+          href="{{ url_for('beach_admin.reservations') }}"
+          class="{% if request.path == url_for('beach_admin.reservations') %}active{% endif %}"
+        >
+          📅 Rezervasyonlar
+        </a>
+        <a
+          href="{{ url_for('beach_admin.manage_beds') }}"
+          class="{% if request.path == url_for('beach_admin.manage_beds') %}active{% endif %}"
+        >
+          🛏️ Şezlonglar
+        </a>
+        <a
+          href="{{ url_for('beach_admin.bed_occupancy') }}"
+          class="{% if request.path == url_for('beach_admin.bed_occupancy') %}active{% endif %}"
+        >
+          📊 Doluluk
+        </a>
+
+        {% if session.get('beach_id') %}
+        <a
+          href="{{ url_for('beach_admin.bed_schedule', beach_id=session.get('beach_id')) }}"
+          class="{% if request.path == url_for('beach_admin.bed_schedule', beach_id=session.get('beach_id')) %}active{% endif %}"
+        >
+          ⏰ Saatlik Doluluk
+        </a>
+        {% endif %}
+
+        <span style="margin: 0 10px">
+          👋 Merhaba,
+          <strong>{{ session.get('user_name', 'Kullanıcı') }}</strong>
+        </span>
+        <a href="{{ url_for('auth.logout') }}">Çıkış Yap</a>
+        
+        {% elif session.get('user_id') %}
+        <a href="{{ url_for('public.about') }}?tab=help">Yardım</a>
+        <a href="{{ url_for('public.contact') }}">İletişim</a>
+        <a href="{{ url_for('auth.profile') }}">Profil</a>
+        <a href="{{ url_for('public.my_favorites') }}">⭐ Favorilerim</a>
+        <a href="{{ url_for('reservations.my_reservations') }}">Rezervasyonlarım</a>
+        <span style="margin: 0 10px">
+          👋 Hoş geldin, <strong>{{ session.get('user_name', 'Kullanıcı') }}</strong>
+        </span>
+
+        {% if session.get('user_email') in admin_emails %}
+        <a href="{{ url_for('admin.beaches') }}">Yönetim Paneli</a>
+        <a href="{{ url_for('admin.manage_users') }}">Kullanıcılar</a>
+        <a href="{{ url_for('admin.dashboard') }}">İstatistikler</a>
+        {% endif %}
+        <a href="{{ url_for('auth.logout') }}">Çıkış Yap</a>
+
+        {% else %}
+        <a href="{{ url_for('public.about') }}?tab=help">Yardım</a>
+        <a href="{{ url_for('public.contact') }}">İletişim</a>
+        <a href="{{ url_for('auth.signup') }}">Kayıt Ol</a>
+        <a href="{{ url_for('auth.login') }}">Giriş Yap</a>
+        {% endif %}
+      </div>
+    </header>
+
+    <!-- 🔁 Yükleme ekranı -->
+    <div id="loader">
+      <div class="spinner"></div>
+    </div>
+
+    <!-- ✅ Gerçek içerik buraya yüklenecek -->
+    <div id="main-content" style="display: none;">
+      <!-- 📄 Sayfa içeriği -->
+      <main class="container mt-4 mb-5">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div
+                class="alert alert-{{ category }} alert-dismissible fade show"
+                role="alert"
+              >
+                {{ message }}
+                <button
+                  type="button"
+                  class="close"
+                  data-dismiss="alert"
+                  aria-label="Close"
+                >
+                  <span aria-hidden="true">&times;</span>
+                </button>
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+
+
+    <!-- 👣 Footer -->
+    {% include 'footer.html' %}
+
+    <!-- 📜 JavaScript -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- 🔁 Sayfa yüklenince loader'ı kapat -->
+    <script>
+      window.addEventListener("load", function () {
+        var loader = document.getElementById("loader");
+        if (loader) loader.style.display = "none";
+
+        var content = document.getElementById("main-content");
+        if (content) content.style.display = "block";
+      });
+    </script>
+
+    <!-- 🌐 Hamburger Toggle Script -->
+    <script>
+      const navToggle = document.getElementById("nav-toggle");
+      const navLinks = document.getElementById("nav-links");
+
+      navToggle.addEventListener("click", () => {
+        navLinks.classList.toggle("active");
+      });
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const forms = document.querySelectorAll("form");
+        forms.forEach(form => {
+          form.addEventListener("submit", function () {
+            const loader = document.getElementById("loader");
+            if (loader) loader.style.display = "flex";
+          });
+        });
+      });
+    </script>
+
+  </body>
+</html>

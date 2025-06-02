@@ -1,0 +1,77 @@
+<footer class="footer-section">
+  <div class="footer-container">
+
+    <div class="footer-logo-group">
+      <a href="{{ url_for('public.index') or '/' }}" aria-label="Edrelax Ana Sayfa">
+        <img
+          src="{{ url_for('static', filename='images/edrelax.png') }}"
+          alt="Edrelax Logo"
+          class="footer-logo-main"
+        />
+      </a>
+      <span class="footer-slogan">Plaj gününüzü rahatlatın.</span>
+
+      <div class="footer-app-icons-wrapper">
+        <h4 class="footer-column-heading">Uygulamamızı Edinin</h4>
+        <div class="app-icon-list">
+          <a href="#" title="Google Play'den İndirin" aria-label="Edrelax uygulamasını Google Play'den indirin">
+            <img
+              src="https://img.icons8.com/color/48/000000/google-play.png"
+              alt="Google Play Store"
+              class="app-icon"
+            />
+          </a>
+          <a href="#" title="App Store'dan İndirin" aria-label="Edrelax uygulamasını App Store'dan indirin">
+            <img
+              src="https://img.icons8.com/ios-filled/50/ffffff/mac-os.png"
+              alt="Apple App Store"
+              class="app-icon"
+            />
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer-links-group">
+      <div class="link-column">
+        <h4 class="footer-column-heading">Şirket</h4>
+        <ul>
+          <li><a href="{{ url_for('public.about') }}?tab=about">Hakkımızda</a></li>
+          <li><a href="{{ url_for('public.contact') }}">İletişim</a></li>
+          <li><a href="#">Kariyer</a></li>
+        </ul>
+      </div>
+      <div class="link-column">
+        <h4 class="footer-column-heading">Destek ve Yasal</h4>
+        <ul>
+          <li><a href="{{ url_for('public.about') }}?tab=help">Yardım</a></li>
+          <li><a href="{{ url_for('public.about') }}?tab=terms">Şartlar ve Koşullar</a></li>
+          <li><a href="{{ url_for('public.about') }}?tab=privacy">Gizlilik Politikası</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer-social-group">
+      <p>Bizi takip edin:</p>
+      <div class="social-icons">
+        <a href="#" title="Facebook'ta Edrelax" aria-label="Facebook'ta Edrelax'ı takip edin"><img src="https://img.icons8.com/ios-filled/30/ffffff/facebook--v1.png" alt="Facebook" /></a>
+        <a href="#" title="X'te Edrelax" aria-label="X'te Edrelax'ı takip edin"><img src="https://img.icons8.com/ios-filled/30/ffffff/twitterx--v1.png" alt="X" /></a>
+        <a href="#" title="Instagram'da Edrelax" aria-label="Instagram'da Edrelax'ı takip edin"><img src="https://img.icons8.com/ios-filled/30/ffffff/instagram-new.png" alt="Instagram" /></a>
+        <a href="#" title="YouTube'da Edrelax" aria-label="YouTube'da Edrelax'ı takip edin"><img src="https://img.icons8.com/ios-filled/30/ffffff/youtube-play.png" alt="YouTube" /></a>
+      </div>
+    </div>
+  </div>
+
+  <div class="payment-logos">
+    <img src="https://plazz.com/images/paymentLogos/ApplePay.png" alt="ApplePay kabul edilir" />
+    <img src="https://plazz.com/images/paymentLogos/GooglePay.png" alt="GooglePay kabul edilir" />
+    <img src="https://plazz.com/images/paymentLogos/visa.jpg" alt="Visa kabul edilir" />
+    <img src="https://plazz.com/images/paymentLogos/mastercard.jpg" alt="MasterCard kabul edilir" />
+    <img src="https://plazz.com/images/paymentLogos/maestro.jpg" alt="Maestro kabul edilir" />
+    <img src="https://plazz.com/images/paymentLogos/amex.jpg" alt="American Express kabul edilir" />
+  </div>
+
+  <div class="footer-bottom">
+    <p class="copyright">Edrelax &copy; 2025 Tüm hakları saklıdır</p>
+  </div>
+</footer>

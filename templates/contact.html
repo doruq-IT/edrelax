@@ -1,0 +1,157 @@
+{% extends 'base.html' %}
+{% block title %}Bize Ulaşın - Edrelax{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<style>
+  #contact-map {
+    height: 350px;
+    width: 100%;
+    border-radius: 0.5rem;
+    margin-top: 20px;
+    border: 1px solid #dee2e6;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+  }
+
+  .contact-section {
+    background-color: #f8f9fa;
+  }
+
+  .form-control:focus, .form-select:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+  }
+
+  .contact-info-box {
+    background-color: #ffffff;
+    padding: 30px;
+    border-radius: 0.5rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+    height: 100%;
+  }
+
+  .contact-info-box h5 {
+    color: #343a40;
+    font-weight: 600;
+    margin-bottom: 25px;
+  }
+
+  .contact-info-box p {
+    margin-bottom: 15px;
+    line-height: 1.7;
+    color: #495057;
+  }
+
+  .contact-info-box p strong {
+    color: #212529;
+  }
+  
+  .contact-info-box .icon {
+    font-size: 1.2rem;
+    margin-right: 10px;
+    color: #007bff;
+  }
+
+  .btn-primary {
+    background-color: #007bff;
+    border-color: #007bff;
+  }
+
+  .btn-primary:hover {
+    background-color: #0056b3;
+    border-color: #0056b3;
+  }
+</style>
+
+<section class="contact-section py-5">
+  <div class="container">
+    <div class="text-center mb-5">
+      <h2 class="fw-bold display-5">Bize Ulaşın</h2>
+      <p class="lead text-muted">Herhangi bir sorunuz veya geri bildiriminiz varsa bizimle iletişime geçmekten çekinmeyin.</p>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }} alert-dismissible fade show mt-3 shadow-sm" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Kapat"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <div class="row gx-lg-5 gy-4 align-items-stretch">
+      <div class="col-lg-7">
+        <div class="card p-4 p-md-5 shadow-lg">
+          <h4 class="mb-4 text-primary fw-semibold">Bize Mesaj Gönderin</h4>
+          <form method="post" action="{{ url_for('public.contact') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="form-group mb-4">
+              <label for="name" class="form-label">Adınız Soyadınız</label>
+              <input type="text" class="form-control form-control-lg" id="name" name="name" placeholder="Adınızı ve soyadınızı girin" required />
+            </div>
+            <div class="form-group mb-4">
+              <label for="email" class="form-label">E-posta Adresiniz</label>
+              <input type="email" class="form-control form-control-lg" id="email" name="email" placeholder="E-posta adresinizi girin" required />
+            </div>
+            <div class="form-group mb-4">
+              <label for="message" class="form-label">Mesajınız</label>
+              <textarea class="form-control form-control-lg" id="message" name="message" rows="6" placeholder="Size nasıl yardımcı olabiliriz?" required></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary btn-lg w-100 py-3 mt-2 fw-semibold">
+              Gönder <i class="fas fa-paper-plane ms-2"></i>
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <div class="col-lg-5">
+        <div class="contact-info-box d-flex flex-column">
+          <h5 class="mb-4">Ofis Adresimiz ve İletişim Bilgileri</h5>
+          <p><i class="fas fa-map-marker-alt icon"></i>Edrelax Genel Merkez<br />Güre, Edremit / Balıkesir, Türkiye</p>
+          <p><i class="fas fa-envelope icon"></i><strong>E-posta:</strong> <a href="mailto:edrelax.beach@gmail.com" class="text-decoration-none">edrelax.beach@gmail.com</a></p>
+          <p><i class="fas fa-phone icon"></i><strong>Telefon:</strong> <a href="tel:+902660000000" class="text-decoration-none">+90 266 000 00 00</a></p>
+          
+          <div id="contact-map" class="mt-auto"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    if (typeof L !== 'undefined') {
+      const contactMap = L.map('contact-map').setView([39.585340, 26.876784], 13);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors'
+      }).addTo(contactMap);
+
+      L.marker([39.585340, 26.876784]).addTo(contactMap)
+        .bindPopup("<strong>Edrelax HQ</strong><br>Güre, Edremit / Balıkesir")
+        .openPopup();
+
+      let resizeTimer;
+      const handleResize = () => {
+          clearTimeout(resizeTimer);
+          resizeTimer = setTimeout(() => {
+              contactMap.invalidateSize();
+          }, 200); 
+      };
+      
+      setTimeout(() => {
+        contactMap.invalidateSize();
+      }, 700); 
+
+      window.addEventListener('resize', handleResize);
+
+    } else {
+      console.error('Leaflet library is not loaded.');
+    }
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,255 @@
+{% extends "base.html" %} {% block title %}{{ beach.name }} - Beach Details{%
+endblock %} {% block content %}
+
+<!-- 🌐 Flatpickr CSS -->
+<link
+  rel="stylesheet"
+  href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css"
+/>
+
+<style>
+  .hero {
+    position: relative;
+    height: 70vh;
+    background: url("{{ beach.image_url }}") center center / cover no-repeat;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    text-shadow: 1px 1px 5px rgba(0, 0, 0, 0.7);
+  }
+
+  .hero-content {
+    text-align: center;
+    background: rgba(0, 0, 0, 0.4);
+    padding: 30px;
+    border-radius: 15px;
+  }
+
+  .date-form {
+    margin-top: 15px;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .info-section {
+    padding: 50px 20px;
+    text-align: center;
+  }
+
+  .facilities {
+    margin-top: 30px;
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    flex-wrap: wrap;
+    font-size: 14px;
+  }
+
+  .facility {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #f8f9fa;
+    padding: 10px 15px;
+    border-radius: 12px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  }
+
+  .beach-description {
+    background-color: #f9f9f9;
+    padding: 20px;
+    border-radius: 8px;
+    margin: 40px auto;
+    max-width: 800px;
+    text-align: left;
+  }
+  .heart-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 28px;
+    color: red;
+    padding: 0 5px;
+  }
+
+  .heart-btn i {
+    transition: transform 0.2s ease;
+  }
+
+  .heart-btn:hover i {
+    transform: scale(1.2);
+  }
+</style>
+
+<div class="hero">
+  <div class="hero-content">
+    <h1 style="font-size: 32px">
+      {{ beach.name }}
+      <button
+        id="favorite-btn"
+        class="heart-btn"
+        data-beach-id="{{ beach.id }}"
+        style="background: none; border: none; cursor: pointer; font-size: 28px"
+      >
+        <i
+          class="{% if beach.is_favorited %}fas{% else %}far{% endif %} fa-heart"
+        ></i>
+      </button>
+    </h1>
+
+    <p style="font-size: 18px">{{ beach.location }}</p>
+
+    <form
+      class="date-form"
+      method="GET"
+      action="{{ url_for('reservations.select_beds', slug=beach.slug) }}"
+    >
+      <input
+        type="date"
+        name="date"
+        id="date"
+        value="{{ current_date }}"
+        min="{{ current_date }}"
+        required
+        style="padding: 10px; border-radius: 8px; border: none"
+      />
+      <input
+        type="text"
+        name="start_time"
+        id="start_time"
+        required
+        style="padding: 10px; border-radius: 8px; border: none"
+      />
+      <input
+        type="text"
+        name="end_time"
+        id="end_time"
+        required
+        style="padding: 10px; border-radius: 8px; border: none"
+      />
+      <button type="submit" class="btn btn-info" style="border-radius: 25px">
+        Hemen Rezerve Et
+      </button>
+    </form>
+  </div>
+</div>
+
+<div class="info-section">
+  <h3>{{ beach.name }}</h3>
+  <p><strong>Konum:</strong> {{ beach.location }}</p>
+  <p style="max-width: 600px; margin: auto">{{ beach.description }}</p>
+
+  <div class="beach-description">
+    <h4>Plaj Hakkında Detaylı Bilgi</h4>
+    <div>{{ beach.long_description | safe }}</div>
+  </div>
+
+  <h4 style="margin-top: 40px">Olanaklar</h4>
+  <div class="facilities">
+    <div class="facility"><span>📶</span> WiFi</div>
+    <div class="facility"><span>🍽️</span> Yiyecek & İçecek</div>
+    <div class="facility"><span>🄹️</span> Otopark</div>
+    <div class="facility"><span>💼</span> Dükkanlar</div>
+  </div>
+
+  <div style="margin-top: 40px">
+    <a href="{{ url_for('public.index') }}" class="btn btn-secondary"
+      >← Plajlara Geri Dön</a
+    >
+  </div>
+</div>
+
+
+<!-- 📜 Flatpickr JS -->
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    // 📅 Tarih ve saat işlemleri
+    const dateInput = document.getElementById("date");
+    const startInput = document.getElementById("start_time");
+    const endInput = document.getElementById("end_time");
+
+    const today = new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD formatı, yerel saat
+    const pad = (n) => n.toString().padStart(2, "0");
+
+    dateInput.min = today;
+    dateInput.value = today;
+
+    let endPicker;
+
+    flatpickr(startInput, {
+      enableTime: true,
+      noCalendar: true,
+      dateFormat: "H:i",
+      time_24hr: true,
+      defaultDate: "09:00",
+      minuteIncrement: 15,
+      onChange: function (selectedDates, dateStr) {
+        if (endPicker) endPicker.destroy();
+
+        // Giriş saatinden en az 1 saat sonrası
+        const [hour, minute] = dateStr.split(":").map(Number);
+        let minHour = hour + 1;
+        let minMinute = minute;
+
+        if (minHour >= 24) {
+          minHour = 23;
+          minMinute = 59;
+        }
+
+        const minTimeStr = `${pad(minHour)}:${pad(minMinute)}`;
+
+        endPicker = flatpickr(endInput, {
+          enableTime: true,
+          noCalendar: true,
+          dateFormat: "H:i",
+          time_24hr: true,
+          minuteIncrement: 15,
+          minTime: minTimeStr,
+          defaultDate: minTimeStr,
+        });
+      },
+    });
+
+    endPicker = flatpickr(endInput, {
+      enableTime: true,
+      noCalendar: true,
+      dateFormat: "H:i",
+      time_24hr: true,
+      defaultDate: "13:00",
+      minuteIncrement: 15,
+    });
+
+    // ❤️ Favori işlemi (Font Awesome ikon class'ı güncellemesi)
+    const favoriteBtn = document.getElementById("favorite-btn");
+
+    favoriteBtn?.addEventListener("click", () => {
+      const beachId = favoriteBtn.dataset.beachId;
+      const icon = favoriteBtn.querySelector("i");
+
+      fetch(`/toggle-favorite/${beachId}`, {
+        method: "POST",
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.status === "added") {
+            icon.classList.remove("far");
+            icon.classList.add("fas");
+          } else if (data.status === "removed") {
+            icon.classList.remove("fas");
+            icon.classList.add("far");
+          }
+        })
+        .catch((err) => {
+          console.error("Favori işlemi başarısız:", err);
+          alert("Bir hata oluştu. Lütfen tekrar deneyin.");
+        });
+    });
+  });
+</script>
+
+{% endblock %}

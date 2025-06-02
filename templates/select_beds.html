@@ -1,0 +1,199 @@
+{% block body_class %}{% endblock %}
+
+{% extends 'base.html' %}
+{% block title %}Şezlong Seçimi - {{ beach.name }}{% endblock %}
+{% block content %}
+
+<!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<!-- Flatpickr -->
+<link
+  rel="stylesheet"
+  href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css"
+/>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+<link
+  rel="stylesheet"
+  href="{{ url_for('static', filename='css/beds.css') }}"
+/>
+
+<script>
+  const bookedBeds = {{ booked_beds | tojson }};
+  const totalBeds = {{ beach.bed_count or 20 }};
+  const bedPrice = {{ beach.price or 10 }};
+</script>
+
+<main
+  class="container my-5"
+  id="reservation-wrapper"
+  data-beach-id="{{ beach.id }}"
+>
+  <h1 style="text-align: center">Şezlongunuzu Seçin - {{ beach.name }}</h1>
+
+  <div class="countdown-wrapper" style="text-align:center; font-weight:bold; margin-bottom: 15px;">
+    ⏳ Rezervasyon süresi: <span id="countdown-timer">03:00</span>
+  </div>
+
+  <div class="top-panel mt-4 mb-5">
+    <div class="datetime">
+      <label for="selected-date">TARİH:</label>
+      <input type="text" id="selected-date" value="{{ date }}" />
+
+      <label for="selected-start">BAŞLANGIÇ:</label>
+      <input type="text" id="selected-start" value="{{ start_time }}" />
+
+      <label for="selected-end">BİTİŞ:</label>
+      <input type="text" id="selected-end" value="{{ end_time }}" />
+    </div>
+
+    <div class="checkout-panel">
+      <span>🛒 Toplam: <span id="total-price">0</span> TL</span>
+      <button id="checkout-btn">Ödemeye Geç</button>
+    </div>
+
+    <p><strong>🛏️ Seçilen Şezlonglar:</strong> <span id="selected-beds-info">Yok</span></p>
+  </div>
+
+  <div class="beach-front-wrapper">
+    <img id="beach-front-banner"
+        src="{{ url_for('static', filename='images/beach_front.webp') }}"
+        alt="Deniz Kenarı" />
+  </div>
+
+  <div id="beds-container"></div>
+</main>
+
+
+<!-- JS logic -->
+<script src="{{ url_for('static', filename='js/beds.js') }}"></script>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const dateEl = document.getElementById("selected-date");
+    const startEl = document.getElementById("selected-start");
+    const endEl = document.getElementById("selected-end");
+
+    const pad = (n) => n.toString().padStart(2, "0");
+    const now = new Date();
+    const todayStr = now.toISOString().split("T")[0];
+    const currentTime = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+
+    const initializeTimePickers = () => {
+      const currentSelectedDateInPicker = dateEl.value || todayStr;
+      const isSelectedDateToday = currentSelectedDateInPicker === todayStr;
+
+      let minTimeForStartPicker = isSelectedDateToday ? currentTime : "00:00";
+      let defaultTimeForStartPicker = startEl.value || minTimeForStartPicker;
+
+      if (isSelectedDateToday && defaultTimeForStartPicker < currentTime) {
+        defaultTimeForStartPicker = currentTime;
+      }
+      if (!isSelectedDateToday && defaultTimeForStartPicker < "00:00"){
+          defaultTimeForStartPicker = "00:00";
+      }
+      if (defaultTimeForStartPicker < minTimeForStartPicker) {
+          defaultTimeForStartPicker = minTimeForStartPicker;
+      }
+
+      flatpickr(startEl, {
+        enableTime: true,
+        noCalendar: true,
+        dateFormat: "H:i",
+        time_24hr: true,
+        minuteIncrement: 15,
+        minTime: minTimeForStartPicker,
+        defaultDate: defaultTimeForStartPicker,
+        onChange: handleStartChange
+      });
+
+      const [startHour, startMinute] = defaultTimeForStartPicker.split(":").map(Number);
+      let endHourCalc = startHour + 1;
+      let endMinuteCalc = startMinute;
+      if (endHourCalc >= 24) {
+          endHourCalc = 23;
+          endMinuteCalc = 59;
+      }
+      const minTimeForEndPicker = `${pad(endHourCalc)}:${pad(endMinuteCalc)}`;
+      let defaultTimeForEndPicker = endEl.value || minTimeForEndPicker;
+
+      if (defaultTimeForEndPicker <= defaultTimeForStartPicker || defaultTimeForEndPicker < minTimeForEndPicker) {
+        defaultTimeForEndPicker = minTimeForEndPicker;
+      }
+
+      flatpickr(endEl, {
+        enableTime: true,
+        noCalendar: true,
+        dateFormat: "H:i",
+        time_24hr: true,
+        minuteIncrement: 15,
+        minTime: minTimeForEndPicker,
+        defaultDate: defaultTimeForEndPicker,
+        onChange: reloadWithParams
+      });
+    };
+
+    flatpickr(dateEl, {
+      dateFormat: "Y-m-d",
+      minDate: "today",
+      defaultDate: dateEl.value || todayStr,
+      onChange: function(selectedDates, dateStr) {
+        const isTodayNew = dateStr === todayStr;
+        let newDefaultStartTime = isTodayNew ? currentTime : "00:00";
+
+        if (isTodayNew && newDefaultStartTime < currentTime) {
+            newDefaultStartTime = currentTime;
+        }
+
+        const [startH, startM] = newDefaultStartTime.split(":").map(Number);
+        let newDefaultEndHour = startH + 1;
+        let newDefaultEndMinute = startM;
+        if (newDefaultEndHour >= 24) {
+            newDefaultEndHour = 23;
+            newDefaultEndMinute = 59;
+        }
+        const newDefaultEndTime = `${pad(newDefaultEndHour)}:${pad(newDefaultEndMinute)}`;
+
+        startEl.value = newDefaultStartTime;
+        endEl.value = newDefaultEndTime;
+
+        reloadWithParams();
+      },
+    });
+
+    initializeTimePickers();
+
+    function handleStartChange(selectedDates, newStartTimeStr) {
+      const [hour, minute] = newStartTimeStr.split(":").map(Number);
+      let endHour = hour + 1;
+      let endMinute = minute;
+
+      if (endHour >= 24) {
+        endHour = 23;
+        endMinute = 59;
+      }
+      const newEndTimeStr = `${pad(endHour)}:${pad(endMinute)}`;
+
+      endEl.value = newEndTimeStr;
+      reloadWithParams();
+    }
+
+    function reloadWithParams() {
+      const beachSlug = {{ beach.slug | tojson }};
+      const date = dateEl.value;
+      const start = startEl.value;
+      const end = endEl.value;
+
+      if (date && start && end) {
+        if (start >= end) {
+          console.warn("Bitiş saati başlangıçtan sonra olmalı. Yeniden yükleme engellendi.");
+          return;
+        }
+        const url = `/beach/${beachSlug}/select-beds?date=${date}&start_time=${start}&end_time=${end}`;
+        window.location.href = url;
+      }
+    }
+  });
+</script>
+{% endblock %}

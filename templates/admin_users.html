@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+{% block title %}Admin - Kullanıcı Yönetimi{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+  <div class="card shadow-sm">
+    <div class="card-header bg-info text-white">
+      <h2 class="mb-0 h4"><i class="fas fa-users-cog"></i> Kullanıcı Yönetimi</h2>
+    </div>
+    
+    <div class="card-body admin-card-body">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+              {{ message }}
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Kapat"></button>
+            </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      {% if users %}
+      <div class="table-responsive">
+        <table class="table table-hover table-striped align-middle table-sm">
+          <thead class="table-light text-center">
+            <tr>
+              <th>ID</th>
+              <th><i class="fas fa-user"></i> İsim</th>
+              <th><i class="fas fa-envelope"></i> E-posta</th>
+              <th><i class="fas fa-user-shield"></i> Rol</th>
+              <th><i class="fas fa-umbrella-beach"></i> Plaj Yetkisi / Ata</th>
+              <th style="width: 150px;"><i class="fas fa-save"></i> Güncelle</th>
+            </tr>
+          </thead>
+          <tbody class="text-center">
+            {% for u in users %}
+            <tr>
+              <td>{{ u.id }}</td>
+              <td class="text-start">{{ u.first_name }} {{ u.last_name }}</td>
+              <td class="text-start">{{ u.email }}</td>
+              <td>
+                {% if u.role == 'admin' %}
+                  <span class="badge bg-danger">Admin</span>
+                {% elif u.role == 'beach_admin' %}
+                  <span class="badge bg-primary">Plaj Yöneticisi</span>
+                {% elif u.role == 'user' %}
+                  <span class="badge bg-secondary">Kullanıcı</span>
+                {% else %}
+                  <span class="badge bg-light text-dark">{{ u.role | capitalize }}</span>
+                {% endif %}
+              </td>
+
+              <form method="POST" action="{{ url_for('admin.update_user_role', user_id=u.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <td>
+                  <div class="d-flex flex-column flex-sm-row flex-wrap gap-2">
+                    <select name="new_role" class="form-select form-select-sm" aria-label="Rol seçimi">
+                      <option value="user" {% if u.role == 'user' %}selected{% endif %}>Kullanıcı</option>
+                      <option value="beach_admin" {% if u.role == 'beach_admin' %}selected{% endif %}>Plaj Yöneticisi</option>
+                      <option value="admin" {% if u.role == 'admin' %}selected{% endif %}>Admin</option>
+                    </select>
+                    <select name="manager_for_beach_id" class="form-select form-select-sm" aria-label="Plaj atama">
+                      <option value="">-- Yetkili Plaj Seç/Değiştir --</option>
+                      {% for beach in beaches %}
+                        <option value="{{ beach.id }}" {% if beach.manager_id == u.id %}selected{% endif %}>
+                          {{ beach.name }}
+                        </option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                </td>
+                <td>
+                  <button type="submit" class="btn btn-sm btn-success w-100 px-3">
+                    <i class="fas fa-check"></i> Kaydet
+                  </button>
+                </td>
+              </form>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="alert alert-info text-center">
+        <i class="fas fa-info-circle"></i> Sistemde kayıtlı kullanıcı bulunmamaktadır.
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+

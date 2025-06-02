@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+{% block title %}Favori Plajlarım - Edrelax{% endblock %}
+
+{% block content %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<style>
+  .card-amenities {
+    font-size: 0.9em;
+    color: #555;
+    margin-top: 8px;
+  }
+  .card-amenities .amenity-icon {
+    margin-right: 10px;
+    color: #007bff; /* İkon rengi */
+  }
+  .card-img-top.beach-fav-img {
+    height: 200px;
+    object-fit: cover;
+  }
+  .card-title-fav {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+  }
+  .card-text-fav {
+    height: 4.2em; /* VEYA 4.0em, 4.8em gibi deneyin */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 3; /* Bu hala 3 satır hedefler */
+    -webkit-box-orient: vertical;
+    /* Gerekirse satır yüksekliğini de ayarlayabilirsiniz: */
+    /* line-height: 1.4em; */ 
+}
+  .btn-remove-favorite {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background-color: rgba(255, 255, 255, 0.8); /* Hafif şeffaf arka plan */
+    border-radius: 50%;
+    width: 35px; /* Biraz büyütüldü */
+    height: 35px; /* Biraz büyütüldü */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #dc3545;
+    border: 1px solid #dc3545; /* Kenarlık eklendi */
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+  }
+  .btn-remove-favorite:hover {
+    background-color: #dc3545;
+    color: white;
+    transform: scale(1.1); /* Hafif büyüme efekti */
+  }
+  .popular-badge { /* YENİ STİL: Popüler plajlar için etiket */
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background-color: #ffc107; /* Uyarı rengi (sarı) */
+    color: #212529; /* Koyu metin */
+    padding: 0.3em 0.6em;
+    font-size: 0.75rem;
+    font-weight: bold;
+    border-radius: 0.25rem;
+    z-index: 1;
+  }
+</style>
+
+<div class="container mt-5">
+
+{# ---- YENİ BÖLÜM: EN ÇOK FAVORİLENEN PLAJLAR ---- #}
+{% if popular_beaches %}
+<div class="mb-5">
+  <h3 class="mb-3"><i class="fas fa-star text-warning"></i> Popüler Plajlar (En Çok Favorilenenler)</h3>
+  <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+    {% for item in popular_beaches %}
+    {% set beach = item.beach_obj %} {# beach nesnesini almak için #}
+    <div class="col">
+      <div class="card h-100 shadow-sm">
+        <div style="position: relative;">
+          <span class="popular-badge"><i class="fas fa-fire"></i> {{ item.times_favorited }} Favori</span>
+          <img src="{{ beach.image_url or url_for('static', filename='images/default.jpg') }}" 
+               class="card-img-top beach-fav-img" alt="{{ beach.name }}">
+          
+          {# YENİ EKLENEN KISIM: Resim Üzerine Plaj Adı #}
+          <div style="position: absolute; bottom: 0; left: 0; width: 100%; background-color: rgba(0, 0, 0, 0.6); color: white; padding: 8px 12px; border-bottom-left-radius: calc(0.25rem - 1px); border-bottom-right-radius: calc(0.25rem - 1px);">
+            <h6 class="mb-0 text-truncate" title="{{ beach.name }}" style="font-size: 0.95rem;">{{ beach.name }}</h6>
+          </div>
+          {# YENİ EKLENEN KISIM SONU #}
+        </div>
+        <div class="card-body d-flex flex-column pt-2">           
+          
+          <p class="card-text card-text-fav">{{ beach.description | striptags | truncate(100, True, '...') }}</p>
+          
+          <div class="card-amenities mb-3">
+            {% if beach.has_food %}<span class="amenity-icon" title="Yiyecek & İçecek"><i class="fas fa-utensils"></i></span>{% endif %}
+            {% if beach.has_parking %}<span class="amenity-icon" title="Otopark"><i class="fas fa-parking"></i></span>{% endif %}
+            {% if beach.has_wifi %}<span class="amenity-icon" title="Wi-Fi"><i class="fas fa-wifi"></i></span>{% endif %}
+            {# Diğer olanak ikonları buraya eklenebilir (allows_pets, has_water_sports, is_disabled_friendly) #}
+            {% if beach.allows_pets %}<span class="amenity-icon" title="Evcil Hayvan Dostu"><i class="fas fa-paw"></i></span>{% endif %}
+            {% if beach.has_water_sports %}<span class="amenity-icon" title="Su Sporları"><i class="fas fa-swimmer"></i></span>{% endif %}
+            {% if beach.is_disabled_friendly %}<span class="amenity-icon" title="Engelli Dostu"><i class="fas fa-wheelchair"></i></span>{% endif %}
+          </div>
+
+          <div class="mt-auto">
+            <a href="{{ url_for('public.beach_detail', slug=beach.slug) }}" class="btn btn-outline-primary w-100">
+              <i class="fas fa-search-location"></i> Keşfet
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+<hr class="my-5"> {# Bölümler arası ayırıcı #}
+{% endif %}
+{# ---- EN ÇOK FAVORİLENEN PLAJLAR BÖLÜMÜ SONU ---- #}
+
+
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-heart text-danger"></i> Favori Plajlarım</h2>
+    {% if not beaches %}
+      <a href="{{ url_for('public.index') }}" class="btn btn-outline-primary">
+        <i class="fas fa-umbrella-beach"></i> Plajları Keşfet
+      </a>
+    {% endif %}
+  </div>
+
+  {% if beaches %}
+  <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4" id="favoriteBeachesContainer">
+    {% for beach in beaches %}
+    <div class="col" id="beach-card-{{ beach.id }}">
+      <div class="card h-100 shadow-sm">
+        <div style="position: relative;">
+          <img src="{{ beach.image_url or url_for('static', filename='images/default.jpg') }}" 
+               class="card-img-top beach-fav-img" alt="{{ beach.name }}">
+          <button class="btn-remove-favorite" data-beach-id="{{ beach.id }}" title="Favorilerden Çıkar">
+            <i class="fas fa-heart-broken"></i>
+          </button>
+        </div>
+        <div class="card-body d-flex flex-column">
+          <h5 class="card-title card-title-fav" title="{{ beach.name }}">{{ beach.name }}</h5>
+          <p class="card-text text-muted small mb-2"><i class="fas fa-map-marker-alt text-secondary"></i> {{ beach.location }}</p>
+          <p class="card-text card-text-fav">{{ beach.description | striptags | truncate(120, True, '...') }}</p>
+          
+          <div class="card-amenities mb-3">
+            {% if beach.has_food %}<span class="amenity-icon" title="Yiyecek & İçecek"><i class="fas fa-utensils"></i></span>{% endif %}
+            {% if beach.has_parking %}<span class="amenity-icon" title="Otopark"><i class="fas fa-parking"></i></span>{% endif %}
+            {% if beach.has_wifi %}<span class="amenity-icon" title="Wi-Fi"><i class="fas fa-wifi"></i></span>{% endif %}
+            {% if beach.allows_pets %}<span class="amenity-icon" title="Evcil Hayvan Dostu"><i class="fas fa-paw"></i></span>{% endif %}
+            {% if beach.has_water_sports %}<span class="amenity-icon" title="Su Sporları"><i class="fas fa-swimmer"></i></span>{% endif %}
+            {% if beach.is_disabled_friendly %}<span class="amenity-icon" title="Engelli Dostu"><i class="fas fa-wheelchair"></i></span>{% endif %}
+          </div>
+
+          <div class="mt-auto">
+            <a href="{{ url_for('public.beach_detail', slug=beach.slug) }}" class="btn btn-primary w-100">
+              <i class="fas fa-info-circle"></i> Detayları Gör
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% else %}
+    <div class="text-center py-5" id="noFavoritesMessage">
+      <i class="fas fa-heart-broken fa-3x text-muted mb-3"></i>
+      <h4>Henüz favori plaj eklemediniz.</h4>
+      <p class="text-muted">Beğendiğiniz plajları favorilerinize ekleyerek buradan kolayca ulaşabilirsiniz.</p>
+    </div>
+  {% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const favoriteBeachesContainer = document.getElementById('favoriteBeachesContainer');
+    
+    favoriteBeachesContainer?.addEventListener('click', function(event) {
+        const removeButton = event.target.closest('.btn-remove-favorite');
+        if (!removeButton) {
+            return;
+        }
+
+        const beachId = removeButton.dataset.beachId;
+        const beachCard = document.getElementById(`beach-card-${beachId}`);
+        const beachTitleElement = beachCard ? beachCard.querySelector('.card-title-fav') : null;
+        const beachName = beachTitleElement ? beachTitleElement.textContent : 'Bu plajı';
+
+        Swal.fire({
+            title: 'Emin misiniz?',
+            text: `${beachName} favorilerinizden kaldırmak istediğinize emin misiniz?`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Evet, Kaldır!',
+            cancelButtonText: 'Vazgeç'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                fetch(`/toggle-favorite/${beachId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.status === 'removed' || data.status === 'success') { 
+                        Swal.fire(
+                            'Kaldırıldı!',
+                            `${beachName} favorilerinizden kaldırıldı.`,
+                            'success'
+                        );
+                        if (beachCard) {
+                            beachCard.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+                            beachCard.style.opacity = '0';
+                            beachCard.style.transform = 'scale(0.9)';
+                            setTimeout(() => {
+                                beachCard.remove();
+                                const currentFavorites = favoriteBeachesContainer.querySelectorAll('.col');
+                                if (currentFavorites.length === 0) {
+                                    const noFavoritesMessage = document.getElementById('noFavoritesMessage');
+                                    if(noFavoritesMessage) {
+                                        // noFavoritesMessage'ın görünürlüğü ile ilgili bir işlem gerekirse buraya eklenebilir.
+                                        // Mevcut HTML yapısında zaten görünür kalıyor.
+                                    }
+                                }
+                            }, 500); 
+                        }
+                    } else {
+                        Swal.fire(
+                            'Hata!',
+                            data.message || 'Plaj favorilerden kaldırılamadı.',
+                            'error'
+                        );
+                    }
+                })
+                .catch(error => {
+                    console.error('Fetch Error:', error);
+                    Swal.fire(
+                        'İstek Hatası!',
+                        `Bir sorun oluştu: ${error.message}. Lütfen konsolu kontrol edin.`,
+                        'error'
+                    );
+                });
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

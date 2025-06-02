@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% block title %}Plaj Seçimi{% endblock %}
+{% block content %}
+
+<div class="container mt-5 mb-5">
+  <h2 class="text-center mb-4">
+    🏖️ <strong>Lütfen işlem yapmak istediğiniz plajı seçin</strong>
+  </h2>
+
+  <form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="row justify-content-center">
+      {% for beach in beaches %}
+      <div class="col-md-4 col-sm-6 mb-4">
+        <input type="radio" class="btn-check" name="beach_id" id="beach{{ beach.id }}" value="{{ beach.id }}" required>
+        <label class="card btn btn-outline-primary shadow-sm p-0 border-0 overflow-hidden" for="beach{{ beach.id }}">
+          <img src="{{ beach.image_url or url_for('static', filename='images/default_beach.jpg') }}"
+               alt="{{ beach.name }}"
+               class="card-img-top"
+               style="height: 200px; object-fit: cover;" />
+          <div class="card-body text-center">
+            <h5 class="card-title text-primary">{{ beach.name }}</h5>
+            <p class="card-text">Kimlik: {{ beach.id }}</p>
+            <i class="fas fa-umbrella-beach fa-lg text-info"></i>
+          </div>
+        </label>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="text-center mt-4 mb-5">
+      <button type="submit" class="btn btn-success btn-lg px-4">
+        🏁 Devam Et
+      </button>
+    </div>
+  </form>
+</div>
+
+<style>
+  .btn-check:checked + .btn {
+    background-color: #0d6efd;
+    color: white;
+    border: 2px solid #0d6efd;
+    transform: scale(1.02);
+  }
+
+  .btn-check + .btn:hover {
+    box-shadow: 0 0 10px rgba(0, 123, 255, 0.3);
+    transition: 0.2s ease-in-out;
+  }
+
+  .card-img-top {
+    transition: transform 0.3s ease;
+  }
+
+  .btn-check + .btn:hover .card-img-top {
+    transform: scale(1.03);
+  }
+</style>
+
+{% endblock %}

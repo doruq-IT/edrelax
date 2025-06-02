@@ -1,0 +1,115 @@
+{% extends 'base.html' %}
+{% block title %}Yönetim Paneli{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+  <h2 class="mb-4">📊 Yönetim Paneli – İstatistikler</h2>
+
+  <div class="row g-4">
+    <div class="col-md-3">
+      <div class="card bg-primary text-white shadow">
+        <div class="card-body">
+          👥 Toplam Kullanıcı
+          <h3>{{ total_users }}</h3>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="card bg-success text-white shadow">
+        <div class="card-body">
+          🏖️ Toplam Plaj
+          <h3>{{ total_beaches }}</h3>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="card bg-warning text-dark shadow">
+        <div class="card-body">
+          📅 Toplam Rezervasyon
+          <h3>{{ total_reservations }}</h3>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="card bg-info text-white shadow">
+        <div class="card-body">
+          ❤️ Toplam Favori
+          <h3>{{ total_favorites }}</h3>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <div class="card bg-dark text-white shadow">
+        <div class="card-body">
+          🔐 Yönetici Sayıları
+          <p>Süper Admin: <strong>{{ total_admins }}</strong></p>
+          <p>Plaj Admini: <strong>{{ total_beach_admins }}</strong></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 📊 Grafik Alanları -->
+  <div class="row mt-5">
+    <div class="col-md-6">
+      <h5>📅 Günlük Rezervasyonlar</h5>
+      <canvas id="dailyChart" height="250"></canvas>
+    </div>
+
+    <div class="col-md-6">
+      <h5>🏖️ En Popüler Plajlar</h5>
+      <canvas id="popularChart" height="250"></canvas>
+    </div>
+  </div>
+</div>
+
+
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- JS ile grafikleri çiz -->
+<script>
+  fetch('/admin/dashboard/data')
+    .then(response => response.json())
+    .then(data => {
+      const dailyCtx = document.getElementById('dailyChart').getContext('2d');
+      new Chart(dailyCtx, {
+        type: 'bar',
+        data: {
+          labels: Object.keys(data.daily_reservations),
+          datasets: [{
+            label: 'Rezervasyon Sayısı',
+            data: Object.values(data.daily_reservations),
+            backgroundColor: 'rgba(54, 162, 235, 0.6)'
+          }]
+        },
+        options: {
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                precision:0
+              }
+            }
+          }
+        }
+      });
+
+      const popularCtx = document.getElementById('popularChart').getContext('2d');
+      new Chart(popularCtx, {
+        type: 'pie',
+        data: {
+          labels: data.popular_beaches.map(b => b.name),
+          datasets: [{
+            data: data.popular_beaches.map(b => b.reservations),
+            backgroundColor: ['#ff6384', '#36a2eb', '#cc65fe', '#ffce56', '#2ecc71']
+          }]
+        }
+      });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,194 @@
+{% extends 'base.html' %}
+{% block title %}Giriş Yap - Edrelax{% endblock %}
+<style>
+  body {
+    font-family: sans-serif;
+  }
+  .login-container {
+    max-width: 400px;
+    margin: 60px auto;
+    padding: 30px;
+    border-radius: 10px;
+    background: #f8f9fa;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  }
+  .login-container h2 {
+    text-align: center;
+    margin-bottom: 25px;
+    color: #0a4857;
+    font-size: 24px;
+  }
+
+  /* Sosyal Medya Butonları için TEMEL Ortak Stil */
+  .social-login .social-btn {
+    width: 100%;
+    margin-bottom: 12px;
+    padding: 12px; /* Görseldeki butonlar biraz daha dolgun görünüyor */
+    border-radius: 25px; /* Yuvarlak kenarlar görseldeki gibi */
+    font-size: 14px; /* Yazı boyutu */
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center; /* İkon ve metni ortalar */
+    transition: opacity 0.2s ease-in-out, transform 0.1s ease; /* Opacity ve transform için geçiş */
+    border: 1px solid transparent; /* Google butonu için border gerekebilir, diğerleri için transparent */
+  }
+  .social-login .social-btn:hover {
+    opacity: 0.9; /* Genel bir hover efekti */
+    transform: translateY(-2px); /* Hafif yukarı kalkma efekti */
+  }
+  .social-login .social-btn i {
+    margin-right: 10px; /* İkon ve yazı arası boşluk */
+    font-size: 18px; /* İkonları biraz daha belirgin yapalım */
+  }
+
+  /* Marka Renkleriyle Sosyal Medya Butonları */
+  .social-login .facebook-btn {
+    background-color: #3b5998; /* Facebook Mavisi */
+    color: #fff;
+  }
+  .social-login .google-btn {
+    background-color: #fff; /* Beyaz Arkaplan */
+    color: #424242; /* Koyu Gri Yazı (Siyah da olabilir) */
+    border: 1px solid #dadce0; /* Google'ın kullandığı hafif gri border */
+  }
+  .social-login .google-btn:hover {
+    /* Google butonu için özel hover, arkaplanı hafif gri yapabilir */
+    background-color: #f8f9fa;
+    opacity: 1; /* Genel opacity hover'ını ezelim */
+  }
+
+  /* Form Alanları (önceki standart yapı korunuyor) */
+  .form-group {
+    position: relative;
+    margin-bottom: 18px;
+  }
+  .form-group input {
+    width: 100%;
+    padding: 12px 15px 12px 45px;
+    border: 2px solid #3dc0d3;
+    border-radius: 25px;
+    font-size: 14px;
+    box-sizing: border-box;
+  }
+  .form-group input:focus {
+    outline: none;
+    border-color: #0a4857;
+    box-shadow: 0 0 5px rgba(61, 192, 211, 0.5);
+  }
+  .form-group .icon {
+    position: absolute;
+    top: 50%;
+    left: 15px;
+    transform: translateY(-50%);
+    color: #0a4857;
+    font-size: 16px;
+  }
+
+  /* Checkbox (önceki standart yapı korunuyor) */
+  .checkbox-container {
+    font-size: 13px;
+    margin-bottom: 20px;
+    text-align: left;
+  }
+  .checkbox-container label {
+    display: block;
+    margin-bottom: 8px;
+    cursor: pointer;
+  }
+  .checkbox-container input[type="checkbox"] {
+    margin-right: 8px;
+    vertical-align: middle;
+  }
+
+  /* Login Butonu (önceki standart yapı korunuyor, ana eylem rengi teal) */
+  .login-container button[type="submit"] {
+    width: 100%;
+    background: #3dc0d3;
+    color: white;
+    padding: 14px;
+    border: none;
+    border-radius: 25px;
+    font-weight: bold;
+    font-size: 16px;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: background-color 0.2s ease-in-out, transform 0.1s ease;
+  }
+  .login-container button[type="submit"]:hover {
+    background-color: #2aa8b9;
+    transform: translateY(-2px);
+  }
+
+  /* Şifremi Unuttum Linki (önceki standart yapı korunuyor) */
+  .login-container .forgot-link {
+    display: block;
+    text-align: center;
+    margin-top: 20px;
+    font-size: 14px;
+    color: #3dc0d3;
+    text-decoration: none;
+  }
+  .login-container .forgot-link:hover {
+    text-decoration: underline;
+  }
+
+  /* Signup sayfasına yönlendirme linki (isteğe bağlı) */
+  .login-container .signup-link {
+    font-size: 14px;
+    text-align: center;
+    margin-top: 15px;
+  }
+  .login-container .signup-link a {
+    color: #2980b9;
+    font-weight: bold;
+    text-decoration: none;
+  }
+  .login-container .signup-link a:hover {
+    text-decoration: underline;
+  }
+</style>
+
+<div class="login-container">
+  <h2>Hızlı Giriş</h2>
+
+  <div class="social-login">
+    <button class="social-btn facebook-btn" type="button">
+      <i class="fab fa-facebook-f"></i> Facebook ile Giriş Yap
+    </button>
+
+    <button
+      class="social-btn google-btn"
+      type="button"
+      onclick="window.location.href='{{ url_for('auth.google_login') }}'">
+      <i class="fab fa-google"></i> Google ile Giriş Yap
+    </button>
+  </div>
+
+  <form method="POST" action="{{ url_for('auth.login') }}">
+    {{ form.hidden_tag() }}
+
+    <div class="form-group">
+      <span class="icon">📧</span>
+      {{ form.email(class="form-control", placeholder="E-posta", required=True) }}
+    </div>
+
+    <div class="form-group">
+      <span class="icon">🔒</span>
+      {{ form.password(class="form-control", placeholder="Şifre", required=True) }}
+    </div>
+
+    <div class="checkbox-container">
+      <label>{{ form.remember() }} Beni Hatırla</label>
+    </div>
+
+    <button type="submit">Giriş Yap</button>
+  </form>
+
+  <a class="forgot-link" href="{{ url_for('auth.forgot_password') }}">
+    Şifrenizi mi unuttunuz?
+  </a>
+</div>
+
+{% endblock %}

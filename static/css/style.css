@@ -1,0 +1,776 @@
+/* ✅ Genel Ayarlar */
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: #fff;
+  color: #333;
+}
+
+main {
+  padding: 0;
+}
+
+/* ✅ Navbar */
+.top-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 60px;
+  background-color: white;
+  font-size: 16px;
+  color: #333;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+.nav-section {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.nav-section.center {
+  flex: 1;
+  justify-content: center;
+}
+
+.logo img {
+  height: 42px;
+  filter: drop-shadow(0 0 2px rgba(0,0,0,0.3));
+  transition: transform 0.3s ease;
+}
+
+.logo img:hover {
+  transform: scale(1.05);
+}
+
+
+.nav-section.right a {
+  text-decoration: none;
+  color: #444;
+  transition: 0.2s;
+}
+
+.nav-section.right a:hover {
+  color: #0a4857;
+  text-decoration: underline;
+}
+
+.icon-google-play::before {
+  content: "📱";
+  font-size: 20px;
+}
+
+.icon-apple::before {
+  content: "🍏";
+  font-size: 20px;
+}
+
+/* ✅ Ana Konteyner */
+.container {
+  max-width: 1140px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* ✅ Arama Alanı */
+.search-area {
+  text-align: center;
+  margin-top: 60px;
+  padding-bottom: 60px;
+}
+
+.search-area h2 {
+  font-size: 26px;
+  color: #3dc0d3;
+  font-weight: bold;
+  margin-bottom: 30px;
+}
+
+/* 🔄 Güncellendi */
+.search-form {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 20px;
+}
+
+/* ✅ Yeni eklendi */
+.search-box-wrapper {
+  width: 60%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+/* ⬇️ Aşağıdakiler aynı kaldı */
+.search-box {
+  position: relative;
+  width: 100%;
+}
+
+.search-box input[type="text"] {
+  width: 100%;
+  padding: 14px 45px;
+  border: 2px solid #3dc0d3;
+  border-radius: 30px;
+  font-size: 16px;
+  outline: none;
+}
+
+#search-input:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+#search-input:-webkit-autofill {
+  box-shadow: 0 0 0px 1000px white inset !important;
+}
+
+.search-icon {
+  position: absolute;
+  top: 50%;
+  left: 15px;
+  transform: translateY(-50%);
+  font-size: 18px;
+  color: #3dc0d3;
+}
+
+.suggestions {
+  position: absolute;
+  background: white;
+  border: 1px solid #ccc;
+  width: 60%;
+  max-width: 600px;
+  margin-top: 5px;
+  z-index: 1000;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.suggestion-item {
+  padding: 10px;
+  cursor: pointer;
+}
+
+.suggestion-item:hover {
+  background: #f0f0f0;
+}
+
+/* 🔄 Güncellendi */
+.advanced-search {
+  position: absolute;
+  bottom: -25px;
+  right: 10px;
+  color: #3dc0d3;
+  font-weight: 500;
+  text-decoration: none;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.advanced-search:hover {
+  text-decoration: underline;
+}
+
+
+/* ✅ Carousel Alanı */
+.carousel-section {
+  position: relative;
+  padding-bottom: 40px;
+}
+
+.carousel-indicators {
+  bottom: -30px !important;
+  position: absolute !important;
+}
+
+.carousel-item {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.carousel-box {
+  width: 100%;
+  background-color: #0e2d3b;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
+}
+
+.beache-box-holder {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+}
+
+/* Görsel kısmı */
+.beache-image {
+  position: relative;
+  width: 50%;
+  height: 350px; /* 🎯 sabit yükseklik */
+  overflow: hidden;
+}
+
+
+.beache-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.beache-info {
+  position: absolute;
+  bottom: 10px;
+  left: 15px;
+  background: rgba(0,0,0,0.5);
+  padding: 10px;
+  border-radius: 5px;
+}
+
+.beache-info .name {
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.beache-info address {
+  font-size: 14px;
+  font-style: normal;
+  color: #d8f5f8;
+}
+
+/* Detay kısmı */
+.beache-detail {
+  padding: 30px;
+  width: 50%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+  color: white;
+}
+
+.beache-detail h3 {
+  font-size: 26px;
+  font-weight: bold;
+  margin: 0;
+}
+
+.sub-title-info {
+  font-size: 15px;
+  font-style: italic;
+  color: #cde8eb;
+}
+
+.link-learn {
+  color: #3dc0d3;
+  font-weight: 500;
+  text-decoration: underline;
+  font-size: 14px;
+}
+
+.price-info {
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.price-info .price {
+  font-size: 20px;
+  color: #fff;
+}
+
+/* Buton */
+.btn-reserve-main {
+  margin-top: 10px;
+  background-color: #3dc0d3;
+  color: white;
+  padding: 10px 20px;
+  text-align: center;
+  text-decoration: none;
+  border-radius: 25px;
+  font-weight: bold;
+  width: fit-content;
+  transition: background-color 0.2s ease;
+}
+
+
+.btn-reserve-main:hover {
+  background-color: #2ca2b2;
+}
+
+
+/* Görsel üzerindeki başlık ve lokasyon */
+.caption-text {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  color: white;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+.caption-text h3 {
+  font-size: 22px;
+  font-weight: bold;
+  margin: 0;
+}
+
+.caption-text p {
+  font-size: 14px;
+  margin: 2px 0 0;
+}
+
+/* 🎯 Explore Greece grid bölümü */
+#Explore-Greece {
+  padding: 60px 0;
+  background-color: #fff;
+}
+
+.beach-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 25px;
+}
+
+.beach-card {
+  background-color: white;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+  transition: transform 0.3s ease;
+}
+
+.beach-card:hover {
+  transform: translateY(-5px);
+}
+
+.card-img {
+  position: relative;
+}
+
+.card-img img {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+}
+
+.price-tag {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background-color: #3dc0d3;
+  color: white;
+  font-size: 13px;
+  padding: 5px 10px;
+  border-radius: 5px;
+  font-weight: bold;
+}
+
+.card-content {
+  padding: 15px;
+  text-align: center;
+}
+
+.card-content .beach-name {
+  font-size: 16px;
+  font-weight: bold;
+  color: #0a4857;
+  display: block;
+  margin-bottom: 5px;
+}
+
+.card-content .beach-location {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 10px;
+}
+
+.btn-book-card {
+  display: inline-block;
+  padding: 8px 16px;
+  background-color: #3dc0d3;
+  color: white;
+  border-radius: 25px;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* ÖNEMLİ NOT: Footer bölümü */
+.footer-section {
+  background-color: #0e4b5b;
+  color: white;
+  font-family: Arial, sans-serif;
+  padding: 30px 20px 20px;
+  position: relative;
+}
+
+.footer-container {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  max-width: 1200px;
+  margin: auto;
+  align-items: flex-start;
+  gap: 40px;
+}
+
+.footer-logo-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  flex: 1;
+  min-width: 200px;
+}
+
+.footer-logo-main {
+  width: 100px;
+  height: auto;
+  border-radius: 6px;
+}
+
+.footer-slogan {
+  font-size: 14px;
+  color: #d8f5f8;
+}
+
+.footer-icon {
+  width: 70px;
+  height: auto;
+}
+
+.footer-logo {
+  height: 35px;
+}
+
+.footer-logo-text span {
+  display: block;
+  font-size: 13px;
+  margin-top: 5px;
+  color: #d8f5f8;
+}
+
+.footer-links-group {
+  display: flex;
+  flex: 2;
+  justify-content: space-between;
+  gap: 40px;
+  min-width: 300px;
+}
+
+.footer-links-group ul {
+  list-style: none;
+  padding: 0;
+}
+
+.footer-links-group li {
+  margin-bottom: 10px;
+}
+
+.footer-links-group a {
+  color: #d8f5f8;
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.footer-links-group a:hover {
+  text-decoration: underline;
+}
+
+.footer-social-group {
+  flex: 1;
+  min-width: 180px;
+  text-align: right;
+}
+
+.footer-social-group p {
+  font-size: 15px;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+.social-icons a {
+  margin-left: 10px;
+}
+
+.social-icons img {
+  width: 30px;
+  height: 30px;
+  /* filter: brightness(0) invert(1); */
+  transition: transform 0.2s ease;
+}
+
+.social-icons img:hover {
+  transform: scale(1.1);
+}
+
+/* Alt kısım */
+.footer-bottom {
+  max-width: 1200px;
+  margin: 10px auto 0;
+  text-align: center;
+  /* border-top: 1px solid rgba(255,255,255,0.1); */ /* 🔥 bunu kaldır */
+  padding-top: 0;
+}
+
+
+.payment-logos {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.payment-logos img {
+  width: 40px;  /* eskiden 60px idi */
+  height: auto;
+  object-fit: contain;
+}
+
+
+
+.copyright {
+  font-size: 12px;
+  color: #cde8eb;
+}
+.footer-app-icons-wrapper { /* HTML'de eklenen yeni sarmalayıcı */
+  margin-top: 15px; /* Orijinal HTML'deki footer-app-icons inline style'ından */
+}
+.app-icon-list {
+  display: flex; /* İkonları yan yana dizer */
+  gap: 10px;   /* İkonlar arası boşluk */
+}
+.app-icon { /* HTML'deki inline style'ların yerini alır */
+  height: 32px;
+  width: auto; /* Oranı korur */
+}
+.footer-column-heading { /* HTML'de eklenen yeni başlık class'ı */
+  font-size: 15px; /* .footer-social-group p ile aynı punto */
+  font-weight: bold;
+  margin-bottom: 15px; /* Linklerden önce boşluk */
+  color: white; /* Zaten genel footer rengi beyaz ama garanti olsun */
+}
+.link-column {
+  flex: 1; /* .footer-links-group içinde her link sütununun eşit alan kaplaması için */
+           /* Veya farklı oranlar verebilirsiniz */
+}
+
+/* 🎨 Fancy Navbar Tasarımı */
+.top-nav {
+  background: linear-gradient(90deg, #0a4857 0%, #3dc0d3 100%);
+  color: white;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+
+.top-nav a {
+  color: white !important;
+  font-weight: bold;
+  font-size: 15px;
+  transition: all 0.3s ease;
+}
+
+.top-nav a:hover {
+  text-shadow: 0 0 5px rgba(255,255,255,0.6);
+  transform: scale(1.05);
+}
+
+.top-nav .fab {
+  font-size: 20px;
+  margin-left: 10px;
+  color: white !important;
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+/* Hamburger menü butonu */
+.nav-toggle {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: white;
+  display: none;
+  z-index: 1002;
+}
+
+.beach-img {
+  height: 200px;
+  object-fit: cover;
+  width: 100%;
+}
+
+.card-body {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 180px;
+}
+
+a.active {
+  font-weight: bold;
+  border-bottom: 2px solid #ffffff;
+  padding-bottom: 3px;
+}
+
+.hover-shadow:hover {
+  transform: translateY(-4px);
+  transition: 0.2s ease-in-out;
+}
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+}
+
+.admin-card-body {
+  min-height: 80vh !important;
+  padding-bottom: 20px;
+  background-color: #e3f2fd;
+  overflow-y: auto;
+}
+#loader {
+  position: fixed;
+  z-index: 9999;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(255, 255, 255, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.spinner {
+  width: 60px;
+  height: 60px;
+  border: 6px solid #ddd;
+  border-top: 6px solid #3498db;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+
+/* Mobil görünümde nav-links davranışı */
+@media (max-width: 768px) {
+  .nav-toggle {
+    display: block;
+    position: absolute;
+    right: 20px;
+    top: 15px;
+  }
+
+  .nav-links {
+    display: none;
+    position: fixed;
+    top: 60px; /* navbar yüksekliğine göre */
+    right: 0;
+    width: 100%;
+    background-color: #0a4857;
+    padding: 20px;
+    z-index: 1000;
+  }
+
+  .nav-links.active {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+  }
+
+  .nav-links a {
+    width: 100%;
+    padding: 10px 0;
+    text-align: left;
+    color: white !important;
+  }
+
+
+/* Footer bölümü responsive */
+  .footer-container {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .footer-logo-group,
+  .footer-links-group,
+  .footer-social-group {
+    width: 100%;
+    align-items: center;
+    margin-bottom: 30px;
+  }
+
+  .footer-links-group {
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .footer-links-group ul {
+    padding: 0;
+    margin: 0;
+  }
+
+  .footer-links-group li {
+    margin-bottom: 8px;
+  }
+
+  .footer-social-group {
+    text-align: center;
+  }
+
+  .footer-social-group p {
+    margin-bottom: 10px;
+  }
+
+  .payment-logos {
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+  }
+
+  .payment-logos img {
+    width: 50px;
+    height: auto;
+  }
+
+  .footer-bottom {
+    padding: 20px 0;
+  }
+  .footer-container {
+    flex-direction: column;
+    align-items: center; /* Bu özellik alt elemanları (flex item) ortalar */
+    text-align: center;  /* Bu özellik içindeki metinleri ortalar */
+  }
+
+  .footer-column-heading {
+    /* text-align: center; .footer-container'dan miras alınır */
+    margin-top: 15px; /* Üstteki bölümden sonra biraz boşluk */
+  }
+  .footer-links-group .link-column:first-child .footer-column-heading {
+      margin-top: 0; /* İlk link sütunu başlığının üst boşluğunu sıfırla */
+  }
+
+
+  .app-icon-list {
+    justify-content: center; /* Mobil görünümde uygulama ikonlarını ortalar */
+  }
+}
+
+
+
+
+
+
+

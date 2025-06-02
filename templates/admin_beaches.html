@@ -1,0 +1,312 @@
+{% extends "base.html" %}
+{% block title %}Admin - Plajları Yönet{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<div class="container my-5">
+  <div class="card shadow-lg p-4">
+    <h2 class="mb-4 text-primary"><i class="fas fa-umbrella-beach"></i> Plaj Ekle / Düzenle</h2>
+    <form id="beachForm"
+          method="POST"
+          action="{{ url_for('admin.beaches') }}"
+          data-default-action="{{ url_for('admin.beaches') }}"
+          enctype="multipart/form-data">
+
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="edit_beach_id" id="edit_beach_id" />
+
+      <div class="row">
+        <div class="col-md-6">
+          <div class="form-group">
+            <label for="name">Plaj Adı</label>
+            <input type="text" class="form-control" id="name" name="name" required />
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="form-group">
+            <label for="location">Konum</label>
+            <input type="text" class="form-control" id="location" name="location" required />
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="description">Kısa Açıklama</label>
+        <textarea class="form-control" id="description" name="description" rows="2"></textarea>
+      </div>
+      <div class="form-group">
+        <label for="long_description">Detaylı Açıklama</label>
+        <textarea class="form-control mb-3" id="long_description" name="long_description" rows="6"></textarea>
+      </div>
+
+      <div class="row">
+        <div class="col-md-6">
+          <div class="form-group">
+            <label for="image_url">Görsel Seç</label>
+            <select class="form-control" id="image_url" name="image_url">
+              <option value="">Mevcut görsellerden seç</option>
+              {% for filename in image_files %}
+              <option value="{{ url_for('static', filename='images/' ~ filename) }}"
+                {% if beach and beach.image_url == url_for('static', filename='images/' ~ filename) %}selected{% endif %}>
+                {{ filename }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="form-group">
+            <label for="image_upload">Yeni Görsel Yükle</label>
+            <input type="file" class="form-control" id="image_upload" name="image_upload" accept="image/*" />
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-4">
+          <div class="form-group">
+            <label for="slug">Slug (URL uyumlu)</label>
+            <input type="text" class="form-control" id="slug" name="slug" required />
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="form-group">
+            <label for="price">Başlangıç Fiyatı (TL)</label>
+            <input type="number" class="form-control" id="price" name="price" min="0" step="0.01" />
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="form-group">
+            <label for="bed_count">Şezlong Sayısı</label>
+            <input type="number" class="form-control" id="bed_count" name="bed_count" min="1" required />
+          </div>
+        </div>
+      </div>
+
+      <hr />
+      <h5 class="mb-3">🏷️ Ek Özellikler</h5>
+      <div class="row">
+        {% for feature in [
+          ('has_booking', 'Rezerve Edilebilir'),
+          ('has_food', 'Yiyecek & İçecek'),
+          ('has_parking', 'Otopark'),
+          ('allows_pets', 'Evcil Hayvan İzni'),
+          ('has_wifi', 'Wi-Fi'),
+          ('has_water_sports', 'Su Sporları'),
+          ('is_disabled_friendly', 'Engelli Dostu')] %}
+        <div class="col-md-4">
+          <div class="form-check mb-2">
+            <input type="checkbox" class="form-check-input" id="{{ feature[0] }}" name="{{ feature[0] }}" />
+            <label class="form-check-label" for="{{ feature[0] }}">{{ feature[1] }}</label>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <div class="form-group mt-4">
+        <label>Haritadan Konum Seç</label>
+        <div id="map" style="height: 300px; border: 1px solid #ccc; border-radius: 8px"></div>
+        <input type="hidden" name="latitude" id="latitude" />
+        <input type="hidden" name="longitude" id="longitude" />
+      </div>
+
+      <div class="mt-4">
+        <button type="submit" class="btn btn-success">
+          <i class="fas fa-save"></i> Plajı Ekle / Güncelle
+        </button>
+        <button type="button" class="btn btn-outline-secondary ml-2" onclick="resetForm()">
+          <i class="fas fa-undo"></i> Sıfırla
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <hr class="my-5" />
+  <h2 class="mb-4">📋 Mevcut Plajlar</h2>
+
+  {% if beaches %}
+  <div class="table-responsive">
+    <table class="table table-hover table-bordered">
+      <thead class="thead-light">
+        <tr>
+          <th>Ad</th>
+          <th>Konum</th>
+          <th>Slug</th>
+          <th style="width: 140px">İşlemler</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for beach in beaches %}
+        <tr data-beach='{{ beach | tojson | safe }}'>
+          <td>{{ beach.name }}</td>
+          <td>{{ beach.location }}</td>
+          <td>{{ beach.slug }}</td>
+          <td>
+            <button type="button" class="btn btn-warning btn-sm mb-1" onclick="editBeach(this)">
+              <i class="fas fa-edit"></i>
+            </button>
+            <form method="POST" action="{{ url_for('admin.delete_beach', beach_id=beach.id) }}" style="display: inline-block"
+              onsubmit="return confirm('Bu plajı silmek istediğinizden emin misiniz?');">
+              {{ csrf_token() }}
+              <button type="submit" class="btn btn-danger btn-sm">
+                <i class="fas fa-trash-alt"></i>
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p>Hiç plaj bulunamadı.</p>
+  {% endif %}
+</div>
+
+
+
+<script src="https://cdn.ckeditor.com/4.22.1/standard/ckeditor.js"></script>
+
+<script>
+  // 🌍 Leaflet Harita Ayarı
+  const map = L.map("map").setView([39.6, 27.0], 8);
+
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: "&copy; OpenStreetMap contributors",
+  }).addTo(map);
+
+  // 🔁 300ms sonra haritayı yeniden boyutlandır
+  setTimeout(() => {
+    map.invalidateSize();
+  }, 700);
+
+
+  let marker;
+  map.on("click", function (e) {
+    const { lat, lng } = e.latlng;
+    document.getElementById("latitude").value = lat;
+    document.getElementById("longitude").value = lng;
+
+    if (marker) {
+      marker.setLatLng(e.latlng);
+    } else {
+      marker = L.marker(e.latlng).addTo(map);
+    }
+  });
+
+  // 🔤 Slug üretici
+  function generateSlug(text) {
+    return text
+      .toLowerCase()
+      .trim()
+      .replace(/[çÇğĞıİöÖşŞüÜ]/g, function (char) {
+        const map = {
+          ç: "c", Ç: "c", ğ: "g", Ğ: "g",
+          ı: "i", İ: "i", ö: "o", Ö: "o",
+          ş: "s", Ş: "s", ü: "u", Ü: "u"
+        };
+        return map[char] || "";
+      })
+      .replace(/[^a-z0-9\\s-]/g, "")
+      .replace(/\\s+/g, "-")
+      .replace(/-+/g, "-");
+  }
+
+  // 🚀 Sayfa Yüklendiğinde
+  document.addEventListener("DOMContentLoaded", () => {
+    // CKEditor başlat
+    if (typeof CKEDITOR !== 'undefined') {
+      CKEDITOR.replace('long_description');
+    }
+
+    const nameInput = document.getElementById("name");
+    const slugInput = document.getElementById("slug");
+
+    if (nameInput && slugInput) {
+      nameInput.addEventListener("input", () => {
+        if (!slugInput.dataset.manualEdit) {
+          slugInput.value = generateSlug(nameInput.value);
+        }
+      });
+
+      slugInput.addEventListener("input", () => {
+        slugInput.dataset.manualEdit = true;
+      });
+    }
+
+    // Form varsayılan action sıfırla
+    const form = document.getElementById("beachForm");
+    form.action = form.dataset.defaultAction;
+  });
+
+  // ✏️ Plajı düzenle
+  function editBeach(btn) {
+    const row = btn.closest("tr");
+    const data = JSON.parse(row.getAttribute("data-beach"));
+
+    for (const key in data) {
+      if (key === "long_description") continue;
+
+      const input = document.getElementById(key);
+      if (input) {
+        if (input.type === "checkbox") {
+          input.checked = !!data[key];
+        } else {
+          input.value = data[key];
+        }
+      }
+    }
+
+    // CKEditor alanı güncelle
+    setTimeout(() => {
+      if ("long_description" in data && CKEDITOR.instances.long_description) {
+        CKEDITOR.instances.long_description.setData(data.long_description || "");
+      }
+    }, 200);
+
+    // Image select güncelle
+    const select = document.getElementById("image_url");
+    if (select && data.image_url) {
+      [...select.options].forEach(opt => {
+        opt.selected = (opt.value === data.image_url);
+      });
+    }
+
+    // Marker göster
+    if (data.latitude && data.longitude) {
+      const latLng = [data.latitude, data.longitude];
+      document.getElementById("latitude").value = data.latitude;
+      document.getElementById("longitude").value = data.longitude;
+      map.setView(latLng, 13);
+      if (marker) marker.setLatLng(latLng);
+      else marker = L.marker(latLng).addTo(map);
+    }
+
+    // Form action ve id ayarı
+    document.getElementById("edit_beach_id").value = data.id;
+    document.getElementById("beachForm").action = `/admin/update-beach/${data.id}`;
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  // 🔄 Form sıfırla
+  function resetForm() {
+    const form = document.getElementById("beachForm");
+    form.reset();
+    form.action = form.dataset.defaultAction;
+    document.getElementById("edit_beach_id").value = "";
+
+    if (marker) {
+      marker.remove();
+      marker = null;
+    }
+
+    if (CKEDITOR.instances.long_description) {
+      CKEDITOR.instances.long_description.setData("");
+    }
+
+    map.setView([39.6, 27.0], 8);
+  }
+</script>
+{% endblock %}
