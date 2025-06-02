@@ -9,10 +9,11 @@ from flask import abort
 from functools import wraps
 from flask_mail import Mail
 from flask_dance.contrib.google import make_google_blueprint
-
+from flask_migrate import Migrate
 
 # Eklenti nesneleri
 db = SQLAlchemy()
+migrate = Migrate()
 login_manager = LoginManager()
 limiter = Limiter(key_func=get_remote_address)
 csrf = CSRFProtect()

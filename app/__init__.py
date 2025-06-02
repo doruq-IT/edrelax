@@ -7,6 +7,7 @@ from .routes.auth import load_user  # Kullanıcı yükleme fonksiyonu
 from datetime import datetime
 from app.routes.beach_admin import beach_admin_bp
 from app.util import to_alphanumeric_bed_id
+from app.extensions import db, migrate
 from config import Config
 from app.extensions import limiter
 from app.extensions import csrf
@@ -28,6 +29,7 @@ def create_app():
     )
 
     app.config.from_object(Config)
+    migrate.init_app(app, db)
     csrf.init_app(app)
     mail.init_app(app)
 
