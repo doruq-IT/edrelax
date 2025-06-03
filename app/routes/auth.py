@@ -212,3 +212,18 @@ def send_test_mail():
     msg.body = "Flask-Mail çalışıyor! Bu bir test mesajıdır."
     mail.send(msg)
     return "Mail gönderildi"
+
+@auth_bp.route('/delete_account', methods=['POST'])
+@login_required
+def delete_account():
+    user = current_user
+
+    # Oturumu kapat
+    logout_user()
+
+    # İlişkili tüm rezervasyonlar silinecek (cascade sayesinde)
+    db.session.delete(user)
+    db.session.commit()
+
+    flash("Profiliniz kalıcı olarak silinmiştir.", "success")
+    return redirect(url_for("public.index"))

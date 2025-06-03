@@ -206,3 +206,12 @@ def my_favorites():
         beaches=current_user_favorite_beaches, # Kullanıcının kendi favorileri
         popular_beaches=top_popular_beaches  # YENİ: En popüler plajlar listesi
     )
+
+@public_bp.route('/privacy')
+def privacy():
+    return render_template('about/privacy.html')
+
+@public_bp.route('/kredi')
+@login_required
+def kredi():
+    return render_template('kredi.html')

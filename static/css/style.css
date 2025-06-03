@@ -634,6 +634,25 @@ a.active {
   background-color: #e3f2fd;
   overflow-y: auto;
 }
+.balance-box {
+  display: inline-block;
+  background-color: #e8f1fc;
+  color: #007bff;
+  padding: 6px 10px;
+  border-radius: 12px;
+  font-size: 0.85em;
+  font-weight: 600;
+  margin-right: 10px;
+  transition: all 0.2s ease-in-out;
+  text-decoration: none;
+}
+
+.balance-box:hover {
+  background-color: #d0e6fb;
+  color: #0056b3;
+  text-decoration: none;
+}
+
 #loader {
   position: fixed;
   z-index: 9999;

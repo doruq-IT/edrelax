@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Kredi Bilgisi - Edrelax{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+  <h2 class="mb-4">💳 Kredi Bakiyeniz</h2>
+
+  <div class="card shadow-sm mb-4">
+    <div class="card-body text-center">
+      <h4>Toplam Bakiyeniz</h4>
+      <p class="display-4 text-primary font-weight-bold">
+        {{ session.get('user_credit', 0) }} TL
+      </p>
+      <p class="text-muted">Bu kredi, gelecekteki rezervasyonlarınızda kullanılabilir.</p>
+    </div>
+  </div>
+
+  <h5 class="mt-5">❓ Kredi Nedir ve Nasıl Kullanılır?</h5>
+  <ul class="list-unstyled">
+    <li>✔️ İptal ettiğiniz rezervasyonlardan iade edilen tutarlar burada gösterilir.</li>
+    <li>✔️ Rezervasyon yaparken toplam tutardan otomatik olarak düşülür.</li>
+    <li>✔️ Kullanılmayan krediler <strong>31/10/2025</strong> tarihine kadar geçerlidir.</li>
+    <li>✔️ Detaylı bilgi için <a href="{{ url_for('public.contact') }}">İletişim</a> sayfasından bize ulaşabilirsiniz.</li>
+  </ul>
+</div>
+{% endblock %}

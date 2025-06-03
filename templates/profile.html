@@ -10,79 +10,79 @@
       {% for category, message in messages %}
         <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
           {{ message }}
-          <button type="button" class="close" data-dismiss="alert" aria-label="Kapat">
-            <span aria-hidden="true">&times;</span>
-          </button>
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Kapat"></button>
         </div>
       {% endfor %}
     {% endif %}
   {% endwith %}
 
+  <!-- Profil güncelleme formu -->
   <form method="POST" action="{{ url_for('auth.profile') }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-    <div class="form-group">
+    <div class="form-group mb-3">
       <label for="first_name">Ad</label>
-      <input
-        type="text"
-        name="first_name"
-        class="form-control"
-        id="first_name"
-        value="{{ user.first_name }}"
-        required
-      />
+      <input type="text" name="first_name" class="form-control" id="first_name" value="{{ user.first_name }}" required />
     </div>
 
-    <div class="form-group">
+    <div class="form-group mb-3">
       <label for="last_name">Soyad</label>
-      <input
-        type="text"
-        name="last_name"
-        class="form-control"
-        id="last_name"
-        value="{{ user.last_name }}"
-        required
-      />
+      <input type="text" name="last_name" class="form-control" id="last_name" value="{{ user.last_name }}" required />
     </div>
 
-    <div class="form-group">
+    <div class="form-group mb-3">
       <label for="email">E-posta (değiştirilemez)</label>
-      <input
-        type="email"
-        name="email"
-        class="form-control"
-        id="email"
-        value="{{ user.email }}"
-        disabled
-      />
+      <input type="email" class="form-control" id="email" value="{{ user.email }}" disabled />
     </div>
 
     <hr />
     <h5>Şifre Değiştir (isteğe bağlı)</h5>
 
-    <div class="form-group">
+    <div class="form-group mb-3">
       <label for="current_password">Mevcut Şifre</label>
-      <input
-        type="password"
-        name="current_password"
-        class="form-control"
-        id="current_password"
-        placeholder="Mevcut şifrenizi girin"
-      />
+      <input type="password" name="current_password" class="form-control" id="current_password" placeholder="Mevcut şifrenizi girin" />
     </div>
 
-    <div class="form-group">
+    <div class="form-group mb-4">
       <label for="new_password">Yeni Şifre</label>
-      <input
-        type="password"
-        name="new_password"
-        class="form-control"
-        id="new_password"
-        placeholder="Değiştirmeyecekseniz boş bırakın"
-      />
+      <input type="password" name="new_password" class="form-control" id="new_password" placeholder="Değiştirmeyecekseniz boş bırakın" />
     </div>
 
-    <button type="submit" class="btn btn-primary mt-3">Değişiklikleri Kaydet</button>
+    <!-- Bilgilendirme -->
+    <p class="text-muted" style="font-size: 0.9em;">
+  Bu sayfa üzerinden kişisel bilgilerinizi güncelleyebilirsiniz. KVKK kapsamındaki haklarınız için <a href="{{ url_for('public.privacy') }}" target="_blank">Gizlilik Politikamızı</a> inceleyin.
+</p>
+
+    <div class="d-flex justify-content-between align-items-center mt-4">
+      <button type="submit" class="btn btn-primary">Değişiklikleri Kaydet</button>
+      <!-- Profili sil butonu -->
+      <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
+        Profili Sil
+      </button>
+    </div>
   </form>
+
+  <!-- Profili Sil Modal -->
+  <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content shadow-lg border-0">
+        <div class="modal-header bg-danger text-white">
+          <h5 class="modal-title" id="deleteModalLabel">Profili Sil</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Kapat"></button>
+        </div>
+        <div class="modal-body">
+          <p>Profilinizi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.</p>
+        </div>
+        <div class="modal-footer">
+          <form method="POST" action="{{ url_for('auth.delete_account') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+            <button type="submit" class="btn btn-danger">Evet, Sil</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </div>
 {% endblock %}
