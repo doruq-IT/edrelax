@@ -18,7 +18,7 @@
 
   <!-- Profil güncelleme formu -->
   <form method="POST" action="{{ url_for('auth.profile') }}">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
 
     <div class="form-group mb-3">
       <label for="first_name">Ad</label>
@@ -75,7 +75,7 @@
         </div>
         <div class="modal-footer">
           <form method="POST" action="{{ url_for('auth.delete_account') }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
             <button type="submit" class="btn btn-danger">Evet, Sil</button>
           </form>

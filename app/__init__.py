@@ -4,6 +4,7 @@ from flask import Flask, render_template, redirect, url_for, flash, request, cur
 from app.extensions import db, login_manager, limiter
 from app.routes import auth_bp, admin_bp, public_bp, reservations_bp
 from .routes.auth import load_user  # Kullanıcı yükleme fonksiyonu
+from flask_wtf.csrf import generate_csrf
 from datetime import datetime
 from app.routes.beach_admin import beach_admin_bp
 from app.util import to_alphanumeric_bed_id
@@ -61,6 +62,10 @@ def create_app():
     @app.context_processor
     def inject_admin_emails():
         return dict(admin_emails=current_app.config.get('ADMIN_EMAILS', []))
+    
+    @app.context_processor
+    def inject_csrf():
+        return dict(csrf_token=generate_csrf())
 
     return app
 

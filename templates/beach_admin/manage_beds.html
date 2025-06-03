@@ -21,6 +21,7 @@
   {% endwith %}
 
   <form method="POST" id="manageBedsForm">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <div class="table-responsive">
       <table class="table table-bordered table-hover align-middle">
         <thead class="table-light text-center">
@@ -30,6 +31,7 @@
             <th>Bugün Aktif Rez.</th>
             <th>Bugünkü Doluluk (%)</th>
             <th>Yeni Sayı</th>
+            <th>Yeni Fiyat (₺)</th>
           </tr>
         </thead>
         <tbody class="text-center">
@@ -62,6 +64,16 @@
                      min="0"
                      aria-label="Yeni şezlong sayısı {{ beach_data.name }}">
             </td>
+            <td>
+              <input type="number"
+                    name="bed_price_{{ beach_data.id }}"
+                    class="form-control form-control-sm text-center"
+                    value="{{ beach_data.price | default(0, true) }}"
+                    min="0"
+                    step="0.01"
+                    aria-label="Şezlong fiyatı {{ beach_data.name }}">
+            </td>
+
           </tr>
           {% endfor %}
         </tbody>
@@ -76,48 +88,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('manageBedsForm');
     if (form) {
         form.addEventListener('submit', function(event) {
-            event.preventDefault(); // Formun normal gönderimini engelle
+            event.preventDefault(); // Normal submiti durdur
+            console.log("✅ TEST: Form submit çağrıldı.");
 
-            let changesSummary = "Aşağıdaki değişiklikler yapılacak:\n";
-            let hasChanges = false;
-            const inputs = form.querySelectorAll('input[type="number"]');
-            
-            inputs.forEach(input => {
-                const beachName = input.closest('tr').querySelector('td:first-child').textContent;
-                const originalValue = parseInt(input.getAttribute('value')); // Başlangıçtaki değer
-                const newValue = parseInt(input.value);
-
-                if (originalValue !== newValue) {
-                    changesSummary += `- ${beachName}: ${originalValue} → ${newValue}\n`;
-                    hasChanges = true;
-                }
-            });
-
-            if (!hasChanges) {
-                Swal.fire({
-                    title: 'Bilgi',
-                    text: 'Herhangi bir değişiklik yapılmadı.',
-                    icon: 'info'
-                });
-                return;
-            }
-
-            Swal.fire({
-                title: 'Değişiklikleri Onayla',
-                html: `<p>Şezlong sayılarında değişiklik yapmak üzeresiniz.</p><pre style="text-align:left; font-size:0.9em; max-height:200px; overflow-y:auto;">${changesSummary}</pre><p>Devam etmek istiyor musunuz?</p>`,
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#3085d6',
-                cancelButtonColor: '#d33',
-                confirmButtonText: 'Evet, Kaydet!',
-                cancelButtonText: 'Hayır, Vazgeç'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    form.submit(); // Onaylanırsa formu gerçekten gönder
-                }
-            });
+            // Burada sadece form gönderilsin
+            form.submit();
         });
     }
 });
 </script>
+
 {% endblock %}

@@ -88,7 +88,7 @@
         <div class="card p-4 p-md-5 shadow-lg">
           <h4 class="mb-4 text-primary fw-semibold">Bize Mesaj Gönderin</h4>
           <form method="post" action="{{ url_for('public.contact') }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <div class="form-group mb-4">
               <label for="name" class="form-label">Adınız Soyadınız</label>
               <input type="text" class="form-control form-control-lg" id="name" name="name" placeholder="Adınızı ve soyadınızı girin" required />
