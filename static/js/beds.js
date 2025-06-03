@@ -14,6 +14,13 @@ function calculateColumnCount(total) {
   return 10;
 }
 
+// Bu değişkenlerin select_beds.html içindeki <script> bloğunda tanımlandığını varsayıyoruz:
+// const totalBeds = {{ beach.bed_count or 20 }};
+// const bookedBeds = {{ booked_beds | tojson }};
+// const bedPrice = {{ beach.price or 10 }};
+// const kullanicininOncedenRezerveEttigiSayi = {{ kullanicinin_o_gun_rezerve_ettigi_sezlong_sayisi | default(0) | tojson }};
+// const GUNLUK_MAKSIMUM_SEZLONG = 10;
+
 const columns = calculateColumnCount(totalBeds);
 bedsContainer.style.gridTemplateColumns = `repeat(${columns}, 60px)`;
 
@@ -36,6 +43,22 @@ for (let i = 0; i < totalBeds; i++) {
     bedDiv.title += " (DOLU)";
   } else {
     bedDiv.addEventListener("click", () => {
+      const suAnSeciliOlanlarUI = document.querySelectorAll(".bed.selected").length;
+      const buSezlongSeciliMi = bedDiv.classList.contains("selected");
+
+      // Eğer kullanıcı yeni bir şezlong seçmeye çalışıyorsa (yani bu şezlong henüz seçili değilse)
+      // ve bu seçimle birlikte günlük limiti aşacaksa:
+      if (!buSezlongSeciliMi &&
+          (kullanicininOncedenRezerveEttigiSayi + suAnSeciliOlanlarUI + 1) > GUNLUK_MAKSIMUM_SEZLONG) {
+        Swal.fire({
+          icon: "warning",
+          title: "Limit Aşıldı",
+          text: "Bir günde en fazla " + GUNLUK_MAKSIMUM_SEZLONG + " adet şezlong seçebilirsiniz. Daha fazlası için lütfen iletişime geçin."
+        });
+        return; // Şezlongun seçilmesini engelle
+      }
+
+      // Limit aşılmadıysa veya kullanıcı bir seçimi kaldırıyorsa
       bedDiv.classList.toggle("selected");
       updatePrice();
     });
@@ -113,6 +136,17 @@ checkoutBtn.addEventListener("click", () => {
     return;
   }
 
+  // Ödeme butonuna tıklandığında da limit kontrolü
+  if ((kullanicininOncedenRezerveEttigiSayi + selectedBeds.length) > GUNLUK_MAKSIMUM_SEZLONG) {
+    Swal.fire({
+      icon: "error",
+      title: "Limit Aşıldı!",
+      text: "Günlük maksimum şezlong limitini (" + GUNLUK_MAKSIMUM_SEZLONG + ") aştınız. Lütfen seçiminizi gözden geçirin veya daha fazla şezlong için bizimle iletişime geçin.",
+      confirmButtonText: "Anladım"
+    });
+    return; // Ödeme işlemini durdur
+  }
+
   // ⛔ Double-click koruması
   checkoutBtn.disabled = true;
   checkoutBtn.innerText = "Gönderiliyor...";
@@ -137,18 +171,16 @@ checkoutBtn.addEventListener("click", () => {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "X-CSRFToken": csrfToken  // 🔒 burası önemli!
+      "X-CSRFToken": csrfToken
     },
     body: JSON.stringify(payload)
   })
-
     .then(res => res.json())
     .then(data => {
       if (data.success) {
         const selectedCodes = Array.from(selectedBeds)
           .map(b => b.dataset.code)
           .join(', ');
-
         Swal.fire({
           icon: "success",
           title: "Rezervasyon Tamamlandı!",
@@ -173,7 +205,7 @@ checkoutBtn.addEventListener("click", () => {
           text: data.message || "Rezervasyon oluşturulamadı."
         });
         checkoutBtn.disabled = false;
-        checkoutBtn.innerText = "Check Out";
+        checkoutBtn.innerText = "Ödemeye Geç";
       }
     })
     .catch(err => {
@@ -184,7 +216,6 @@ checkoutBtn.addEventListener("click", () => {
         text: "Bir hata oluştu. Lütfen tekrar deneyin."
       });
       checkoutBtn.disabled = false;
-      checkoutBtn.innerText = "Check Out";
+      checkoutBtn.innerText = "Ödemeye Geç";
     });
 });
-

@@ -279,23 +279,103 @@ def dashboard_data():
         "popular_beaches": popular_beaches
     })
 
-@admin_bp.route('/users/<int:user_id>/update', methods=['POST'])
+@admin_bp.route('/users/<int:user_id>/update_role_assign_beach', methods=['POST'])
 @admin_required
-def update_user_role(user_id):
+def update_user_role_and_assign_beach(user_id): # HTML'deki url_for ile eşleşen fonksiyon adı
     user = User.query.get_or_404(user_id)
     new_role = request.form.get('new_role')
-    beach_id = request.form.get('manager_for_beach_id')
+    # HTML'deki <select name="assign_new_beach_id" ...> alanından değeri alıyoruz
+    new_beach_to_assign_id = request.form.get('assign_new_beach_id') 
 
-    # Kullanıcının rolünü güncelle
-    if new_role:
+    role_changed_message = None
+    beach_assigned_message = None
+    warning_message = None
+    action_taken = False # Herhangi bir veritabanı değişikliği yapılıp yapılmadığını izlemek için
+
+    # 1. Kullanıcının rolünü güncelle
+    if new_role and user.role != new_role:
         user.role = new_role
+        role_changed_message = f"{user.first_name} {user.last_name} kullanıcısının rolü '{new_role}' olarak güncellendi."
+        action_taken = True
 
-    # Eğer beach_id girilmişse ve boş değilse
-    if beach_id:
-        beach = Beach.query.get(int(beach_id))
-        if beach:
-            beach.manager_id = user.id
+    # 2. Yeni bir plaj atanacaksa (dropdown'dan bir plaj seçilmişse)
+    if new_beach_to_assign_id: # Değer boş değilse (yani "-- Yeni Plaj Ata (Opsiyonel) --" seçilmemişse)
+        beach_to_assign = Beach.query.get(int(new_beach_to_assign_id))
+        if beach_to_assign:
+            if beach_to_assign.manager_id and beach_to_assign.manager_id != user.id:
+                other_manager_user = User.query.get(beach_to_assign.manager_id)
+                other_manager_name = f"{other_manager_user.first_name} {other_manager_user.last_name}" if other_manager_user else "başka bir kullanıcı"
+                warning_message = f"{beach_to_assign.name} plajının zaten bir yöneticisi ({other_manager_name}) var. Atama yapılmadı."
+            elif beach_to_assign.manager_id == user.id:
+                # Zaten bu kullanıcıya atanmışsa bir şey yapma
+                pass 
+            else:
+                beach_to_assign.manager_id = user.id
+                beach_assigned_message = f"{beach_to_assign.name} plajı {user.first_name} {user.last_name} kullanıcısına başarıyla atandı."
+                action_taken = True
+        else:
+            warning_message = "Atanmak istenen plaj bulunamadı."
 
-    db.session.commit()
-    flash("Kullanıcı ve plaj ataması başarıyla güncellendi.", "success")
+    # 3. Veritabanı işlemlerini yap ve mesajları flash et
+    if action_taken: # Sadece gerçekten bir değişiklik yapıldıysa commit et
+        try:
+            db.session.commit()
+            if role_changed_message:
+                flash(role_changed_message, "success")
+            if beach_assigned_message:
+                flash(beach_assigned_message, "success")
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Veritabanı güncellenirken bir hata oluştu: {str(e)}", "danger")
+            # Hata durumunda uyarı mesajını da (varsa) göster
+            if warning_message:
+                flash(warning_message, "warning")
+            return redirect(url_for('admin.manage_users')) # Hata sonrası yönlendirme
+
+    # Uyarı mesajları her zaman gösterilebilir (başarılı işlemden sonra veya tek başına)
+    if warning_message:
+        flash(warning_message, "warning")
+    
+    if not action_taken and not warning_message: # Hiçbir değişiklik yapılmadıysa ve uyarı da yoksa
+        flash("Kaydedilecek bir değişiklik yapılmadı veya seçilen plaj zaten atanmış.", "info")
+
+    return redirect(url_for('admin.manage_users'))
+
+# admin.py dosyanıza EKLENECEK KOD
+@admin_bp.route('/users/<int:user_id>/unassign_beach/<int:beach_id>', methods=['POST'])
+@admin_required
+def unassign_specific_beach(user_id, beach_id):
+    user = User.query.get_or_404(user_id)
+    beach = Beach.query.get_or_404(beach_id)
+
+    if beach.manager_id == user.id:
+        beach.manager_id = None
+        db.session.commit()
+        flash(f'{user.first_name} {user.last_name} kullanıcısı {beach.name} plaj yöneticiliğinden başarıyla kaldırıldı.', 'success')
+    else:
+        flash(f'Hata: {beach.name} plajı zaten {user.first_name} {user.last_name} kullanıcısına atanmamış veya başka bir sorun oluştu.', 'danger')
+
+    return redirect(url_for('admin.manage_users'))
+
+@admin_bp.route('/users/<int:user_id>/delete', methods=['POST'])
+@admin_required
+def delete_user(user_id):
+    user_to_delete = User.query.get_or_404(user_id)
+
+    if user_to_delete.role == 'admin':
+        flash('Admin rolündeki kullanıcılar sistemden silinemez.', 'danger')
+        return redirect(url_for('admin.manage_users'))
+
+    try:
+        if user_to_delete.role == 'beach_admin':
+            Beach.query.filter_by(manager_id=user_to_delete.id).update({Beach.manager_id: None})
+
+        db.session.delete(user_to_delete)
+        db.session.commit()
+        flash(f'{user_to_delete.first_name} {user_to_delete.last_name} ({user_to_delete.email}) adlı kullanıcı başarıyla silindi.', 'success')
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Kullanıcı silinirken bir hata oluştu: {str(e)}', 'danger')
+
     return redirect(url_for('admin.manage_users'))

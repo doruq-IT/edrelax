@@ -50,7 +50,6 @@
         <i class="fas fa-bars"></i>
       </button>
 
-      <!-- Navigation Links -->
       <div class="nav-links" id="nav-links">
         {% if session.get('user_role') == 'beach_admin' %}
         <a href="{{ url_for('auth.profile') }}">👤 Profil</a>
@@ -64,7 +63,7 @@
           href="{{ url_for('beach_admin.reservations') }}"
           class="{% if request.path == url_for('beach_admin.reservations') %}active{% endif %}"
         >
-          📅 Rezervasyonlar
+          📅 Rezervasyonlar  {# Bu beach admin'in kendi rezervasyon yönetimi, kullanıcıların "Rezervasyonlarım" değil #}
         </a>
         <a
           href="{{ url_for('beach_admin.manage_beds') }}"
@@ -92,34 +91,36 @@
           👋 Merhaba,
           <strong>{{ session.get('user_name', 'Kullanıcı') }}</strong>
         </span>
-        <!-- 👛 Kullanıcı bakiyesi -->
-        <a href="{{ url_for('public.kredi') }}" class="balance-box" title="Kredi Bilgisi">
-          💰 {{ session.get('user_credit', 0) }} TL
-        </a>
+        {# #}
         <a href="{{ url_for('auth.logout') }}">Çıkış Yap</a>
         
-        {% elif session.get('user_id') %}
+        {% elif session.get('user_id') %} {# Normal kullanıcı veya Süper Admin (beach_admin olmayan) #}
         <a href="{{ url_for('public.about') }}?tab=help">Yardım</a>
         <a href="{{ url_for('public.contact') }}">İletişim</a>
         <a href="{{ url_for('auth.profile') }}">Profil</a>
-        <a href="{{ url_for('public.my_favorites') }}">⭐ Favorilerim</a>
-        <a href="{{ url_for('reservations.my_reservations') }}">Rezervasyonlarım</a>
-        <span style="margin: 0 10px">
-          👋 Hoş geldin, <strong>{{ session.get('user_name', 'Kullanıcı') }}</strong>
-        </span>
+        <a href="{{ url_for('public.my_favorites') }}">⭐ Favorilerim</a>    
 
-        {% if session.get('user_email') in admin_emails %}
+        {% if session.get('user_email') in admin_emails %} {# Süper admin linkleri #}
         <a href="{{ url_for('admin.beaches') }}">Yönetim Paneli</a>
         <a href="{{ url_for('admin.manage_users') }}">Kullanıcılar</a>
         <a href="{{ url_for('admin.dashboard') }}">İstatistikler</a>
-        {% endif %}
-        <!-- 👛 Kullanıcı bakiyesi -->
+        {# #}
+        <span style="margin: 0 10px">
+          👋 Hoş geldin, <strong>{{ session.get('user_name', 'Kullanıcı') }}</strong>
+        </span>
+        {# #}
+        {% else %} {# Normal kullanıcı (süper admin veya beach admin olmayan) #}
+        <a href="{{ url_for('reservations.my_reservations') }}">Rezervasyonlarım</a> {# Normal kullanıcılar için buraya eklendi #}
         <a href="{{ url_for('public.kredi') }}" class="balance-box" title="Kredi Bilgisi">
           💰 {{ session.get('user_credit', 0) }} TL
         </a>
+        <span style="margin: 0 10px">
+          👋 Hoş geldin, <strong>{{ session.get('user_name', 'Kullanıcı') }}</strong>
+        </span>
+        {% endif %}
         <a href="{{ url_for('auth.logout') }}">Çıkış Yap</a>
 
-        {% else %}
+        {% else %} {# Misafir Kullanıcı #}
         <a href="{{ url_for('public.about') }}?tab=help">Yardım</a>
         <a href="{{ url_for('public.contact') }}">İletişim</a>
         <a href="{{ url_for('auth.signup') }}">Kayıt Ol</a>

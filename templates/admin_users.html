@@ -36,49 +36,112 @@
           <tbody class="text-center">
             {% for u in users %}
             <tr>
-              <td>{{ u.id }}</td>
-              <td class="text-start">{{ u.first_name }} {{ u.last_name }}</td>
-              <td class="text-start">{{ u.email }}</td>
-              <td>
-                {% if u.role == 'admin' %}
-                  <span class="badge bg-danger">Admin</span>
-                {% elif u.role == 'beach_admin' %}
-                  <span class="badge bg-primary">Plaj Yöneticisi</span>
-                {% elif u.role == 'user' %}
-                  <span class="badge bg-secondary">Kullanıcı</span>
-                {% else %}
-                  <span class="badge bg-light text-dark">{{ u.role | capitalize }}</span>
-                {% endif %}
-              </td>
+                <td>{{ u.id }}</td>
+                <td class="text-start">{{ u.first_name }} {{ u.last_name }}</td>
+                <td class="text-start">{{ u.email }}</td>
+                <td>
+                    {# Mevcut Rolü Gösterme #}
+                    {% if u.role == 'admin' %}
+                        <span class="badge bg-danger">Admin</span>
+                    {% elif u.role == 'beach_admin' %}
+                        <span class="badge bg-primary">Plaj Yöneticisi</span>
+                    {% elif u.role == 'user' %}
+                        <span class="badge bg-secondary">Kullanıcı</span>
+                    {% else %}
+                        <span class="badge bg-light text-dark">{{ u.role | capitalize }}</span>
+                    {% endif %}
+                </td>
+                
+                {# Plaj Yetkisi / Ata ve Rol Güncelleme Sütunu (Bu kısım önceki adımla aynı kalıyor) #}
+                <td>
+                    {# 1. Mevcut Atanmış Plajları Listeleme ve Tek Tek Kaldırma #}
+                    {% set managed_beaches = beaches | selectattr('manager_id', 'equalto', u.id) | list %}
+                    {% if managed_beaches %}
+                        <div class="mb-3">
+                            <strong class="d-block mb-1 text-start">Atanmış Plajlar:</strong>
+                            <ul class="list-unstyled mb-0 text-start">
+                                {% for beach_managed in managed_beaches %}
+                                    <li class="d-flex justify-content-between align-items-center mb-1 p-1 border rounded">
+                                        <span>{{ beach_managed.name }}</span>
+                                        <form method="POST" action="{{ url_for('admin.unassign_specific_beach', user_id=u.id, beach_id=beach_managed.id) }}" style="display: inline; margin-left: 10px;">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                            <button type="submit" class="btn btn-xs btn-outline-danger py-0 px-1" onclick="return confirm('{{ u.first_name }} {{ u.last_name }} kullanıcısını {{ beach_managed.name }} plaj yöneticiliğinden kaldırmak istediğinize emin misiniz?');" title="Bu plajdan kaldır">
+                                                <i class="fas fa-times fa-fw"></i>
+                                            </button>
+                                        </form>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    {% else %}
+                        {% if u.role == 'beach_admin' %}
+                        <div class="mb-2 text-start">
+                            <span class="badge bg-warning text-dark">Bu plaj yöneticisine henüz plaj atanmamış.</span>
+                        </div>
+                        {% endif %}
+                    {% endif %}
 
-              <form method="POST" action="{{ url_for('admin.update_user_role', user_id=u.id) }}">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                <td>
-                  <div class="d-flex flex-column flex-sm-row flex-wrap gap-2">
-                    <select name="new_role" class="form-select form-select-sm" aria-label="Rol seçimi">
-                      <option value="user" {% if u.role == 'user' %}selected{% endif %}>Kullanıcı</option>
-                      <option value="beach_admin" {% if u.role == 'beach_admin' %}selected{% endif %}>Plaj Yöneticisi</option>
-                      <option value="admin" {% if u.role == 'admin' %}selected{% endif %}>Admin</option>
-                    </select>
-                    <select name="manager_for_beach_id" class="form-select form-select-sm" aria-label="Plaj atama">
-                      <option value="">-- Yetkili Plaj Seç/Değiştir --</option>
-                      {% for beach in beaches %}
-                        <option value="{{ beach.id }}" {% if beach.manager_id == u.id %}selected{% endif %}>
-                          {{ beach.name }}
-                        </option>
-                      {% endfor %}
-                    </select>
-                  </div>
+                    {# 2. Rol Değiştirme ve Yeni Plaj Atama Formu #}
+                    <form method="POST" action="{{ url_for('admin.update_user_role_and_assign_beach', user_id=u.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                        <div class="text-start mb-1 fw-bold">Rolü Değiştir / Yeni Plaj Ata:</div>
+                        <div class="input-group input-group-sm mb-2">
+                            <label class="input-group-text" for="new_role_{{ u.id }}">Rol:</label>
+                            <select name="new_role" id="new_role_{{ u.id }}" class="form-select form-select-sm" aria-label="Rol seçimi">
+                                <option value="user" {% if u.role == 'user' %}selected{% endif %}>Kullanıcı</option>
+                                <option value="beach_admin" {% if u.role == 'beach_admin' %}selected{% endif %}>Plaj Yöneticisi</option>
+                                <option value="admin" {% if u.role == 'admin' %}selected{% endif %}>Admin</option>
+                            </select>
+                        </div>
+                        <div class="input-group input-group-sm mb-2">
+                            <label class="input-group-text" for="assign_new_beach_id_{{ u.id }}">Plaj Ata:</label>
+                            <select name="assign_new_beach_id" id="assign_new_beach_id_{{ u.id }}" class="form-select form-select-sm" aria-label="Yeni plaj atama">
+                                <option value="">-- Yeni Plaj Ata (Opsiyonel) --</option>
+                                {% for beach_option in beaches %}
+                                    {% set current_manager_text = "" %}
+                                    {% if beach_option.manager_id and beach_option.manager_id != u.id %}
+                                        {% set manager_user = users | selectattr('id', 'equalto', beach_option.manager_id) | first %}
+                                        {% if manager_user %}
+                                            {% set current_manager_text = " (Yönetici: " + manager_user.first_name + ")" %}
+                                        {% else %}
+                                            {% set current_manager_text = " (Başka Yöneticisi Var)" %}
+                                        {% endif %}
+                                    {% endif %}
+                                    {% if beach_option.manager_id != u.id %}
+                                        <option value="{{ beach_option.id }}">
+                                            {{ beach_option.name }}{{ current_manager_text }}
+                                        </option>
+                                    {% endif %}
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-sm btn-success w-100">
+                            <i class="fas fa-save fa-fw"></i> Değişiklikleri Kaydet
+                        </button>
+                    </form>
                 </td>
-                <td>
-                  <button type="submit" class="btn btn-sm btn-success w-100 px-3">
-                    <i class="fas fa-check"></i> Kaydet
-                  </button>
+
+                {# YENİ EKLENEN KISIM: Kullanıcı Silme Butonu #}
+                <td class="align-middle"> {# Dikey ortalama için align-middle eklendi #}
+                    {# Admin rolündeki kullanıcılar silinemez (isteğe bağlı bir kural) #}
+                    {% if u.role != 'admin' %} 
+                        <form method="POST" action="{{ url_for('admin.delete_user', user_id=u.id) }}" style="display: inline;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                            <button type="submit" class="btn btn-danger btn-sm" 
+                                    onclick="return confirm('{{ u.first_name }} {{ u.last_name }} ({{ u.email }}) adlı kullanıcıyı silmek istediğinize emin misiniz? Bu işlem geri alınamaz!');"
+                                    title="Kullanıcıyı Sil">
+                                <i class="fas fa-trash-alt fa-fw"></i> Sil
+                            </button>
+                        </form>
+                    {% else %}
+                        <button type="button" class="btn btn-secondary btn-sm" disabled title="Admin rolündeki kullanıcılar silinemez.">
+                            <i class="fas fa-trash-alt fa-fw"></i> Sil
+                        </button>
+                    {% endif %}
                 </td>
-              </form>
             </tr>
             {% endfor %}
-          </tbody>
+        </tbody>
         </table>
       </div>
       {% else %}

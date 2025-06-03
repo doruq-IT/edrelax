@@ -19,12 +19,6 @@
   href="{{ url_for('static', filename='css/beds.css') }}"
 />
 
-<script>
-  const bookedBeds = {{ booked_beds | tojson }};
-  const totalBeds = {{ beach.bed_count or 20 }};
-  const bedPrice = {{ beach.price or 10 }};
-</script>
-
 <main
   class="container my-5"
   id="reservation-wrapper"
@@ -65,7 +59,16 @@
   <div id="beds-container"></div>
 </main>
 
+<script>
+  const bookedBeds = {{ booked_beds | tojson }};
+  const totalBeds = {{ beach.bed_count or 20 }};
+  const bedPrice = {{ beach.price or 10 }};
 
+  // YENİ EKLENEN SATIRLAR BAŞLANGIÇ
+  const kullanicininOncedenRezerveEttigiSayi = {{ kullanicinin_o_gun_rezerve_ettigi_sezlong_sayisi | default(0) | tojson }};
+  const GUNLUK_MAKSIMUM_SEZLONG = 10; 
+  // YENİ EKLENEN SATIRLAR BİTİŞ
+</script>
 <!-- JS logic -->
 <script src="{{ url_for('static', filename='js/beds.js') }}"></script>
 
@@ -196,4 +199,5 @@
     }
   });
 </script>
+
 {% endblock %}
