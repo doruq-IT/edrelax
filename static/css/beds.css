@@ -148,10 +148,29 @@ body.beds-page {
   }
 /* 📱 Mobil görünüm */
 @media (max-width: 600px) {
+  #beds-container {
+    grid-template-columns: repeat(9, 40px);
+    gap: 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: #ccc #f0f0f0;
+    padding-left: 200px;
+    padding-right: 10px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
   .bed {
     width: 40px;
     height: 40px;
   }
+
+  main#reservation-wrapper {
+    overflow-x: hidden;
+  }
+
 
   .top-panel,
   .datetime,

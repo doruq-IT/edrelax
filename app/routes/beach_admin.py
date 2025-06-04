@@ -119,15 +119,6 @@ def manage_beds():
                 # Opsiyonel: Eğer yeni sayı, o gün için aktif rezervasyonlardan azsa bir uyarı verebilirsiniz
                 # (Bu daha karmaşık bir kontrol olurdu, şimdilik eklemiyorum)
                 beach_instance.bed_count = new_count
-            # 2️⃣ Yeni fiyatı al
-            new_price_str = request.form.get(f"bed_price_{beach_instance.id}")
-            if new_price_str:
-                try:
-                    new_price = float(new_price_str)
-                    if beach_instance.price != new_price:
-                        beach_instance.price = new_price
-                except ValueError:
-                    flash(f"{beach_instance.name} için geçersiz fiyat girdiniz.", "danger")
         db.session.commit()
         flash("Şezlong sayıları başarıyla güncellendi.", "success")
         return redirect(url_for('beach_admin.manage_beds'))
@@ -154,7 +145,6 @@ def manage_beds():
             'id': beach_obj.id,
             'name': beach_obj.name,
             'bed_count': beach_obj.bed_count,
-            'price': beach_obj.price,
             'active_reservations_today': active_reservations_today,
             'occupancy_rate_today': occupancy_rate_today
         })
