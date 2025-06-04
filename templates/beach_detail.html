@@ -173,7 +173,7 @@ endblock %} {% block content %}
     const startInput = document.getElementById("start_time");
     const endInput = document.getElementById("end_time");
 
-    const today = new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD formatı, yerel saat
+    const today = new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD
     const pad = (n) => n.toString().padStart(2, "0");
 
     dateInput.min = today;
@@ -191,7 +191,6 @@ endblock %} {% block content %}
       onChange: function (selectedDates, dateStr) {
         if (endPicker) endPicker.destroy();
 
-        // Giriş saatinden en az 1 saat sonrası
         const [hour, minute] = dateStr.split(":").map(Number);
         let minHour = hour + 1;
         let minMinute = minute;
@@ -224,7 +223,16 @@ endblock %} {% block content %}
       minuteIncrement: 15,
     });
 
-    // ❤️ Favori işlemi (Font Awesome ikon class'ı güncellemesi)
+    // 🧠 CSRF token'ı cookie'den çek
+    function getCookie(name) {
+      const value = `; ${document.cookie}`;
+      const parts = value.split(`; ${name}=`);
+      if (parts.length === 2) return parts.pop().split(";").shift();
+    }
+
+    const csrfToken = getCookie("csrf_token");
+
+    // ❤️ Favori işlemi (icon güncelleme + fetch)
     const favoriteBtn = document.getElementById("favorite-btn");
 
     favoriteBtn?.addEventListener("click", () => {
@@ -233,8 +241,15 @@ endblock %} {% block content %}
 
       fetch(`/toggle-favorite/${beachId}`, {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": csrfToken, // 🛡 CSRF koruması için token gönder
+        },
       })
-        .then((res) => res.json())
+        .then((res) => {
+          if (!res.ok) throw new Error("HTTP Error " + res.status);
+          return res.json();
+        })
         .then((data) => {
           if (data.status === "added") {
             icon.classList.remove("far");
