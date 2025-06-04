@@ -1,4 +1,5 @@
 /* ✅ Genel Ayarlar */
+
 body {
   font-family: Arial, sans-serif;
   margin: 0;
@@ -634,6 +635,15 @@ a.active {
   background-color: #e3f2fd;
   overflow-y: auto;
 }
+/* 🔷 Atanmış plaj etiketi görünümü */
+.badge.bg-info {
+  font-size: 13px;
+  font-weight: 500;
+  padding: 6px 10px;
+  border-radius: 10px;
+}
+
+/* kredi button */
 .balance-box {
   display: inline-block;
   background-color: #e8f1fc;
@@ -785,7 +795,7 @@ a.active {
   .app-icon-list {
     justify-content: center; /* Mobil görünümde uygulama ikonlarını ortalar */
   }
-    /* Sekmeli sayfa: Mobil görünüm düzeni */
+  /* Sekmeli sayfa: Mobil görünüm düzeni */
 .tabs-container {
   flex-direction: column;
   padding: 20px;
@@ -825,10 +835,3 @@ a.active {
 }
 
 }
-
-
-
-
-
-
-
