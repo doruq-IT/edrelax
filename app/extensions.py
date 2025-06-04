@@ -4,20 +4,22 @@ from flask_login import LoginManager, current_user
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_wtf import CSRFProtect
+from flask_socketio import SocketIO
 import os
 from flask import abort
 from functools import wraps
 from flask_mail import Mail
 from flask_dance.contrib.google import make_google_blueprint
-from flask_migrate import Migrate
+
 
 # Eklenti nesneleri
 db = SQLAlchemy()
-migrate = Migrate()
 login_manager = LoginManager()
 limiter = Limiter(key_func=get_remote_address)
 csrf = CSRFProtect()
 mail = Mail()
+socketio = SocketIO(cors_allowed_origins="*")
+
 
 # Role-based erişim kontrolü
 def admin_required(f):

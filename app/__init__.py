@@ -4,17 +4,15 @@ from flask import Flask, render_template, redirect, url_for, flash, request, cur
 from app.extensions import db, login_manager, limiter
 from app.routes import auth_bp, admin_bp, public_bp, reservations_bp
 from .routes.auth import load_user  # Kullanıcı yükleme fonksiyonu
-from flask_wtf.csrf import generate_csrf
 from datetime import datetime
 from app.routes.beach_admin import beach_admin_bp
+from flask_wtf.csrf import generate_csrf
 from app.util import to_alphanumeric_bed_id
-from app.extensions import db, migrate
 from config import Config
-from app.extensions import limiter
-from app.extensions import csrf
-from app.extensions import mail
-from app.extensions import google_bp
+from app.extensions import csrf, mail, limiter, google_bp
+from app.extensions import socketio
 from dotenv import load_dotenv
+from .extensions import csrf
 
 load_dotenv()
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
@@ -30,7 +28,6 @@ def create_app():
     )
 
     app.config.from_object(Config)
-    migrate.init_app(app, db)
     csrf.init_app(app)
     mail.init_app(app)
 
@@ -40,6 +37,8 @@ def create_app():
     login_manager.login_view = 'auth.login'
     login_manager.user_loader(load_user)
     limiter.init_app(app)
+    socketio.init_app(app)
+
 
     # ✨ Jinja filtresini kaydet
     app.jinja_env.filters['to_alphanumeric_bed_id'] = to_alphanumeric_bed_id
@@ -66,7 +65,13 @@ def create_app():
     @app.context_processor
     def inject_csrf():
         return dict(csrf_token=generate_csrf())
-
+    
+    
+    @app.after_request
+    def inject_csrf_token(response):
+        response.set_cookie('csrf_token', generate_csrf())
+        return response
+    from app import socket_events
     return app
 
 
