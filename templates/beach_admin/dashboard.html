@@ -7,7 +7,6 @@
     🏖️ <span class="fw-semibold">Plaj Yönetim Paneli</span>
   </h2>
 
-  <!-- Bildirim Alanı -->
   <div class="row ms-2 me-2">
     <div class="col-lg-12">
       <div class="alert alert-info shadow-sm rounded mb-4">
@@ -19,7 +18,6 @@
   {% if beaches %}
   <div class="row ms-2 me-2">
     {% for beach in beaches %}
-    <!-- Sol Kart: Plaj Bilgileri -->
     <div class="col-lg-6 col-md-12 mb-4">
       <div class="card border-0 shadow-lg rounded-4 h-100">
         <div class="card-body pb-0">
@@ -47,9 +45,10 @@
       </div>
     </div>
 
-    <!-- Sağ Panel: Plaj Durumu -->
     <div class="col-lg-6 col-md-12 mb-4">
-      <div class="card bg-light shadow-sm rounded-4 p-4 h-100">
+      {# === DEĞİŞİKLİK BURADA BAŞLIYOR === #}
+      <div class="card bg-light shadow-sm rounded-4 p-4 h-100 d-flex flex-column"> {# d-flex flex-column eklendi #}
+      {# === DEĞİŞİKLİK BURADA BİTİYOR === #}
         <h5 class="text-secondary fw-bold mb-3">📈 Plaj Durumu</h5>
         <ul class="list-group list-group-flush">
           <li class="list-group-item d-flex justify-content-between align-items-center">
@@ -84,9 +83,20 @@
             </strong>
           </li>
         </ul>
-        <div class="mt-4 text-center">
-          <span class="text-muted fst-italic">Güncellenme zamanı: {{ current_time }}</span>
+        
+        {# === DEĞİŞİKLİK BURADA BAŞLIYOR === #}
+        <div class="mt-auto pt-3 text-center"> 
+          <button 
+            class="btn btn-sm btn-outline-primary update-past-reservations-btn" 
+            data-beach-id="{{ beach.id }}"
+            title="Bu plaja ait geçmiş 'Rezerve' ve 'Kullanımda' durumundaki rezervasyonları 'Tamamlandı' olarak günceller.">
+            <i class="fas fa-check-double me-1"></i> {# Örnek bir ikon, Font Awesome kullanıyorsanız #}
+            Geçmişi Rezervasyonları Güncelle
+          </button>
+          <div class="text-muted fst-italic mt-2">Güncellenme zamanı: {{ current_time }}</div> {# mt-4'ten mt-2'ye alındı ve butonla aynı div içine taşındı #}
         </div>
+        {# === DEĞİŞİKLİK BURADA BİTİYOR === #}
+        
       </div>
     </div>
     {% endfor %}
@@ -97,4 +107,55 @@
   </div>
   {% endif %}
 </div>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const updateButtons = document.querySelectorAll('.update-past-reservations-btn');
+    const csrfTokenMeta = document.querySelector('meta[name="csrf-token"]');
+    const csrfToken = csrfTokenMeta ? csrfTokenMeta.getAttribute('content') : null;
+
+    updateButtons.forEach(button => {
+      button.addEventListener('click', function () {
+        const beachId = this.dataset.beachId;
+
+        if (!beachId) {
+          alert("Plaj ID'si bulunamadı.");
+          return;
+        }
+
+        if (!confirm("Geçmiş rezervasyonları 'Tamamlandı' olarak işaretlemek istediğinizden emin misiniz?")) {
+          return;
+        }
+
+        const requestUrl = `/beach-admin/complete-past-reservations/${beachId}`;
+
+        fetch(requestUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken,
+            'X-Requested-With': 'XMLHttpRequest'
+          }
+        })
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`Sunucu hatası (${response.status})`);
+          }
+          return response.json();
+        })
+        .then(data => {
+          if (data.success) {
+            alert(data.message);
+            location.reload();
+          } else {
+            alert("❌ Hata: " + data.message);
+          }
+        })
+        .catch(error => {
+          console.error("İstek sırasında hata oluştu:", error);
+          alert("⚠️ Bir hata oluştu: " + error.message);
+        });
+      });
+    });
+  });
+</script>
 {% endblock %}
