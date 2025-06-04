@@ -62,6 +62,48 @@ def dashboard():
         current_time=current_time
     )
 
+@beach_admin_bp.route('/complete-past-reservations/<int:beach_id>', methods=['POST'])
+@login_required
+def complete_past_reservations(beach_id):
+    today = date.today()
+    try:
+        beach = Beach.query.get_or_404(beach_id)
+        if beach.manager_id != current_user.id:
+            return jsonify({
+                "success": False,
+                "message": "Bu işlem için yetkiniz yok."
+            }), 403
+
+        # Güncellenecek rezervasyonları bul
+        reservations_to_update = Reservation.query.filter(
+            Reservation.beach_id == beach_id,
+            Reservation.date < today,  # Tarihi bugünden küçük olanlar
+            Reservation.status.in_(['reserved', 'used'])  # Durumu 'reserved' veya 'used' olanlar
+        ).all()
+
+        updated_count = 0  # Gerçek sayıyı sonra hesaplayacağız
+        if reservations_to_update:
+            for res in reservations_to_update:
+                res.status = 'completed'
+                updated_count += 1
+
+        db.session.commit()  # Değişiklikleri veritabanına kaydet
+
+        # Başarılı yanıt
+        return jsonify({
+            "success": True,
+            "message": f"{updated_count} adet geçmiş rezervasyon 'Tamamlandı' olarak işaretlendi."
+        })
+
+    except Exception as e:
+        current_app.logger.error(f"Geçmiş rezervasyonlar tamamlanırken hata: {e}")
+        db.session.rollback()  # Hata durumunda veritabanı işlemlerini geri al
+        return jsonify({
+            "success": False,
+            "message": f"Bir hata oluştu: {str(e)}"
+        }), 500
+
+
 @beach_admin_bp.route('/select-beach', methods=['GET', 'POST'])
 @login_required
 def select_beach():
@@ -119,6 +161,15 @@ def manage_beds():
                 # Opsiyonel: Eğer yeni sayı, o gün için aktif rezervasyonlardan azsa bir uyarı verebilirsiniz
                 # (Bu daha karmaşık bir kontrol olurdu, şimdilik eklemiyorum)
                 beach_instance.bed_count = new_count
+            # 2️⃣ Yeni fiyatı al
+            new_price_str = request.form.get(f"bed_price_{beach_instance.id}")
+            if new_price_str:
+                try:
+                    new_price = float(new_price_str)
+                    if beach_instance.price != new_price:
+                        beach_instance.price = new_price
+                except ValueError:
+                    flash(f"{beach_instance.name} için geçersiz fiyat girdiniz.", "danger")
         db.session.commit()
         flash("Şezlong sayıları başarıyla güncellendi.", "success")
         return redirect(url_for('beach_admin.manage_beds'))
@@ -145,6 +196,7 @@ def manage_beds():
             'id': beach_obj.id,
             'name': beach_obj.name,
             'bed_count': beach_obj.bed_count,
+            'price': beach_obj.price,
             'active_reservations_today': active_reservations_today,
             'occupancy_rate_today': occupancy_rate_today
         })
