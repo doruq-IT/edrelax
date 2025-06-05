@@ -8,6 +8,8 @@ import os
 import time
 from werkzeug.utils import secure_filename
 from flask_login import login_required, current_user
+from google.cloud import storage
+import uuid
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
@@ -65,8 +67,7 @@ def beaches():
             return redirect(url_for("admin.beaches"))
 
         uploaded_file = request.files.get('image_upload')
-        image_url = request.form.get('image_url')
-
+        # --- GCS İÇİN DEĞİŞTİRİLDİ ---
         if uploaded_file and uploaded_file.filename.strip():
             if not allowed_file(uploaded_file.filename):
                 flash("Only JPG and PNG files are allowed.", "danger")
@@ -76,15 +77,23 @@ def beaches():
                 flash("Image file is too large. Max 5MB allowed.", "danger")
                 return redirect(url_for("admin.beaches"))
 
+            # GCS'e yükleme mantığı
             filename = secure_filename(uploaded_file.filename)
-            ext = os.path.splitext(filename)[1]
-            unique_name = f"{slug}-{int(time.time())}{ext}"
-            save_path = os.path.join(image_folder, unique_name)
-            uploaded_file.save(save_path)
+            unique_filename = str(uuid.uuid4()) + "-" + filename
+            
+            storage_client = storage.Client()
+            bucket_name = current_app.config['GCS_BUCKET_NAME']
+            bucket = storage_client.bucket(bucket_name)
 
-            image_url = f'/static/images/{unique_name}'
+            blob = bucket.blob(unique_filename)
+            blob.upload_from_file(
+                uploaded_file,
+                content_type=uploaded_file.content_type
+            )
+            image_url = blob.public_url # Veritabanına kaydedilecek URL
+        # --- GCS İÇİN DEĞİŞTİRİLDİ BİTTİ ---
 
-        if not image_url or image_url.strip() == '':
+        if not image_url:
             image_url = '/static/images/default.jpg'
 
         new_beach = Beach(
@@ -159,8 +168,7 @@ def update_beach(beach_id):
     beach.is_disabled_friendly = bool(request.form.get('is_disabled_friendly'))
 
     uploaded_file = request.files.get('image_upload')
-    image_url_from_form = request.form.get('image_url')
-
+    # --- GCS İÇİN DEĞİŞTİRİLDİ ---
     if uploaded_file and uploaded_file.filename.strip():
         if not allowed_file(uploaded_file.filename):
             flash("Only JPG and PNG files are allowed.", "danger")
@@ -170,19 +178,21 @@ def update_beach(beach_id):
             flash("Image file is too large. Max 5MB allowed.", "danger")
             return redirect(url_for("admin.beaches"))
 
-        image_folder = os.path.join(current_app.static_folder, 'images')
-        os.makedirs(image_folder, exist_ok=True)
-
+        # GCS'e yükleme mantığı
         filename = secure_filename(uploaded_file.filename)
-        ext = os.path.splitext(filename)[1]
-        unique_name = f"{beach.slug}-{int(time.time())}{ext}"
-        save_path = os.path.join(image_folder, unique_name)
-        uploaded_file.save(save_path)
+        unique_filename = str(uuid.uuid4()) + "-" + filename
+        
+        storage_client = storage.Client()
+        bucket_name = current_app.config['GCS_BUCKET_NAME']
+        bucket = storage_client.bucket(bucket_name)
 
-        beach.image_url = f'/static/images/{unique_name}'
-    else:
-        # Eğer yeni dosya yoksa, formdaki mevcut URL'yi kullan
-        beach.image_url = image_url_from_form
+        blob = bucket.blob(unique_filename)
+        blob.upload_from_file(
+            uploaded_file,
+            content_type=uploaded_file.content_type
+        )
+        beach.image_url = blob.public_url # Plajın resim URL'ini doğrudan GCS linki ile güncelle
+    # --- GCS İÇİN DEĞİŞTİRİLDİ BİTTİ ---
 
     try:
         db.session.commit()

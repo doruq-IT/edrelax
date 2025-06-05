@@ -42,26 +42,19 @@
       </div>
 
       <div class="row">
-        <div class="col-md-6">
-          <div class="form-group">
-            <label for="image_url">Görsel Seç</label>
-            <select class="form-control" id="image_url" name="image_url">
-              <option value="">Mevcut görsellerden seç</option>
-              {% for filename in image_files %}
-              <option value="{{ url_for('static', filename='images/' ~ filename) }}"
-                {% if beach and beach.image_url == url_for('static', filename='images/' ~ filename) %}selected{% endif %}>
-                {{ filename }}
-              </option>
-              {% endfor %}
-            </select>
+          <div class="col-md-6">
+              <div class="form-group">
+                  <label for="image_upload">Yeni Görsel Yükle (Mevcut görseli değiştirir)</label>
+                  <input type="file" class="form-control" id="image_upload" name="image_upload" accept="image/png, image/jpeg">
+              </div>
           </div>
-        </div>
-        <div class="col-md-6">
-          <div class="form-group">
-            <label for="image_upload">Yeni Görsel Yükle</label>
-            <input type="file" class="form-control" id="image_upload" name="image_upload" accept="image/*" />
+          <div class="col-md-6">
+              <div class="form-group">
+                  <label for="image_url">Mevcut Görsel URL'i</label>
+                  <input type="text" class="form-control" id="image_url" name="image_url" readonly>
+                  <small class="form-text text-muted">Bu alan otomatik olarak güncellenir.</small>
+              </div>
           </div>
-        </div>
       </div>
 
       <div class="row">
