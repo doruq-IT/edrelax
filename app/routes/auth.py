@@ -4,6 +4,8 @@ from flask_login import login_user, logout_user, login_required, current_user
 from itsdangerous import URLSafeTimedSerializer
 from app.extensions import login_manager
 from app.forms.auth_forms import LoginForm
+from app.forms.auth_forms import ForgotPasswordForm
+from app.forms.auth_forms import ResetPasswordForm
 from app.extensions import db
 from app.models import User
 from app.extensions import limiter
@@ -158,11 +160,51 @@ def logout():
 
 @auth_bp.route('/forgot-password', methods=["GET", "POST"])
 def forgot_password():
-    if request.method == "POST":
-        email = request.form.get("email")
-        flash("If this email is registered, a reset link has been sent.", "info")
+    form = ForgotPasswordForm()
+    if form.validate_on_submit():
+        user = User.query.filter_by(email=form.email.data).first()
+        if user:
+            # E-posta doğrulama ile aynı mantık, FARKLI BİR "SALT" DEĞERİ KULLANILIYOR
+            s = URLSafeTimedSerializer(current_app.config["SECRET_KEY"])
+            token = s.dumps(user.email, salt="password-reset-salt")
+
+            # Yeni reset_password route'una yönlendiren link
+            reset_url = url_for("auth.reset_password", token=token, _external=True)
+            
+            # E-postayı hazırla ve gönder
+            msg = Message("Şifre Sıfırlama Talebi", recipients=[user.email])
+            msg.body = f"Merhaba {user.first_name},\n\nŞifrenizi sıfırlamak için aşağıdaki linke tıklayın (Link 1 saat geçerlidir):\n{reset_url}\n\nEğer bu talebi siz yapmadıysanız, bu e-postayı görmezden gelin.\n\nTeşekkürler!"
+            mail.send(msg)
+
+        # Güvenlik notu: Kullanıcının kayıtlı olup olmadığını belli etmemek için her zaman aynı mesajı gösteririz.
+        flash("Bu e-posta adresi sistemimizde kayıtlıysa, şifre sıfırlama bağlantısı gönderilmiştir.", "info")
         return redirect(url_for("auth.login"))
-    return render_template("forgot_password.html")
+
+    return render_template("forgot_password.html", form=form)
+
+@auth_bp.route('/reset-password/<token>', methods=["GET", "POST"])
+def reset_password(token):
+    from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
+    s = URLSafeTimedSerializer(current_app.config["SECRET_KEY"])
+
+    try:
+        # Token'ı "password-reset-salt" ile çözmeyi deniyoruz
+        email = s.loads(token, salt="password-reset-salt", max_age=3600)  # 1 saat geçerli
+    except (SignatureExpired, BadSignature):
+        flash("Şifre sıfırlama bağlantısı geçersiz veya süresi dolmuş.", "danger")
+        return redirect(url_for("auth.login"))
+
+    form = ResetPasswordForm()
+    if form.validate_on_submit():
+        user = User.query.filter_by(email=email).first()
+        if user:
+            hashed_pw = generate_password_hash(form.password.data)
+            user.password = hashed_pw
+            db.session.commit()
+            flash("Şifreniz başarıyla güncellendi. Yeni şifrenizle giriş yapabilirsiniz.", "success")
+            return redirect(url_for("auth.login"))
+
+    return render_template("reset_password.html", form=form, token=token)
 
 @auth_bp.route("/profile", methods=["GET", "POST"])
 @login_required

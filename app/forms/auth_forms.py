@@ -21,3 +21,14 @@ class LoginForm(FlaskForm):
     password = PasswordField("Password", validators=[DataRequired()])
     remember = BooleanField("Remember me")
 
+# app/forms/auth_forms.py dosyasının sonuna ekleyin
+
+class ForgotPasswordForm(FlaskForm):
+    email = StringField("Email", validators=[DataRequired(), Email()])
+
+class ResetPasswordForm(FlaskForm):
+    password = PasswordField("New Password", validators=[DataRequired(), Length(min=6)])
+    confirm_password = PasswordField("Confirm New Password", validators=[
+        DataRequired(),
+        EqualTo("password", message="Passwords must match.")
+    ])
