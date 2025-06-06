@@ -1,10 +1,6 @@
-import eventlet
-eventlet.monkey_patch()  # 👈 Bu en başta, her şeyden önce gelecek
-
 from app import create_app
 from app.extensions import socketio
 from app import socket_events  # Bu satırı run.py dosyanda tut
-
 
 app = create_app()
 
