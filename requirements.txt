@@ -14,9 +14,7 @@ requests==2.31.0
 mysqlclient==2.2.7
 Flask-Mail==0.9.1
 Flask-SocketIO==5.3.6
-eventlet==0.33.3
 python-socketio==5.7.2
 python-engineio==4.3.4
-greenlet==1.1.2
 google-cloud-storage==3.1.0
 gevent==23.9.1
