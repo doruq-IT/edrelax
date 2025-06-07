@@ -125,8 +125,9 @@ def beaches():
             flash(f"An error occurred while adding the beach: {e}", "danger")
 
         return redirect(url_for("admin.beaches"))
-
-    return render_template("admin_beaches.html", image_files=image_files)
+    
+    all_beaches = Beach.query.order_by(Beach.id.desc()).all()
+    return render_template("admin_beaches.html", beaches=all_beaches, image_files=image_files)
 
 
 @admin_bp.route('/beaches/delete/<int:beach_id>', methods=['POST'])
