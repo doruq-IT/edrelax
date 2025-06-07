@@ -132,7 +132,7 @@
       </thead>
       <tbody>
         {% for beach in beaches %}
-        <tr data-beach='{{ beach | tojson | safe }}'>
+        <tr data-beach='{{ beach.to_dict() | tojson | safe }}'>
           <td>{{ beach.name }}</td>
           <td>{{ beach.location }}</td>
           <td>{{ beach.slug }}</td>
