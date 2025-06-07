@@ -48,10 +48,6 @@ def signup():
         confirm_url = url_for("auth.confirm_email", token=token, _external=True)
         msg = Message("Hesabınızı Doğrulayın", recipients=[new_user.email])
         msg.body = f"Merhaba {new_user.first_name},\n\nHesabınızı aktifleştirmek için bu linke tıklayın:\n{confirm_url}\n\nTeşekkürler!"
-        print("✅ DEBUG: current_app.config MAIL_USERNAME:", current_app.config.get("MAIL_USERNAME"))
-        print("✅ DEBUG: current_app.config MAIL_PASSWORD:", current_app.config.get("MAIL_PASSWORD"))
-        print("✅ DEBUG: os.getenv MAIL_USERNAME:", os.getenv("MAIL_USERNAME"))
-        print("✅ DEBUG: os.getenv MAIL_PASSWORD:", os.getenv("MAIL_PASSWORD"))
         mail.send(msg)
 
         flash("Kayıt başarılı! Lütfen e-postanızı kontrol edin ve hesabınızı aktifleştirin.", "info")
