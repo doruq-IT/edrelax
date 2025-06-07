@@ -142,7 +142,7 @@
             </button>
             <form method="POST" action="{{ url_for('admin.delete_beach', beach_id=beach.id) }}" style="display: inline-block"
               onsubmit="return confirm('Bu plajı silmek istediğinizden emin misiniz?');">
-              {{ csrf_token }}
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
               <button type="submit" class="btn btn-danger btn-sm">
                 <i class="fas fa-trash-alt"></i>
               </button>
