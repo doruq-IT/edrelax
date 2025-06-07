@@ -217,3 +217,18 @@ def cancel_reservation(res_id):
     flash("Rezervasyon başarıyla iptal edildi.", "info")
     return redirect(url_for('reservations.my_reservations'))
 
+@reservations_bp.route("/get-user-info/<int:reservation_id>")
+@login_required
+def get_user_info(reservation_id):
+    reservation = Reservation.query.get_or_404(reservation_id)
+    user = reservation.user
+
+    if not user:
+        return jsonify({"success": False, "message": "Kullanıcı bilgisi bulunamadı."}), 404
+
+    return jsonify({
+        "success": True,
+        "full_name": f"{user.first_name} {user.last_name}",
+        "email": user.email
+    })
+
