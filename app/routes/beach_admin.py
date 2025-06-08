@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, date
 from app.extensions import db
 from functools import wraps
 from flask_login import login_required, current_user
+from ..extensions import mail, socketio
 from flask_mail import Message
 from ..extensions import mail
 from app.extensions import csrf
@@ -355,9 +356,30 @@ def update_reservation_status():
                 return jsonify({"success": False, "message": "Bu işlem için yetkiniz yok."}), 403
 
             if new_status == 'free':
+                # Yayını yapabilmek için bilgileri silmeden önce saklayalım
+                deleted_info = {
+                    "beach_id": reservation.beach_id,
+                    "bed_number": reservation.bed_number,
+                    "time": reservation.start_time.strftime('%H:%M'),
+                    "date": reservation.date.strftime('%Y-%m-%d')
+                }
+
                 db.session.delete(reservation)
                 db.session.commit()
+                
+                # Değişikliği herkese yayınla
+                socketio.emit('status_updated', {
+                    'beach_id': deleted_info['beach_id'],
+                    'bed_number': deleted_info['bed_number'],
+                    'time_slot': deleted_info['time'],
+                    'date': deleted_info['date'],
+                    'new_status': 'free',
+                    'reservation_id': None,
+                    'user_info': None
+                }, broadcast=True)
+
                 flash_message = f"Rezervasyon (ID: {reservation_id}) silindi ve slot boş olarak işaretlendi."
+                
                 return jsonify({
                     "success": True,
                     "message": flash_message,
@@ -373,6 +395,16 @@ def update_reservation_status():
                         Thread(target=delayed_confirmation_check, args=(app_ctx, reservation.id)).start()
 
                 db.session.commit()
+
+                socketio.emit('status_updated', {
+                    'beach_id': reservation.beach_id,
+                    'bed_number': reservation.bed_number,
+                    'time_slot': reservation.start_time.strftime('%H:%M'),
+                    'date': reservation.date.strftime('%Y-%m-%d'),
+                    'new_status': reservation.status,
+                    'reservation_id': reservation.id,
+                    'user_info': f"{reservation.user.first_name} {reservation.user.last_name}" if reservation.user else "Bilinmiyor"
+                }, broadcast=True)
 
                 flash_message = f"Rezervasyon (ID: {reservation_id}) durumu '{new_status}' olarak güncellendi."
                 return jsonify({
@@ -417,7 +449,17 @@ def update_reservation_status():
             )
             db.session.add(new_reservation)
             db.session.commit()
-
+            # Değişikliği herkese yayınla
+            socketio.emit('status_updated', {
+                'beach_id': new_reservation.beach_id,
+                'bed_number': new_reservation.bed_number,
+                'time_slot': new_reservation.start_time.strftime('%H:%M'),
+                'date': new_reservation.date.strftime('%Y-%m-%d'),
+                'new_status': new_reservation.status,
+                'reservation_id': new_reservation.id,
+                'user_info': f"{new_reservation.user.first_name} {new_reservation.user.last_name}" if new_reservation.user else "Bilinmiyor"
+            }, broadcast=True)
+            
             return jsonify({
                 "success": True,
                 "message": f"Şezlong #{bed_number} için '{new_status}' durumunda yeni rezervasyon oluşturuldu.",

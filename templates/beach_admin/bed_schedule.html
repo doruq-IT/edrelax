@@ -154,8 +154,66 @@ beach.name }}{% endblock %} {% block content %}
   </div>
 </div>
 
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 <script>
   document.addEventListener('DOMContentLoaded', function () {
+    // ===============================================================
+    // ADIM 2: SOCKET.IO ENTEGRASYONU - BAŞLANGIÇ
+    // ===============================================================
+    try {
+        const socket = io();
+
+        socket.on('connect', function() {
+            console.log('Socket.IO sunucusuna başarıyla bağlanıldı!');
+        });
+
+        socket.on('status_updated', function(data) {
+            console.log('Anlık durum güncellemesi alındı:', data);
+
+            // Gelen güncellemenin bu sayfadaki plaj ve tarih için geçerli olup olmadığını kontrol et
+            const currentPageBeachId = document.getElementById('bedScheduleContainer').dataset.beachId;
+            const currentPageDate = document.getElementById('scheduleDate').value;
+
+            if (data.beach_id.toString() === currentPageBeachId && data.date === currentPageDate) {
+                // Güncellenecek doğru hücreyi bul
+                const cellToUpdate = document.querySelector(
+                    `.bed-slot[data-bed-number="${data.bed_number}"][data-time-slot="${data.time_slot}"]`
+                );
+
+                if (cellToUpdate) {
+                    console.log('İlgili hücre bulundu, arayüz güncelleniyor...');
+                    
+                    // Arayüzü yeni gelen veriyle güncelle
+                    updateCellUI(cellToUpdate, data);
+
+                    // Ekranda bir bildirim göster (isteğe bağlı ama kullanıcı dostu)
+                    Toast.fire({
+                        icon: 'info',
+                        title: `Şezlong #${data.bed_number} (${data.time_slot}) durumu güncellendi.`
+                    });
+                }
+            }
+        });
+
+    } catch (e) {
+        console.error("Socket.IO başlatılırken bir hata oluştu. Kütüphanenin doğru yüklendiğinden emin olun.", e);
+    }
+    
+    // Küçük, anlık bildirimler için bir yardımcı
+    const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: true,
+        didOpen: (toast) => {
+            toast.addEventListener('mouseenter', Swal.stopTimer)
+            toast.addEventListener('mouseleave', Swal.resumeTimer)
+        }
+    });
+    // ===============================================================
+    // ADIM 2: SOCKET.IO ENTEGRASYONU - BİTİŞ
+    // ===============================================================
     const bedSlots = document.querySelectorAll('.bed-slot');
     const beachId = document.getElementById('bedScheduleContainer').dataset.beachId;
     const scheduleDateInput = document.getElementById('scheduleDate');
@@ -419,61 +477,64 @@ beach.name }}{% endblock %} {% block content %}
               if (!isBatchOperation) {
                 Swal.fire('Başarılı!', data.message, 'success');
               }
-
-              cellElement.className = `bed-slot status-${data.new_status.toLowerCase().replace(' ', '-')}`;
-              if (currentlySelectedSlots.includes(cellElement) && isMultiSelectModeActive) {
-                cellElement.classList.add('slot-selected');
-              }
-
-              cellElement.dataset.currentStatus = data.new_status;
-
-              let statusText = data.new_status.charAt(0).toUpperCase() + data.new_status.slice(1);
-              if (data.new_status === 'reserved') statusText = 'Rezerve';
-              else if (data.new_status === 'used') statusText = 'Kullanımda';
-              else if (data.new_status === 'cancelled') statusText = 'İptal';
-              else if (data.new_status === 'free') statusText = 'Boş';
-
-              cellElement.textContent = statusText;
-
-              if (data.reservation_id && !reservationId) {
-                cellElement.dataset.reservationId = data.reservation_id;
-              }
-
-              if (['cancelled', 'free'].includes(data.new_status)) {
-                if (data.reservation_id == null) {
-                  delete cellElement.dataset.reservationId;
-                }
-              }
-
-              const bedDisplayForTitle = cellElement.dataset.bedDisplayId || `#${cellElement.dataset.bedNumber}`;
-              let newTitle = `Şezlong: ${bedDisplayForTitle} | Durum: ${statusText} (${timeSlot})`;
-
-              if (data.reservation_id && !['free', 'cancelled'].includes(data.new_status)) {
-                const userInfoForTitle = data.user_info || (
-                  cellElement.title.includes('Kullanıcı:')
-                    ? cellElement.title.split('Kullanıcı: ')[1].split(' |')[0]
-                    : 'Bilinmiyor'
-                );
-                newTitle = `Şezlong: ${bedDisplayForTitle} | Kullanıcı: ${userInfoForTitle} | Durum: ${statusText} | ID: ${data.reservation_id}`;
-              }
-
-              cellElement.title = newTitle;
+              updateCellUI(cellElement, data);
               resolve({ success: true, message: data.message, cellElement });
-            } else {
-              if (!isBatchOperation) {
-                Swal.fire('Hata!', data.message || 'Durum güncellenemedi.', 'error');
-              }
-              reject({ success: false, message: data.message || 'Durum güncellenemedi.', cellElement });
-            }
-          })
-          .catch(error => {
-            console.error('Fetch Hatası:', error);
+            
+          } else {
+            // Sunucudan {success: false} yanıtı geldiğinde çalışacak bölüm (DEĞİŞMEDİ)
             if (!isBatchOperation) {
-              Swal.fire('Sunucu Hatası!', 'Bir hata oluştu, lütfen tekrar deneyin.', 'error');
+              Swal.fire('Hata!', data.message || 'Durum güncellenemedi.', 'error');
             }
-            reject({ success: false, error, cellElement });
-          });
+            reject({ success: false, message: data.message || 'Durum güncellenemedi.', cellElement });
+          }
+        })
+        .catch(error => {
+          // Ağ hatası veya sunucu tamamen çöktüğünde çalışacak bölüm (DEĞİŞMEDİ)
+          console.error('Fetch Hatası:', error);
+          if (!isBatchOperation) {
+            Swal.fire('Sunucu Hatası!', 'Bir hata oluştu, lütfen tekrar deneyin.', 'error');
+          }
+          reject({ success: false, error, cellElement });
+        });
       });
+    }
+    function updateCellUI(cellElement, data) {
+        // Gelen veriye göre hücrenin arayüzünü güncelleyen merkezi fonksiyon
+        const newStatus = data.new_status;
+        const reservationId = data.reservation_id;
+        const userInfo = data.user_info;
+
+        // 1. Sınıfı güncelle (renk değişimi için)
+        cellElement.className = `bed-slot status-${newStatus.toLowerCase().replace(' ', '-')}`;
+
+        // 2. data-* attribute'lerini güncelle
+        cellElement.dataset.currentStatus = newStatus;
+        if (reservationId) {
+            cellElement.dataset.reservationId = reservationId;
+        } else {
+            delete cellElement.dataset.reservationId;
+        }
+        if (userInfo) {
+            cellElement.dataset.userInfo = userInfo;
+        } else {
+            delete cellElement.dataset.userInfo;
+        }
+
+        // 3. İçeriği güncelle (görünen yazı)
+        let statusText = newStatus.charAt(0).toUpperCase() + newStatus.slice(1);
+        if (newStatus === 'reserved') statusText = 'Rezerve';
+        else if (newStatus === 'used') statusText = 'Kullanımda';
+        else if (newStatus === 'cancelled') statusText = 'İptal';
+        else if (newStatus === 'free') statusText = 'Boş';
+        cellElement.textContent = statusText;
+
+        // 4. Title'ı (fareyle üzerine gelince çıkan yazı) güncelle
+        const bedDisplayForTitle = cellElement.dataset.bedDisplayId || `#${cellElement.dataset.bedNumber}`;
+        let newTitle = `Durum: ${statusText} (${cellElement.dataset.timeSlot})`;
+        if (reservationId && !['free', 'cancelled'].includes(newStatus)) {
+            newTitle = `Kullanıcı: ${userInfo || 'Bilinmiyor'} | Durum: ${statusText} | ID: ${reservationId}`;
+        }
+        cellElement.title = newTitle;
     }
   });
 </script>
