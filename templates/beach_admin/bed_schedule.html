@@ -263,106 +263,81 @@ beach.name }}{% endblock %} {% block content %}
 
     applyToSelectedBtn.addEventListener('click', function () {
       if (currentlySelectedSlots.length === 0) {
-        Swal.fire('Bilgi', 'Lütfen önce en az bir saat dilimi seçin.', 'info');
-        return;
+          Swal.fire('Bilgi', 'Lütfen önce en az bir saat dilimi seçin.', 'info');
+          return;
       }
 
-      // Adım 1'in özü burada başlıyor:
-      // Seçilen ilk slotun bilgilerini alarak başlıyoruz.
-      // Çoklu seçim sadece tek bir şezlong için geçerli olduğundan,
-      // bir tanesinin bilgisi hepsi için yeterli olacaktır.
       const firstSlot = currentlySelectedSlots[0];
       const bedNumber = firstSlot.dataset.bedNumber;
       const reservationId = firstSlot.dataset.reservationId;
       const userInfo = firstSlot.dataset.userInfo;
       const userEmail = firstSlot.dataset.userEmail;
-
-      // Eğer bir e-posta adresi varsa mail butonunu göster.
       const showMailButton = (reservationId && userEmail && userEmail !== 'None');
-
-      // Pop-up içeriğini dinamik olarak oluştur.
+      
       let alertHtml = `<p>${currentlySelectedSlots.length} adet seçili saat dilimine uygulanacak yeni durumu seçin:</p>`;
       if (userInfo && userInfo !== 'None') {
-        alertHtml += `<p>Müşteri: <strong>${userInfo}</strong></p>`;
+          alertHtml += `<p>Müşteri: <strong>${userInfo}</strong></p>`;
       }
-       if (userEmail && userEmail !== 'None') {
-        alertHtml += `<p>E-posta: <strong>${userEmail}</strong></p>`;
+      if (userEmail && userEmail !== 'None') {
+          alertHtml += `<p>E-posta: <strong>${userEmail}</strong></p>`;
       }
 
       Swal.fire({
-        title: `Şezlong #${bedNumber}`,
-        html: alertHtml, // Dinamik HTML içeriğini kullan
-        input: 'select',
-        inputOptions: statusOptions,
-        inputPlaceholder: 'Durum Seçin',
-        showCancelButton: true,
-        confirmButtonText: 'Tüm Seçilenlere Uygula',
-        cancelButtonText: 'Vazgeç',
-        showDenyButton: showMailButton, // Mail butonunu koşullu olarak göster
-        denyButtonText: 'Müşteriye Mail Gönder',
-        inputValidator: (value) => {
-          if (!value) return 'Bir durum seçmelisiniz!';
-        }
+          title: `Şezlong #${bedNumber}`,
+          html: alertHtml,
+          input: 'select',
+          inputOptions: statusOptions,
+          inputPlaceholder: 'Durum Seçin',
+          showCancelButton: true,
+          confirmButtonText: 'Tüm Seçilenlere Uygula',
+          cancelButtonText: 'Vazgeç',
+          showDenyButton: showMailButton,
+          denyButtonText: 'Müşteriye Mail Gönder',
+          inputValidator: (value) => {
+              if (!value) return 'Bir durum seçmelisiniz!';
+          }
       }).then((result) => {
-        if (result.isConfirmed && result.value) {
-          // Bu kısım zaten doğru çalıştığı için dokunmuyoruz.
-          // Mevcut kodunuzdaki gibi kalacak.
-          const newStatusToApply = result.value;
-          const dateForUpdate = scheduleDateInput.value;
+          if (result.isConfirmed && result.value) {
+              const newStatusToApply = result.value;
+              const dateForUpdate = scheduleDateInput.value;
+              
+              // YENİ YAKLAŞIM: Sunucuya gönderilecek bilgileri tek bir dizide topla
+              const slotsToUpdate = currentlySelectedSlots.map(slotEl => {
+                  return {
+                      reservation_id: slotEl.dataset.reservationId || null,
+                      bed_number: slotEl.dataset.bedNumber,
+                      time_slot: slotEl.dataset.timeSlot
+                  };
+              });
 
-          const updatePromises = currentlySelectedSlots.map((slotEl, index) => {
-            const reservationId = slotEl.dataset.reservationId;
-            const bedNum = slotEl.dataset.bedNumber;
-            const timeSlot = slotEl.dataset.timeSlot;
+              // Sunucuya TEK BİR istek gönder. (Bu fonksiyonu sonraki adımda güncelleyeceğiz)
+              updateStatusOnServer(
+                  slotsToUpdate, 
+                  newStatusToApply,
+                  dateForUpdate,
+                  beachId
+              ).finally(() => {
+                  // İşlem bitince seçimi temizle
+                  clearCurrentMultiSelection();
+                  updateApplyToSelectedButtonState();
+              });
 
-            return updateStatusOnServer(
-              slotEl,
-              reservationId,
-              newStatusToApply,
-              bedNum,
-              timeSlot,
-              dateForUpdate,
-              beachId,
-              true,
-              index === 0
-            );
-          });
-
-          Promise.all(updatePromises)
-            .then(results => {
-              const allSuccessful = results.every(r => r.success);
-              if (allSuccessful) {
-                Swal.fire('Başarılı!', `${currentlySelectedSlots.length} saat diliminin durumu güncellendi.`, 'success');
-              } else {
-                Swal.fire('Kısmi Başarı!', 'Bazı saat dilimleri güncellenirken sorun oluştu. Lütfen kontrol edin.', 'warning');
-              }
-            })
-            .catch(error => {
-              console.error("Toplu güncelleme sırasında hata:", error);
-              Swal.fire('Hata!', 'Durumlar güncellenirken bir hata oluştu.', 'error');
-            })
-            .finally(() => {
-              clearCurrentMultiSelection();
-              updateApplyToSelectedButtonState();
-            });
-        } else if (result.isDenied) {
-          // Mail butonuna tıklandığında çalışacak kod
-          const currentBeachName = document.getElementById('bedScheduleContainer').dataset.beachName || "Plajımız";
-          const selectedDate = scheduleDateInput.value;
-          // Seçili tüm saatleri bir string olarak birleştirelim
-          const timeSlotsString = currentlySelectedSlots.map(s => s.dataset.timeSlot).join(', ');
-
-          const mailSubject = encodeURIComponent(`Şezlong Rezervasyonunuz Hk. - ${currentBeachName}`);
-          const mailBody = encodeURIComponent(
-            `Merhaba ${userInfo || ''},\n\n` +
-            `${currentBeachName} olarak şezlong rezervasyonunuzla ilgili size ulaşmak istedik.\n\n` +
-            `Rezervasyon Detayları:\nPlaj: ${currentBeachName}\nŞezlong: #${bedNumber}\nTarih: ${selectedDate}\nSaatler: ${timeSlotsString}\n\n` +
-            `Konuyla ilgili size yardımcı olabiliriz.\n\nSaygılarımızla,\n${currentBeachName} Ekibi`
-          );
-          window.location.href = `mailto:${userEmail}?subject=${mailSubject}&body=${mailBody}`;
-        }
+          } else if (result.isDenied) {
+              // Mail gönderme kodunda bir değişiklik yok
+              const currentBeachName = document.getElementById('bedScheduleContainer').dataset.beachName || "Plajımız";
+              const selectedDate = scheduleDateInput.value;
+              const timeSlotsString = currentlySelectedSlots.map(s => s.dataset.timeSlot).join(', ');
+              const mailSubject = encodeURIComponent(`Şezlong Rezervasyonunuz Hk. - ${currentBeachName}`);
+              const mailBody = encodeURIComponent(
+                  `Merhaba ${userInfo || ''},\n\n` +
+                  `${currentBeachName} olarak şezlong rezervasyonunuzla ilgili size ulaşmak istedik.\n\n` +
+                  `Rezervasyon Detayları:\nPlaj: ${currentBeachName}\nŞezlong: #${bedNumber}\nTarih: ${selectedDate}\nSaatler: ${timeSlotsString}\n\n` +
+                  `Konuyla ilgili size yardımcı olabiliriz.\n\nSaygılarımızla,\n${currentBeachName} Ekibi`
+              );
+              window.location.href = `mailto:${userEmail}?subject=${mailSubject}&body=${mailBody}`;
+          }
       });
-    });
+  });
 
     bedSlots.forEach(slot => {
       slot.addEventListener('click', function () {
@@ -420,8 +395,18 @@ beach.name }}{% endblock %} {% block content %}
             }
           }).then((result) => {
             if (result.isConfirmed && result.value) {
-              const newStatus = result.value;
-              updateStatusOnServer(this, reservationId, newStatus, bedNumber, timeSlot, selectedDate, beachId);
+                const newStatus = result.value;
+
+                // DOĞRU YÖNTEM: Tek bir nesneyi bir dizi içine koyarak
+                // yeni fonksiyonumuza uygun hale getiriyoruz.
+                const slotsToUpdate = [{
+                    reservation_id: reservationId || null,
+                    bed_number: bedNumber,
+                    time_slot: timeSlot
+                }];
+
+                // Fonksiyonu yeni ve doğru parametrelerle çağırıyoruz.
+                updateStatusOnServer(slotsToUpdate, newStatus, selectedDate, beachId);
             } else if (result.isDenied) {
               if (userEmail && userEmail !== 'None') {
                 const currentBeachName = document.getElementById('bedScheduleContainer').dataset.beachName || "Plajımız";
@@ -453,63 +438,62 @@ beach.name }}{% endblock %} {% block content %}
         ? 'inline-block' : 'none';
     }
 
-    function updateStatusOnServer(cellElement, reservationId, newStatus, bedNumber, timeSlot, date, beachId, isBatchOperation = false, mailTrigger = false) {
-      return new Promise((resolve, reject) => {
-        const payload = { new_status: newStatus };
+    function updateStatusOnServer(slotsData, newStatus, date, beachId) {
+      // Sunucuya gönderilecek ana payload'ı oluştur.
+      const payload = {
+          new_status: newStatus,
+          date: date,
+          beach_id: parseInt(beachId),
+          slots: slotsData // ÖNEMLİ: Tüm slot bilgileri burada dizi olarak gidiyor
+      };
 
-        if (isBatchOperation && mailTrigger === true) {
-          payload.mail_trigger = true;
-        }
-
-        if (reservationId) {
-          payload.reservation_id = reservationId;
-        } else {
-          if (newStatus !== 'free' && newStatus !== 'cancelled') {
-            payload.bed_number = parseInt(bedNumber);
-            payload.beach_id = parseInt(beachId);
-            payload.date = date;
-            payload.time_slot = timeSlot;
-          } else {
-            if (!isBatchOperation) {
-              Swal.fire('Bilgi', 'Slot zaten boş veya iptal edilmiş durumda.', 'info');
-            }
-            resolve({ success: true, message: 'Slot zaten uygun durumda.', cellElement });
-            return;
-          }
-        }
-
-        fetch('/beach-admin/update-reservation-status', {
+      return fetch('/beach-admin/update-reservation-status', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
-        })
-          .then(response => response.json())
-          .then(data => {
-            if (data.success) {
-              if (!isBatchOperation) {
-                Swal.fire('Başarılı!', data.message, 'success');
+      })
+      .then(response => {
+          if (!response.ok) {
+              // Sunucudan 4xx veya 5xx gibi bir hata kodu gelirse
+              // JSON'ı parse etmeye çalışmadan önce hatayı yakala.
+              return response.json().then(err => { throw err; });
+          }
+          return response.json();
+      })
+      .then(data => {
+          if (data.success) {
+              // Başarı mesajını göster. Arayüzün güncellenmesi zaten Socket.IO
+              // tarafından gelen emit'lerle yapılacak. Anında geri bildirim için
+              // yine de Swal'ı burada kullanmak iyidir.
+              Swal.fire('Başarılı!', data.message, 'success');
+              
+              // İsteğe bağlı: Socket.IO'da bir gecikme olursa diye UI'ı 
+              // buradan da güncelleyebilirsiniz. Backend artık güncellenen slotların
+              // listesini döndürdüğü için bu mümkündür.
+              if(data.updated_slots) {
+                  data.updated_slots.forEach(updatedSlotInfo => {
+                      const selector = `.bed-slot[data-bed-number="${updatedSlotInfo.bed_number}"][data-time-slot="${updatedSlotInfo.time_slot}"]`;
+                      const cellToUpdate = document.querySelector(selector);
+                      if(cellToUpdate) {
+                          // `updateCellUI` fonksiyonu gelen veriye göre hücreyi günceller.
+                          // Backend'den gelen `updatedSlotInfo` `updateCellUI`'nin beklediği
+                          // formatla uyumlu olmalıdır (new_status, user_info vb. içermeli).
+                          updateCellUI(cellToUpdate, updatedSlotInfo);
+                      }
+                  });
               }
-              updateCellUI(cellElement, data);
-              resolve({ success: true, message: data.message, cellElement });
-            
           } else {
-            // Sunucudan {success: false} yanıtı geldiğinde çalışacak bölüm (DEĞİŞMEDİ)
-            if (!isBatchOperation) {
-              Swal.fire('Hata!', data.message || 'Durum güncellenemedi.', 'error');
-            }
-            reject({ success: false, message: data.message || 'Durum güncellenemedi.', cellElement });
+              // Sunucudan {success: false} mesajı gelirse
+              Swal.fire('Hata!', data.message || 'Durumlar güncellenemedi.', 'error');
           }
-        })
-        .catch(error => {
-          // Ağ hatası veya sunucu tamamen çöktüğünde çalışacak bölüm (DEĞİŞMEDİ)
+      })
+      .catch(error => {
+          // Ağ hatası veya sunucudan gelen JSON formatında olmayan hatalar
           console.error('Fetch Hatası:', error);
-          if (!isBatchOperation) {
-            Swal.fire('Sunucu Hatası!', 'Bir hata oluştu, lütfen tekrar deneyin.', 'error');
-          }
-          reject({ success: false, error, cellElement });
-        });
+          const errorMessage = error.message || 'Sunucuyla iletişim kurulamadı. Lütfen tekrar deneyin.';
+          Swal.fire('Sunucu Hatası!', errorMessage, 'error');
       });
-    }
+  }
     function updateCellUI(cellElement, data) {
         // Gelen veriye göre hücrenin arayüzünü güncelleyen merkezi fonksiyon
         const newStatus = data.new_status;
