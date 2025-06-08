@@ -199,24 +199,15 @@ beach.name }}{% endblock %} {% block content %}
 
       const firstSlotForDisplay = currentlySelectedSlots[0];
       const bedDisplayIdForAlert = firstSlotForDisplay.dataset.bedDisplayId || `#${firstSlotForDisplay.dataset.bedNumber}`;
-      const userInfo = firstSlotForDisplay.dataset.userInfo;
-      const userEmail = firstSlotForDisplay.dataset.userEmail;
-      const showMailButton = (userEmail && userEmail !== 'None');
 
       Swal.fire({
         title: `Şezlong ${bedDisplayIdForAlert}`,
-        html: `
-          ${userInfo && userInfo !== 'None' ? `<p>Müşteri: <strong>${userInfo}</strong></p>` : ''}
-          ${userEmail && userEmail !== 'None' ? `<p>E-posta: <strong>${userEmail}</strong></p>` : ''}
-          <p>${currentlySelectedSlots.length} adet seçili saat dilimine uygulanacak yeni durumu seçin:</p>
-        `,
+        text: `${currentlySelectedSlots.length} adet seçili saat dilimine uygulanacak yeni durumu seçin:`,
         input: 'select',
         inputOptions: statusOptions,
         inputPlaceholder: 'Durum Seçin',
         showCancelButton: true,
         confirmButtonText: 'Tüm Seçilenlere Uygula',
-        showDenyButton: showMailButton,
-        denyButtonText: 'Müşteriye Mail Gönder',
         cancelButtonText: 'Vazgeç',
         inputValidator: (value) => {
           if (!value) return 'Bir durum seçmelisiniz!';
@@ -261,21 +252,84 @@ beach.name }}{% endblock %} {% block content %}
               clearCurrentMultiSelection();
               updateApplyToSelectedButtonState();
             });
+        }
+      });
+    });
 
-        } else if (result.isDenied) {
-          if (userEmail && userEmail !== 'None') {
-            const currentBeachName = document.getElementById('bedScheduleContainer').dataset.beachName || "Plajımız";
-            const mailSubject = encodeURIComponent(`Şezlong Rezervasyonunuz Hk. - ${currentBeachName}`);
-            const mailBody = encodeURIComponent(
-              `Merhaba ${userInfo && userInfo !== 'None' ? userInfo : ''},\\n\\n` +
-              `${currentBeachName} olarak şezlong rezervasyonunuzla ilgili size ulaşmak istedik.\\n\\n` +
-              `Rezervasyon Detayları:\\nPlaj: ${currentBeachName}\\nŞezlong: ${bedDisplayIdForAlert}\\nTarih: ${scheduleDateInput.value}\\n\\n` +
-              `Konuyla ilgili size yardımcı olabiliriz.\\n\\nSaygılarımızla,\\n${currentBeachName} Ekibi`
-            );
-            window.location.href = `mailto:${userEmail}?subject=${mailSubject}&body=${mailBody}`;
-          } else {
-            Swal.fire('Bilgi', 'Bu rezervasyon için kayıtlı bir müşteri e-postası bulunamadı.', 'info');
+    bedSlots.forEach(slot => {
+      slot.addEventListener('click', function () {
+        const clickedBedNum = this.dataset.bedNumber;
+
+        if (isMultiSelectModeActive) {
+          if (currentSelectedBedNumberForMulti === null) {
+            currentSelectedBedNumberForMulti = clickedBedNum;
+          } else if (currentSelectedBedNumberForMulti !== clickedBedNum) {
+            clearCurrentMultiSelection();
+            currentSelectedBedNumberForMulti = clickedBedNum;
           }
+
+          const selectionIndex = currentlySelectedSlots.indexOf(this);
+          if (selectionIndex > -1) {
+            currentlySelectedSlots.splice(selectionIndex, 1);
+            this.classList.remove('slot-selected');
+          } else {
+            currentlySelectedSlots.push(this);
+            this.classList.add('slot-selected');
+          }
+
+          updateApplyToSelectedButtonState();
+        } else {
+          const bedNumber = this.dataset.bedNumber;
+          const bedDisplayId = this.dataset.bedDisplayId || `#${bedNumber}`;
+          const timeSlot = this.dataset.timeSlot;
+          const currentStatus = this.dataset.currentStatus;
+          const reservationId = this.dataset.reservationId;
+          const selectedDate = scheduleDateInput.value;
+          const userEmail = this.dataset.userEmail;
+          const userInfo = this.dataset.userInfo;
+          const showMailButton = (reservationId && userEmail && userEmail !== 'None');
+
+          Swal.fire({
+            title: `Şezlong ${bedDisplayId} (${timeSlot})`,
+            html: `
+              <p>Mevcut Durum: <strong>${currentStatus.toUpperCase()}</strong>.</p>
+              ${reservationId ? `
+                ${userInfo && userInfo !== 'None' ? `<p>Müşteri: <strong>${userInfo}</strong></p>` : ''}
+                ${userEmail && userEmail !== 'None' ? `<p>E-posta: <strong>${userEmail}</strong></p>` : ''}
+              ` : ''}
+              <p>Yeni durumu seçin:</p>
+            `,
+            input: 'select',
+            inputOptions: statusOptions,
+            inputPlaceholder: 'Durum Seçin',
+            showCancelButton: true,
+            confirmButtonText: 'Durumu Güncelle',
+            showDenyButton: showMailButton,
+            denyButtonText: 'Müşteriye Mail Gönder',
+            cancelButtonText: 'Vazgeç',
+            inputValidator: (value) => {
+              if (!value) return 'Bir durum seçmelisiniz!';
+            }
+          }).then((result) => {
+            if (result.isConfirmed && result.value) {
+              const newStatus = result.value;
+              updateStatusOnServer(this, reservationId, newStatus, bedNumber, timeSlot, selectedDate, beachId);
+            } else if (result.isDenied) {
+              if (userEmail && userEmail !== 'None') {
+                const currentBeachName = document.getElementById('bedScheduleContainer').dataset.beachName || "Plajımız";
+                const mailSubject = encodeURIComponent(`Şezlong Rezervasyonunuz Hk. - ${currentBeachName}`);
+                const mailBody = encodeURIComponent(
+                  `Merhaba ${userInfo && userInfo !== 'None' ? userInfo : ''},\n\n` +
+                  `${currentBeachName} olarak şezlong rezervasyonunuzla ilgili size ulaşmak istedik.\n\n` +
+                  `Rezervasyon Detayları:\nPlaj: ${currentBeachName}\nŞezlong: ${bedDisplayId}\nTarih: ${selectedDate}\nSaat: ${timeSlot}\n\n` +
+                  `Konuyla ilgili size yardımcı olabiliriz.\n\nSaygılarımızla,\n${currentBeachName} Ekibi`
+                );
+                window.location.href = `mailto:${userEmail}?subject=${mailSubject}&body=${mailBody}`;
+              } else {
+                Swal.fire('Bilgi', 'Bu rezervasyon için kayıtlı bir müşteri e-postası bulunamadı.', 'info');
+              }
+            }
+          });
         }
       });
     });
