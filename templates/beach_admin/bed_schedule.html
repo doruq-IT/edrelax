@@ -168,44 +168,44 @@ beach.name }}{% endblock %} {% block content %}
         });
 
         socket.on('status_updated', function(data) {
-          console.log('--- Yeni Anlık Güncelleme ---');
-          console.log('Gelen Veri:', data); // Gelen verinin tamamını görelim
+        console.log('--- Yeni Anlık Güncelleme ---');
+        console.log('Gelen Veri:', data); // Gelen verinin tamamını görelim
 
-          // Sayfadaki mevcut plaj ve tarih bilgisini al
-          const currentPageBeachId = document.getElementById('bedScheduleContainer').dataset.beachId;
-          const currentPageDate = document.getElementById('scheduleDate').value;
+        // Sayfadaki mevcut plaj ve tarih bilgisini al
+        const currentPageBeachId = document.getElementById('bedScheduleContainer').dataset.beachId;
+        const currentPageDate = document.getElementById('scheduleDate').value;
 
-          // Gelen veriyi sayfadaki veriyle karşılaştır
-          console.log(`Karşılaştırma: Plaj ID (${data.beach_id} == ${currentPageBeachId})? | Tarih (${data.date} == ${currentPageDate})?`);
+        // Gelen veriyi sayfadaki veriyle karşılaştır
+        console.log(`Karşılaştırma: Plaj ID (${data.beach_id} == ${currentPageBeachId})? | Tarih (${data.date} == ${currentPageDate})?`);
 
-          // Koşul kontrolü
-          if (data.beach_id.toString() === currentPageBeachId && data.date === currentPageDate) {
-              console.log('✅ Koşul başarılı. Sayfa eşleşti, hücre aranıyor...');
+        // Koşul kontrolü
+        if (data.beach_id.toString() === currentPageBeachId && data.date === currentPageDate) {
+            console.log('✅ Koşul başarılı. Sayfa eşleşti, hücre aranıyor...');
 
-              const selector = `.bed-slot[data-bed-number="${data.bed_number}"][data-time-slot="${data.time_slot}"]`;
-              console.log('Kullanılan Seçici (Selector):', selector);
+            const selector = `.bed-slot[data-bed-number="${data.bed_number}"][data-time-slot="${data.time_slot}"]`;
+            console.log('Kullanılan Seçici (Selector):', selector);
 
-              // Güncellenecek doğru hücreyi bul
-              const cellToUpdate = document.querySelector(selector);
+            // Güncellenecek doğru hücreyi bul
+            const cellToUpdate = document.querySelector(selector);
 
-              // Hücrenin bulunup bulunmadığını kontrol et
-              if (cellToUpdate) {
-                  console.log('✅ Hücre bulundu! Arayüz güncelleniyor.', cellToUpdate);
-                  updateCellUI(cellToUpdate, data);
+            // Hücrenin bulunup bulunmadığını kontrol et
+            if (cellToUpdate) {
+                console.log('✅ Hücre bulundu! Arayüz güncelleniyor.', cellToUpdate);
+                updateCellUI(cellToUpdate, data);
 
-                  // Ekranda bir bildirim göster
-                  Toast.fire({
-                      icon: 'info',
-                      title: `Şezlong #${data.bed_number} (${data.time_slot}) durumu güncellendi.`
-                  });
-              } else {
-                  console.error('❌ HATA: Hücre bu seçici ile bulunamadı!', selector);
-              }
-          } else {
-              console.log('Koşul başarısız. Bu güncelleme bu sayfa için değil, işlem yapılmayacak.');
-          }
-          console.log('--- Güncelleme Sonu ---');
-      });
+                // Ekranda bir bildirim göster
+                Toast.fire({
+                    icon: 'info',
+                    title: `Şezlong #${data.bed_number} (${data.time_slot}) durumu güncellendi.`
+                });
+            } else {
+                console.error('❌ HATA: Hücre bu seçici ile bulunamadı!', selector);
+            }
+        } else {
+            console.log('Koşul başarısız. Bu güncelleme bu sayfa için değil, işlem yapılmayacak.');
+        }
+        console.log('--- Güncelleme Sonu ---');
+    });
 
     } catch (e) {
         console.error("Socket.IO başlatılırken bir hata oluştu. Kütüphanenin doğru yüklendiğinden emin olun.", e);
