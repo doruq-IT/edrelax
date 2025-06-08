@@ -328,6 +328,7 @@ def bed_schedule(beach_id):
         bed_schedule=bed_schedule_data # Güncellenmiş veri
     )
 
+
 @beach_admin_bp.route('/update-reservation-status', methods=['POST'])
 @csrf.exempt
 @login_required
@@ -339,7 +340,7 @@ def update_reservation_status():
     bed_number = data.get('bed_number')
     beach_id = data.get('beach_id')
     date_str = data.get('date')
-    time_slot = data.get('time_slot')
+    time_slot = data.get('time_slot') # Bu değişkeni tüm emit'lerde tutarlılık için kullanacağız
 
     allowed_statuses = ['reserved', 'used', 'cancelled', 'free']
     if not new_status or new_status not in allowed_statuses:
@@ -356,63 +357,66 @@ def update_reservation_status():
                 return jsonify({"success": False, "message": "Bu işlem için yetkiniz yok."}), 403
 
             if new_status == 'free':
-                # Yayını yapabilmek için bilgileri silmeden önce saklayalım
+                # ======================================================================
+                # === DEĞİŞİKLİK 1: Rezervasyon Silme Mantığı Yeniden Yazıldı ===
+                # ======================================================================
+                # Silmeden önce bilgileri ve saat aralığını sakla
                 deleted_info = {
                     "beach_id": reservation.beach_id,
                     "bed_number": reservation.bed_number,
-                    "time": reservation.start_time.strftime('%H:%M'),
-                    "date": reservation.date.strftime('%Y-%m-%d')
+                    "date": reservation.date, # Tarih objesi olarak alalım
+                    "start_time": reservation.start_time,
+                    "end_time": reservation.end_time
                 }
-
+                
                 db.session.delete(reservation)
                 db.session.commit()
-                
-                # Değişikliği herkese yayınla
-                socketio.emit('status_updated', {
-                    'beach_id': deleted_info['beach_id'],
-                    'bed_number': deleted_info['bed_number'],
-                    'time_slot': deleted_info['time'],
-                    'date': deleted_info['date'],
-                    'new_status': 'free',
-                    'reservation_id': None,
-                    'user_info': None
-                }, broadcast=True)
 
-                flash_message = f"Rezervasyon (ID: {reservation_id}) silindi ve slot boş olarak işaretlendi."
-                
+                # Silinen rezervasyonun kapsadığı tüm saatler için emit yap
+                current_slot_time = deleted_info['start_time']
+                while current_slot_time < deleted_info['end_time']:
+                    hour_key = current_slot_time.strftime("%H:00")
+                    socketio.emit('status_updated', {
+                        'beach_id': deleted_info['beach_id'],
+                        'bed_number': deleted_info['bed_number'],
+                        'time_slot': hour_key,
+                        'date': deleted_info['date'].strftime('%Y-%m-%d'),
+                        'new_status': 'free',
+                        'reservation_id': None,
+                        'user_info': None
+                    }, broadcast=True)
+                    
+                    # Döngü için bir sonraki saate geç
+                    temp_dt = datetime.combine(deleted_info['date'], current_slot_time) + timedelta(hours=1)
+                    current_slot_time = temp_dt.time()
+
                 return jsonify({
                     "success": True,
-                    "message": flash_message,
-                    "new_status": "free",
-                    "reservation_id": None
+                    "message": f"Rezervasyon (ID: {reservation_id}) silindi ve ilgili saatler boş olarak işaretlendi.",
+                    "new_status": "free", "reservation_id": None
                 })
             else:
+                # ===================================================================
+                # === DEĞİŞİKLİK 2: Rezervasyon Güncelleme `time_slot` Düzeltmesi ===
+                # ===================================================================
                 reservation.status = new_status
-
-                if new_status == 'used':
-                    if data.get('mail_trigger') == True:
-                        app_ctx = current_app._get_current_object()
-                        Thread(target=delayed_confirmation_check, args=(app_ctx, reservation.id)).start()
-
                 db.session.commit()
 
                 socketio.emit('status_updated', {
                     'beach_id': reservation.beach_id,
                     'bed_number': reservation.bed_number,
-                    'time_slot': reservation.start_time.strftime('%H:%M'),
+                    'time_slot': time_slot, # Doğrudan isteğin saatini kullanıyoruz
                     'date': reservation.date.strftime('%Y-%m-%d'),
                     'new_status': reservation.status,
                     'reservation_id': reservation.id,
                     'user_info': f"{reservation.user.first_name} {reservation.user.last_name}" if reservation.user else "Bilinmiyor"
                 }, broadcast=True)
 
-                flash_message = f"Rezervasyon (ID: {reservation_id}) durumu '{new_status}' olarak güncellendi."
                 return jsonify({
                     "success": True,
-                    "message": flash_message,
+                    "message": f"Rezervasyon (ID: {reservation_id}) durumu '{new_status}' olarak güncellendi.",
                     "new_status": reservation.status
                 })
-
 
         elif new_status != 'free' and bed_number and beach_id and date_str and time_slot:
             target_beach = Beach.query.get(beach_id)
@@ -425,7 +429,7 @@ def update_reservation_status():
                 end_time_obj = (datetime.combine(selected_date_obj, start_time_obj) + timedelta(hours=1)).time()
             except ValueError:
                 return jsonify({"success": False, "message": "Geçersiz tarih veya saat formatı."}), 400
-
+            
             existing_reservation = Reservation.query.filter(
                 Reservation.beach_id == beach_id,
                 Reservation.bed_number == bed_number,
@@ -439,21 +443,20 @@ def update_reservation_status():
 
             admin_user_id = current_user.id
             new_reservation = Reservation(
-                beach_id=beach_id,
-                user_id=admin_user_id,
-                bed_number=bed_number,
-                date=selected_date_obj,
-                start_time=start_time_obj,
-                end_time=end_time_obj,
+                beach_id=beach_id, user_id=admin_user_id, bed_number=bed_number,
+                date=selected_date_obj, start_time=start_time_obj, end_time=end_time_obj,
                 status=new_status
             )
             db.session.add(new_reservation)
             db.session.commit()
-            # Değişikliği herkese yayınla
+            
+            # ========================================================================
+            # === DEĞİŞİKLİK 3: Yeni Rezervasyon Oluşturma `time_slot` Düzeltmesi ===
+            # ========================================================================
             socketio.emit('status_updated', {
                 'beach_id': new_reservation.beach_id,
                 'bed_number': new_reservation.bed_number,
-                'time_slot': new_reservation.start_time.strftime('%H:%M'),
+                'time_slot': time_slot, # Tutarlılık için doğrudan isteğin saatini kullanıyoruz
                 'date': new_reservation.date.strftime('%Y-%m-%d'),
                 'new_status': new_reservation.status,
                 'reservation_id': new_reservation.id,
@@ -463,8 +466,7 @@ def update_reservation_status():
             return jsonify({
                 "success": True,
                 "message": f"Şezlong #{bed_number} için '{new_status}' durumunda yeni rezervasyon oluşturuldu.",
-                "new_status": new_reservation.status,
-                "reservation_id": new_reservation.id
+                "new_status": new_reservation.status, "reservation_id": new_reservation.id
             })
 
         else:
