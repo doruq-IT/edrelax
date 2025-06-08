@@ -197,23 +197,46 @@ beach.name }}{% endblock %} {% block content %}
         return;
       }
 
-      const firstSlotForDisplay = currentlySelectedSlots[0];
-      const bedDisplayIdForAlert = firstSlotForDisplay.dataset.bedDisplayId || `#${firstSlotForDisplay.dataset.bedNumber}`;
+      // Adım 1'in özü burada başlıyor:
+      // Seçilen ilk slotun bilgilerini alarak başlıyoruz.
+      // Çoklu seçim sadece tek bir şezlong için geçerli olduğundan,
+      // bir tanesinin bilgisi hepsi için yeterli olacaktır.
+      const firstSlot = currentlySelectedSlots[0];
+      const bedNumber = firstSlot.dataset.bedNumber;
+      const reservationId = firstSlot.dataset.reservationId;
+      const userInfo = firstSlot.dataset.userInfo;
+      const userEmail = firstSlot.dataset.userEmail;
+
+      // Eğer bir e-posta adresi varsa mail butonunu göster.
+      const showMailButton = (reservationId && userEmail && userEmail !== 'None');
+
+      // Pop-up içeriğini dinamik olarak oluştur.
+      let alertHtml = `<p>${currentlySelectedSlots.length} adet seçili saat dilimine uygulanacak yeni durumu seçin:</p>`;
+      if (userInfo && userInfo !== 'None') {
+        alertHtml += `<p>Müşteri: <strong>${userInfo}</strong></p>`;
+      }
+       if (userEmail && userEmail !== 'None') {
+        alertHtml += `<p>E-posta: <strong>${userEmail}</strong></p>`;
+      }
 
       Swal.fire({
-        title: `Şezlong ${bedDisplayIdForAlert}`,
-        text: `${currentlySelectedSlots.length} adet seçili saat dilimine uygulanacak yeni durumu seçin:`,
+        title: `Şezlong #${bedNumber}`,
+        html: alertHtml, // Dinamik HTML içeriğini kullan
         input: 'select',
         inputOptions: statusOptions,
         inputPlaceholder: 'Durum Seçin',
         showCancelButton: true,
         confirmButtonText: 'Tüm Seçilenlere Uygula',
         cancelButtonText: 'Vazgeç',
+        showDenyButton: showMailButton, // Mail butonunu koşullu olarak göster
+        denyButtonText: 'Müşteriye Mail Gönder',
         inputValidator: (value) => {
           if (!value) return 'Bir durum seçmelisiniz!';
         }
       }).then((result) => {
         if (result.isConfirmed && result.value) {
+          // Bu kısım zaten doğru çalıştığı için dokunmuyoruz.
+          // Mevcut kodunuzdaki gibi kalacak.
           const newStatusToApply = result.value;
           const dateForUpdate = scheduleDateInput.value;
 
@@ -252,6 +275,21 @@ beach.name }}{% endblock %} {% block content %}
               clearCurrentMultiSelection();
               updateApplyToSelectedButtonState();
             });
+        } else if (result.isDenied) {
+          // Mail butonuna tıklandığında çalışacak kod
+          const currentBeachName = document.getElementById('bedScheduleContainer').dataset.beachName || "Plajımız";
+          const selectedDate = scheduleDateInput.value;
+          // Seçili tüm saatleri bir string olarak birleştirelim
+          const timeSlotsString = currentlySelectedSlots.map(s => s.dataset.timeSlot).join(', ');
+
+          const mailSubject = encodeURIComponent(`Şezlong Rezervasyonunuz Hk. - ${currentBeachName}`);
+          const mailBody = encodeURIComponent(
+            `Merhaba ${userInfo || ''},\n\n` +
+            `${currentBeachName} olarak şezlong rezervasyonunuzla ilgili size ulaşmak istedik.\n\n` +
+            `Rezervasyon Detayları:\nPlaj: ${currentBeachName}\nŞezlong: #${bedNumber}\nTarih: ${selectedDate}\nSaatler: ${timeSlotsString}\n\n` +
+            `Konuyla ilgili size yardımcı olabiliriz.\n\nSaygılarımızla,\n${currentBeachName} Ekibi`
+          );
+          window.location.href = `mailto:${userEmail}?subject=${mailSubject}&body=${mailBody}`;
         }
       });
     });
