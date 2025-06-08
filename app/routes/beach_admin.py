@@ -329,7 +329,7 @@ def bed_schedule(beach_id):
     )
 
 @beach_admin_bp.route('/update-reservation-status', methods=['POST'])
-@csrf.exempt # Gerekliyse
+@csrf.exempt
 @login_required
 def update_reservation_status():
     data = request.get_json()
@@ -337,17 +337,16 @@ def update_reservation_status():
         return jsonify({"success": False, "message": "Geçersiz istek."}), 400
 
     new_status = data.get('new_status')
-    # YENİ: Gelen veri artık 'slots' adında bir liste içeriyor.
     slots_to_update = data.get('slots')
     beach_id = data.get('beach_id')
     date_str = data.get('date')
 
-    # --- Gerekli Parametrelerin Kontrolü ---
+    # Parametre kontrolü
     allowed_statuses = ['reserved', 'used', 'cancelled', 'free']
     if not all([new_status, new_status in allowed_statuses, slots_to_update, beach_id, date_str]):
         return jsonify({"success": False, "message": "Eksik veya geçersiz parametreler."}), 400
     
-    # --- Yetki Kontrolü (Sadece bir kere yapılır) ---
+    # Yetki kontrolü (Döngüden önce tek sefer yapılır)
     target_beach = Beach.query.get(beach_id)
     if not target_beach or target_beach.manager_id != current_user.id:
         return jsonify({"success": False, "message": "Bu plaj için işlem yapma yetkiniz yok."}), 403
@@ -357,41 +356,39 @@ def update_reservation_status():
     except ValueError:
         return jsonify({"success": False, "message": "Geçersiz tarih formatı."}), 400
 
-    updated_slots_info = [] # Başarılı güncellenen slotların bilgisini frontend'e döndürmek için
+    updated_slots_info_for_response = []
     
     try:
-        # DEĞİŞİKLİK: Tekil time_slot yerine time_slots listesi üzerinde döngü
+        # DİKKAT: Her bir slot için döngü başlıyor
         for slot in slots_to_update:
+            # ÖNEMLİ: broadcast_info'yu her döngünün başında sıfırlıyoruz.
+            broadcast_info = {}
+            
             reservation_id = slot.get('reservation_id')
             bed_number = slot.get('bed_number')
-            time_slot = slot.get('time_slot')
+            time_slot_str = slot.get('time_slot')
 
-            if not bed_number or not time_slot:
-                # Bu hatalı slotu atla ve devam et (veya tüm işlemi iptal et)
+            if not all([bed_number, time_slot_str]):
                 current_app.logger.warning(f"Eksik bilgi içeren slot atlandı: {slot}")
                 continue
 
-            # --- 1. Var Olan Rezervasyonu Güncelleme Senaryosu ---
+            # --- Senaryo 1: Var olan rezervasyonu güncelleme (örn: rezerve -> kullanımda) ---
             if reservation_id:
                 reservation = Reservation.query.get(reservation_id)
                 if not reservation:
                     current_app.logger.warning(f"Rezervasyon bulunamadı (ID: {reservation_id}), slot atlandı.")
                     continue
                 
-                # Yetki zaten başta kontrol edildi, burada tekrar gerek yok.
-                
                 if new_status == 'free':
-                    # Yayını yapabilmek için bilgileri silmeden önce saklayalım
+                    # Bilgileri yayını yapabilmek için silmeden önce sakla
                     broadcast_info = {
                         "beach_id": reservation.beach_id,
                         "bed_number": reservation.bed_number,
                         "time_slot": reservation.start_time.strftime('%H:%M'),
                         "date": reservation.date.strftime('%Y-%m-%d'),
-                        'new_status': 'free',
-                        'reservation_id': None, 'user_info': None
+                        'new_status': 'free', 'reservation_id': None, 'user_info': None
                     }
                     db.session.delete(reservation)
-                    # NOT: commit() döngü sonunda yapılacak
                 else:
                     reservation.status = new_status
                     broadcast_info = {
@@ -404,28 +401,15 @@ def update_reservation_status():
                         'user_info': f"{reservation.user.first_name} {reservation.user.last_name}" if reservation.user else "Bilinmiyor"
                     }
             
-            # --- 2. Yeni Rezervasyon Oluşturma Senaryosu (Boş bir slota tıklandığında) ---
-            elif new_status != 'free': # Sadece rezerve veya kullanımda ise yeni kayıt oluşturulur
+            # --- Senaryo 2: Yeni rezervasyon oluşturma (örn: boş -> kullanımda) ---
+            elif new_status not in ['free', 'cancelled']:
                 try:
-                    start_time_obj = datetime.strptime(time_slot, '%H:%M').time()
+                    start_time_obj = datetime.strptime(time_slot_str, '%H:%M').time()
                     end_time_obj = (datetime.combine(selected_date_obj, start_time_obj) + timedelta(hours=1)).time()
                 except ValueError:
-                    current_app.logger.warning(f"Geçersiz saat formatı ({time_slot}), slot atlandı.")
+                    current_app.logger.warning(f"Geçersiz saat formatı ({time_slot_str}), slot atlandı.")
                     continue
 
-                # Bu saat diliminde başka bir rezervasyon var mı kontrolü
-                existing_reservation = Reservation.query.filter(
-                    Reservation.beach_id == beach_id,
-                    Reservation.bed_number == bed_number,
-                    Reservation.date == selected_date_obj,
-                    Reservation.start_time < end_time_obj,
-                    Reservation.end_time > start_time_obj
-                ).first()
-
-                if existing_reservation:
-                    current_app.logger.warning(f"Çakışma nedeniyle slot atlandı: {slot}")
-                    continue
-                
                 new_reservation = Reservation(
                     beach_id=beach_id, user_id=current_user.id,
                     bed_number=bed_number, date=selected_date_obj,
@@ -433,7 +417,8 @@ def update_reservation_status():
                     status=new_status
                 )
                 db.session.add(new_reservation)
-                db.session.flush() # ID'yi alabilmek için flush() kullanıyoruz
+                # DİKKAT: commit yerine flush kullanarak ID'yi alıyoruz ama veritabanına henüz yazmıyoruz.
+                db.session.flush()
 
                 broadcast_info = {
                     'beach_id': new_reservation.beach_id,
@@ -444,28 +429,30 @@ def update_reservation_status():
                     'reservation_id': new_reservation.id,
                     'user_info': f"{new_reservation.user.first_name} {new_reservation.user.last_name}" if new_reservation.user else "Bilinmiyor"
                 }
-
-            else: # new_status == 'free' ve reservation_id yoksa, işlem yapmaya gerek yok
+            else:
+                # new_status 'free' veya 'cancelled' ise ve reservation_id yoksa, bir şey yapma
                 continue
 
-            # ÖNEMLİ: Her başarılı işlemden sonra emit yapılır
+            # YENİ: Sunucu tarafında loglama. Bu, hatayı ayıklamak için kritiktir.
+            current_app.logger.info(f"EMIT YAPILIYOR: {broadcast_info}")
+            
+            # Her başarılı işlemden sonra emit yapılır
             socketio.emit('status_updated', broadcast_info, broadcast=True)
-            updated_slots_info.append(broadcast_info)
+            updated_slots_info_for_response.append(broadcast_info)
 
-        # Tüm işlemler bittikten sonra veritabanına tek seferde commit et
+        # Tüm işlemler bittikten sonra veritabanına tek seferde commit et (Atomik işlem)
         db.session.commit()
         
         return jsonify({
             "success": True,
-            "message": f"{len(updated_slots_info)} adet saat dilimi başarıyla güncellendi.",
-            "updated_slots": updated_slots_info # Frontend'in UI'ı anında güncellemesi için
+            "message": f"{len(updated_slots_info_for_response)} adet saat dilimi başarıyla güncellendi.",
+            "updated_slots": updated_slots_info_for_response
         })
 
     except Exception as e:
         db.session.rollback() # Hata durumunda tüm işlemleri geri al
         current_app.logger.error(f"Toplu rezervasyon durumu güncellenirken hata: {e}", exc_info=True)
         return jsonify({"success": False, "message": "Sunucu tarafında beklenmedik bir hata oluştu."}), 500
-
 
 
 def delayed_confirmation_check(app, reservation_id):
