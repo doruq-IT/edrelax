@@ -24,11 +24,13 @@ pymysql.install_as_MySQLdb()
 
 
 def create_app():
+    from werkzeug.middleware.proxy_fix import ProxyFix
     app = Flask(
         __name__,
         template_folder=os.path.abspath(os.path.join(os.path.dirname(__file__), '../templates')),
         static_folder=os.path.abspath(os.path.join(os.path.dirname(__file__), '../static'))
     )
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
     app.config.from_object(Config)
     
