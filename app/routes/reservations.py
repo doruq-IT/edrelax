@@ -5,6 +5,7 @@ from flask_wtf.csrf import CSRFProtect, CSRFError
 from app.models import User
 from app.extensions import db, csrf
 from app.models import Beach, Reservation
+from app.extensions import socketio
 from datetime import datetime, timedelta
 from collections import defaultdict
 
@@ -69,6 +70,7 @@ def select_beds(slug):
         kullanicinin_o_gun_rezerve_ettigi_sezlong_sayisi=reservations_today_count
     )
 
+
 @reservations_bp.route('/make-reservation', methods=['POST'])
 @login_required
 def make_reservation():
@@ -80,7 +82,6 @@ def make_reservation():
     start_time = data.get("start_time")
     end_time = data.get("end_time")
 
-    # 1. GİRDİ DOĞRULAMASI (Mevcut kodunuzdaki gibi, doğru)
     if not (beach_id and bed_ids and date and start_time and end_time):
         return jsonify({"success": False, "message": "Eksik bilgi var."}), 400
 
@@ -96,20 +97,17 @@ def make_reservation():
     beach = Beach.query.get(beach_id)
     if not beach:
         return jsonify({"success": False, "message": "Plaj bulunamadı."}), 404
-        
+
     if beach.bed_count < 1:
         return jsonify({"success": False, "message": "Plajda şezlong tanımı yapılmamış. Contact Us bölümünden lütfen bize iletiniz."}), 400
 
     for bed_id in bed_ids:
-        # bed_id'nin integer olduğundan ve geçerli aralıkta olduğundan emin olalım
         try:
             if int(bed_id) < 1 or int(bed_id) > beach.bed_count:
                 return jsonify({"success": False, "message": f"Geçersiz şezlong numarası: {bed_id}"}), 400
         except (ValueError, TypeError):
-             return jsonify({"success": False, "message": f"Geçersiz şezlong ID formatı: {bed_id}"}), 400
+            return jsonify({"success": False, "message": f"Geçersiz şezlong ID formatı: {bed_id}"}), 400
 
-    # 2. --- YENİ EKLENEN GÜVENLİK KONTROLÜ: GÜNLÜK REZERVASYON LİMİTİ ---
-    # Bu kontrol, bir kullanıcının günlük limiti aşmasını sunucu tarafında engeller.
     GUNLUK_MAKSIMUM_SEZLONG = 10
     user_id = session['user_id']
     reservations_today_count = Reservation.query.filter_by(user_id=user_id, date=parsed_date).count()
@@ -117,9 +115,6 @@ def make_reservation():
     if (reservations_today_count + len(bed_ids)) > GUNLUK_MAKSIMUM_SEZLONG:
         return jsonify({"success": False, "message": f"Bir günde en fazla {GUNLUK_MAKSIMUM_SEZLONG} şezlong rezerve edebilirsiniz."}), 400
 
-    # 3. --- GÜNCELLENEN GÜVENLİK VE PERFORMANS KONTROLÜ: RACE CONDITION VE N+1 SORUNU DÜZELTMESİ ---
-    # Önceki kodda her şezlong için ayrı sorgu atılıyordu. Bu hem yavaş hem de güvensizdi.
-    # Şimdi tek bir sorgu ile seçilen tüm şezlongların uygunluğunu atomik olarak kontrol ediyoruz.
     existing_reservation = Reservation.query.filter(
         Reservation.beach_id == beach_id,
         Reservation.bed_number.in_(bed_ids),
@@ -130,11 +125,8 @@ def make_reservation():
     ).first()
 
     if existing_reservation:
-        # Hata mesajı artık daha genel, çünkü hangi spesifik şezlongun dolu olduğunu tek sorguda bilemeyiz.
-        return jsonify({"success": False, "message": "Seçtiğiniz şezlonglardan biri veya birkaçı bu saat aralığında başkası tarafından rezerve edilmiş."}), 409 # 409 Conflict status kodu daha uygun
+        return jsonify({"success": False, "message": "Seçtiğiniz şezlonglardan biri veya birkaçı bu saat aralığında başkası tarafından rezerve edilmiş."}), 409
 
-    # 4. REZERVASYONLARI OLUŞTURMA (Artık güvenli)
-    # Tüm kontrollerden geçti, şimdi rezervasyonları veritabanına ekleyebiliriz.
     for bed_id in bed_ids:
         new_reservation = Reservation(
             beach_id=beach_id,
@@ -143,11 +135,21 @@ def make_reservation():
             date=parsed_date,
             start_time=parsed_start,
             end_time=parsed_end,
-            status='reserved' # Varsayılan status'u belirlemek iyi bir pratiktir
+            status='reserved'
         )
         db.session.add(new_reservation)
 
     db.session.commit()
+
+    # ✅ WebSocket yayını — her şezlong için ayrı ayrı gönder
+    for bed_id in bed_ids:
+        socketio.emit("status_updated", {
+            "beach_id": beach_id,
+            "bed_number": bed_id,
+            "date": parsed_date.strftime("%Y-%m-%d"),
+            "time_slot": parsed_start.strftime("%H:%M"),
+            "new_status": "reserved"
+        }, broadcast=True)
 
     return jsonify({
         "success": True,
@@ -160,6 +162,7 @@ def make_reservation():
             "total_price": beach.price * len(bed_ids) if beach.price else 0
         }
     })
+
     
 @reservations_bp.route("/my-reservations")
 @login_required
