@@ -87,7 +87,7 @@ def create_app():
     app.register_blueprint(google_bp, url_prefix="/login")
 
     # 🔗 Blueprint'leri ekle
-    app.register_blueprint(auth_bp, url_prefix="/auth")
+    app.register_blueprint(auth_bp)
     app.register_blueprint(admin_bp)
     app.register_blueprint(public_bp)
     app.register_blueprint(reservations_bp)
