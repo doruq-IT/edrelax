@@ -84,32 +84,50 @@ def confirm_email(token):
 
 @auth_bp.route('/google/login')
 def google_login():
-    """Kullanıcıyı Google'a yönlendiren route."""
+    print("➡️ Google login route tetiklendi")
     redirect_uri = url_for('auth.google_callback', _external=True)
     return oauth.google.authorize_redirect(redirect_uri)
 
+
 @auth_bp.route('/google/callback')
 def google_callback():
-    """Google'dan dönen kullanıcıyı karşılayan ve işleyen route."""
-    token = oauth.google.authorize_access_token()
-    user_info = oauth.google.get('https://www.googleapis.com/oauth2/v3/userinfo').json()
+    print("📥 Google callback tetiklendi")
     
+    try:
+        token = oauth.google.authorize_access_token()
+        print("🔑 Token alındı:", token)
+    except Exception as e:
+        print("❌ Token alınamadı:", str(e))
+        return redirect(url_for('auth.login'))
+
+    try:
+        user_info = oauth.google.get('https://www.googleapis.com/oauth2/v3/userinfo').json()
+        print("👤 Kullanıcı bilgisi alındı:", user_info)
+    except Exception as e:
+        print("❌ Kullanıcı bilgisi alınamadı:", str(e))
+        return redirect(url_for('auth.login'))
+
     user = User.query.filter_by(email=user_info['email']).first()
-    
+
     if not user:
-        # Eğer kullanıcı yoksa, yeni bir kullanıcı oluştur
+        print("🆕 Yeni kullanıcı oluşturuluyor:", user_info['email'])
         user = User(
             email=user_info['email'],
             first_name=user_info.get('given_name', ''),
-            last_name=user_info.get('family_name', ''),
-            # Not: Google'dan şifre gelmez, bu yüzden şifre alanı boş kalır
+            last_name=user_info.get('family_name', '')
         )
         db.session.add(user)
         db.session.commit()
+        print("✅ Yeni kullanıcı veritabanına kaydedildi:", user.email)
+    else:
+        print("👤 Var olan kullanıcı bulundu:", user.email)
+
     print("✅ login_user çağrılacak")
-    login_user(user) # Kullanıcı oturumunu başlat
+    login_user(user)
     print("✅ login_user çağrıldı")
-    return redirect(url_for('public.index')) # Ana sayfaya yönlendir
+
+    return redirect(url_for('public.index'))
+
 
 @auth_bp.route("/login", methods=["GET", "POST"])
 @limiter.limit("5 per minute")
