@@ -834,5 +834,44 @@ a.active {
   background-color: #3dc0d3;
   border-radius: 2px;
 }
+.advanced-container {
+    flex-direction: column;
+    padding: 20px 10px;
+    gap: 20px;
+  }
+
+  .filter-panel {
+    width: 100%;
+    padding: 15px;
+    border-radius: 10px;
+  }
+
+  .results-panel {
+    width: 100%;
+  }
+
+  .map-area {
+    height: 300px;
+    width: 100%;
+    margin-bottom: 20px;
+  }
+
+  .beach-result {
+    padding: 10px;
+    border-bottom: 1px solid #ccc;
+  }
+
+  .beach-result h6 {
+    font-size: 16px;
+  }
+
+  .beach-result p {
+    font-size: 14px;
+    color: #666;
+  }
+
+  .btn-outline-primary {
+    width: 100%;
+  }
 
 }
