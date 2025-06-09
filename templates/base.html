@@ -223,6 +223,15 @@
 
           // Arka plan karartısına (overlay) tıklandığında menüyü kapat
           menuOverlay.addEventListener("click", closeMenu);
+          window.addEventListener('resize', () => {
+              // Eğer ekran 768 pikselden daha genişse (masaüstü görünümü)
+              if (window.innerWidth > 768) {
+                  // Menü açıksa, kapat ve stilleri sıfırla
+                  if (navLinks.classList.contains('active')) {
+                      closeMenu();
+                  }
+              }
+          });
         }
       });
     </script>

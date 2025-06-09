@@ -766,11 +766,18 @@ a.active {
  }
 
  .nav-links a {
-   width: 100%;
-   padding: 10px 0;
-   text-align: left;
-   color: white !important;
- }
+  width: 100%;
+  padding: 10px; /* Sağına ve soluna da biraz boşluk verelim */
+  text-align: left;
+  color: white !important;
+  border-radius: 8px; /* Kenarları yumuşatalım */
+  transition: background-color 0.2s ease-in-out; /* Yumuşak geçiş efekti */
+}
+
+/* Fare üzerine gelince uygulanacak stil */
+.nav-links a:hover {
+  background-color: rgba(255, 255, 255, 0.1); /* Hafif beyaz bir arkaplan */
+}
 
 
 /* Footer bölümü responsive */
