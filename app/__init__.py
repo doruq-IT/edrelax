@@ -72,11 +72,15 @@ def create_app():
     # Google'ı bir OAuth sağlayıcısı olarak kaydet
     oauth.register(
         name='google',
+        client_id=app.config.get("GOOGLE_CLIENT_ID"),
+        client_secret=app.config.get("GOOGLE_CLIENT_SECRET"),
         server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
         client_kwargs={
             'scope': 'openid email profile'
         }
     )
+
+
 
     # ✨ Jinja filtresini kaydet
     app.jinja_env.filters['to_alphanumeric_bed_id'] = to_alphanumeric_bed_id
