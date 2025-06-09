@@ -114,7 +114,17 @@ def create_app():
         response.set_cookie('csrf_token', generate_csrf())
         return response
     from app import socket_events
+    @app.route("/debug/google-creds")
+    def debug_google_creds():
+        print("GOOGLE_CLIENT_ID:", os.getenv("GOOGLE_CLIENT_ID"))
+        print("GOOGLE_CLIENT_SECRET:", os.getenv("GOOGLE_CLIENT_SECRET"))
+        return "Check logs"
+
     return app
+    
+
+    
+
 
 
 

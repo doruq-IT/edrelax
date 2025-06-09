@@ -290,3 +290,4 @@ def delete_account():
 
     flash("Profiliniz kalıcı olarak silinmiştir.", "success")
     return redirect(url_for("public.index"))
+
