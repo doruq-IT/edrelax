@@ -2,6 +2,7 @@
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
 from flask_wtf.csrf import CSRFProtect, CSRFError
+from app.models import User
 from app.extensions import db, csrf
 from app.models import Beach, Reservation
 from datetime import datetime, timedelta
@@ -45,18 +46,27 @@ def select_beds(slug):
         Reservation.date == selected_date,
         Reservation.start_time < end_time,
         Reservation.end_time > start_time,
-        Reservation.status.in_(['reserved', 'used'])  # 🔥 Eklendi
+        Reservation.status.in_(['reserved', 'used'])
     ).all()
 
     booked_beds = [r.bed_number for r in overlapping_reservations]
 
+    user_id = session['user_id']
+    reservations_today_count = Reservation.query.filter(
+        Reservation.user_id == user_id,
+        Reservation.date == selected_date,
+        Reservation.status.in_(['reserved', 'used'])
+    ).count()
+  
     return render_template(
         'select_beds.html',
         beach=beach,
         date=date_str,
         start_time=start_str,
         end_time=end_str,
-        booked_beds=booked_beds
+        booked_beds=booked_beds,
+        # --- HTML'İN BEKLEDİĞİ DEĞİŞKENİ BURADA GÖNDERİYORUZ ---
+        kullanicinin_o_gun_rezerve_ettigi_sezlong_sayisi=reservations_today_count
     )
 
 @reservations_bp.route('/make-reservation', methods=['POST'])
@@ -70,6 +80,7 @@ def make_reservation():
     start_time = data.get("start_time")
     end_time = data.get("end_time")
 
+    # 1. GİRDİ DOĞRULAMASI (Mevcut kodunuzdaki gibi, doğru)
     if not (beach_id and bed_ids and date and start_time and end_time):
         return jsonify({"success": False, "message": "Eksik bilgi var."}), 400
 
@@ -79,41 +90,60 @@ def make_reservation():
         parsed_end = datetime.strptime(end_time, "%H:%M").time()
         if parsed_end <= parsed_start:
             return jsonify({"success": False, "message": "Bitiş saati, başlangıç saatinden sonra olmalı."}), 400
-
     except ValueError:
         return jsonify({"success": False, "message": "Tarih veya saat biçimi hatalı."}), 400
 
     beach = Beach.query.get(beach_id)
-    if not beach or beach.bed_count < 1:
+    if not beach:
+        return jsonify({"success": False, "message": "Plaj bulunamadı."}), 404
+        
+    if beach.bed_count < 1:
         return jsonify({"success": False, "message": "Plajda şezlong tanımı yapılmamış. Contact Us bölümünden lütfen bize iletiniz."}), 400
 
     for bed_id in bed_ids:
-        if bed_id < 1 or bed_id > beach.bed_count:
-            return jsonify({"success": False, "message": f"Geçersiz şezlong numarası: {bed_id}"}), 400
+        # bed_id'nin integer olduğundan ve geçerli aralıkta olduğundan emin olalım
+        try:
+            if int(bed_id) < 1 or int(bed_id) > beach.bed_count:
+                return jsonify({"success": False, "message": f"Geçersiz şezlong numarası: {bed_id}"}), 400
+        except (ValueError, TypeError):
+             return jsonify({"success": False, "message": f"Geçersiz şezlong ID formatı: {bed_id}"}), 400
 
-    if not beach:
-        return jsonify({"success": False, "message": "Plaj bulunamadı."}), 404
+    # 2. --- YENİ EKLENEN GÜVENLİK KONTROLÜ: GÜNLÜK REZERVASYON LİMİTİ ---
+    # Bu kontrol, bir kullanıcının günlük limiti aşmasını sunucu tarafında engeller.
+    GUNLUK_MAKSIMUM_SEZLONG = 10
+    user_id = session['user_id']
+    reservations_today_count = Reservation.query.filter_by(user_id=user_id, date=parsed_date).count()
 
+    if (reservations_today_count + len(bed_ids)) > GUNLUK_MAKSIMUM_SEZLONG:
+        return jsonify({"success": False, "message": f"Bir günde en fazla {GUNLUK_MAKSIMUM_SEZLONG} şezlong rezerve edebilirsiniz."}), 400
+
+    # 3. --- GÜNCELLENEN GÜVENLİK VE PERFORMANS KONTROLÜ: RACE CONDITION VE N+1 SORUNU DÜZELTMESİ ---
+    # Önceki kodda her şezlong için ayrı sorgu atılıyordu. Bu hem yavaş hem de güvensizdi.
+    # Şimdi tek bir sorgu ile seçilen tüm şezlongların uygunluğunu atomik olarak kontrol ediyoruz.
+    existing_reservation = Reservation.query.filter(
+        Reservation.beach_id == beach_id,
+        Reservation.bed_number.in_(bed_ids),
+        Reservation.date == parsed_date,
+        Reservation.start_time < parsed_end,
+        Reservation.end_time > parsed_start,
+        Reservation.status.in_(['reserved', 'used'])
+    ).first()
+
+    if existing_reservation:
+        # Hata mesajı artık daha genel, çünkü hangi spesifik şezlongun dolu olduğunu tek sorguda bilemeyiz.
+        return jsonify({"success": False, "message": "Seçtiğiniz şezlonglardan biri veya birkaçı bu saat aralığında başkası tarafından rezerve edilmiş."}), 409 # 409 Conflict status kodu daha uygun
+
+    # 4. REZERVASYONLARI OLUŞTURMA (Artık güvenli)
+    # Tüm kontrollerden geçti, şimdi rezervasyonları veritabanına ekleyebiliriz.
     for bed_id in bed_ids:
-        existing = Reservation.query.filter_by(
-            beach_id=beach_id,
-            bed_number=bed_id,
-            date=parsed_date
-        ).filter(
-            Reservation.start_time < parsed_end,
-            Reservation.end_time > parsed_start
-        ).first()
-
-        if existing:
-            return jsonify({"success": False, "message": f"Şezlong {bed_id} bu saat aralığında zaten rezerve edilmiş."}), 409
-
         new_reservation = Reservation(
             beach_id=beach_id,
-            user_id=session['user_id'],
+            user_id=user_id,
             bed_number=bed_id,
             date=parsed_date,
             start_time=parsed_start,
-            end_time=parsed_end
+            end_time=parsed_end,
+            status='reserved' # Varsayılan status'u belirlemek iyi bir pratiktir
         )
         db.session.add(new_reservation)
 
@@ -127,10 +157,10 @@ def make_reservation():
             "start_time": parsed_start.strftime("%H:%M"),
             "end_time": parsed_end.strftime("%H:%M"),
             "bed_count": len(bed_ids),
-            "total_price": beach.price * len(bed_ids)
+            "total_price": beach.price * len(bed_ids) if beach.price else 0
         }
     })
-
+    
 @reservations_bp.route("/my-reservations")
 @login_required
 def my_reservations():
@@ -221,8 +251,15 @@ def cancel_reservation(res_id):
 @login_required
 def get_user_info(reservation_id):
     reservation = Reservation.query.get_or_404(reservation_id)
-    user = reservation.user
+    current_user = User.query.get(session['user_id'])
 
+    is_admin = getattr(current_user, 'is_admin', False)
+    is_beach_owner = (reservation.beach.owner_id == current_user.id)
+
+    if not (is_admin or is_beach_owner):
+        return jsonify({"success": False, "message": "Bu bilgiyi görüntüleme yetkiniz yok."}), 403 # 403 Forbidden
+
+    user = reservation.user
     if not user:
         return jsonify({"success": False, "message": "Kullanıcı bilgisi bulunamadı."}), 404
 

@@ -14,13 +14,6 @@ function calculateColumnCount(total) {
   return 10;
 }
 
-// Bu değişkenlerin select_beds.html içindeki <script> bloğunda tanımlandığını varsayıyoruz:
-// const totalBeds = {{ beach.bed_count or 20 }};
-// const bookedBeds = {{ booked_beds | tojson }};
-// const bedPrice = {{ beach.price or 10 }};
-// const kullanicininOncedenRezerveEttigiSayi = {{ kullanicinin_o_gun_rezerve_ettigi_sezlong_sayisi | default(0) | tojson }};
-// const GUNLUK_MAKSIMUM_SEZLONG = 10;
-
 const columns = calculateColumnCount(totalBeds);
 bedsContainer.style.gridTemplateColumns = `repeat(${columns}, 60px)`;
 
