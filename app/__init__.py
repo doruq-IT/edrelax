@@ -116,9 +116,12 @@ def create_app():
     from app import socket_events
     @app.route("/debug/google-creds")
     def debug_google_creds():
-        print("GOOGLE_CLIENT_ID:", os.getenv("GOOGLE_CLIENT_ID"))
-        print("GOOGLE_CLIENT_SECRET:", os.getenv("GOOGLE_CLIENT_SECRET"))
-        return "Check logs"
+        return f"""
+        <pre>
+        GOOGLE_CLIENT_ID: {app.config.get("GOOGLE_CLIENT_ID")}
+        GOOGLE_CLIENT_SECRET: {app.config.get("GOOGLE_CLIENT_SECRET")}
+        </pre>
+        """
 
     return app
     
