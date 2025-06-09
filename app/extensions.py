@@ -10,6 +10,7 @@ from flask import abort
 from functools import wraps
 from flask_mail import Mail
 from flask_dance.contrib.google import make_google_blueprint
+from authlib.integrations.flask_client import OAuth
 
 
 # Eklenti nesneleri
@@ -19,6 +20,7 @@ limiter = Limiter(key_func=get_remote_address)
 csrf = CSRFProtect()
 mail = Mail()
 socketio = SocketIO(cors_allowed_origins="*")
+oauth = OAuth()
 
 
 # Role-based erişim kontrolü

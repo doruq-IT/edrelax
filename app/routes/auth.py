@@ -8,7 +8,7 @@ from app.forms.auth_forms import ForgotPasswordForm
 from app.forms.auth_forms import ResetPasswordForm
 from app.extensions import db
 from app.models import User
-from .. import oauth
+from ..extensions import oauth
 from app.extensions import limiter
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
