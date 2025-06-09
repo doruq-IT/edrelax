@@ -775,8 +775,8 @@ a.active {
 }
 
 /* Fare üzerine gelince uygulanacak stil */
-.nav-links a:hover {
-  background-color: rgba(255, 255, 255, 0.1); /* Hafif beyaz bir arkaplan */
+.nav-links.active a:hover {
+  background-color: rgba(255, 255, 255, 0.1); 
 }
 
 
