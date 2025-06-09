@@ -142,17 +142,22 @@ def make_reservation():
     db.session.commit()
     print("📡 WebSocket emit başlıyor...")
 
+    start_dt = datetime.combine(parsed_date, parsed_start)
+    end_dt = datetime.combine(parsed_date, parsed_end)
+    current_dt = start_dt
 
-    # ✅ WebSocket yayını — her şezlong için ayrı ayrı gönder
-    for bed_id in bed_ids:
-        print(f"🛏️ Emit gönderiliyor: bed_id={bed_id}")
-        socketio.emit("status_updated", {
-            "beach_id": beach_id,
-            "bed_number": bed_id,
-            "date": parsed_date.strftime("%Y-%m-%d"),
-            "time_slot": parsed_start.strftime("%H:%M"),
-            "new_status": "reserved"
-        }, broadcast=True)
+    while current_dt < end_dt:
+        hour_str = current_dt.strftime("%H:%M")
+        for bed_id in bed_ids:
+            print(f"🛏️ Emit gönderiliyor: bed_id={bed_id}, time_slot={hour_str}")
+            socketio.emit("status_updated", {
+                "beach_id": beach_id,
+                "bed_number": bed_id,
+                "date": parsed_date.strftime("%Y-%m-%d"),
+                "time_slot": hour_str,
+                "new_status": "reserved"
+            }, broadcast=True)
+        current_dt += timedelta(hours=1)
 
     return jsonify({
         "success": True,
