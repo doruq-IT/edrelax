@@ -34,11 +34,16 @@ def create_app():
     # --- CACHE BUSTER KODU BURAYA EKLENDİ ---
     @app.context_processor
     def inject_cache_buster():
-        
-        def cache_buster(filepath):
-            full_path = os.path.join(app.root_path, filepath)
+        def cache_buster(filepath_relative_to_static):
+            """
+            Dosyanın, static klasörüne göre olan yolunu alır (örn: 'css/style.css')
+            ve tam sistem yolunu bularak hash üretir.
+            """
+            # Flask'in bildiği static klasörünün tam yolu ile dosya yolunu birleştir
+            full_path = os.path.join(app.static_folder, filepath_relative_to_static)
+            
             if not os.path.exists(full_path):
-                return ""
+                return "" # Dosya bulunamazsa boş dön
             
             # Dosyanın içeriğinin hash'ini hesapla
             hasher = hashlib.md5()
@@ -46,7 +51,6 @@ def create_app():
                 buf = f.read()
                 hasher.update(buf)
             
-            # Hash'in ilk 10 karakterini sürüm olarak kullan
             return hasher.hexdigest()[:10]
             
         return dict(cache_buster=cache_buster)
