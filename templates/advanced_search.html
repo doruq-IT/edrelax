@@ -3,10 +3,7 @@
 
 {% block content %}
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<link
-      rel="stylesheet"
-      href="{{ url_for('static', filename='css/style.css') }}"
-/>
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <style>
@@ -42,6 +39,10 @@
     margin: 0;
   }
 </style>
+<link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/style.css') }}"
+/>
 
 <div class="advanced-container">
   <div class="filter-panel">
