@@ -729,14 +729,12 @@ a.active {
 /* Mobil görünümde nav-links davranışı */
 @media (max-width: 768px) {
  .nav-toggle {
-  display: block;
-  position: absolute;
-  right: 20px;
-  top: 15px;
-  
-  /* En üst katman, her zaman tıklanabilir olmalı */
-  z-index: 1031; 
-}
+   display: block;
+   position: absolute;
+   right: 20px;
+   top: 15px;
+   z-index: 1031; /* Menünün üzerinde kalması için */
+ }
 
  .nav-links {
    /* Bu seçici artık menünün hem kapalı hem açık halinin temelini oluşturuyor */
@@ -764,13 +762,9 @@ a.active {
  }
 
  .nav-links.active {
-  display: flex;
-  flex-direction: column;
-  /* ...diğer tüm stilleriniz (position, top, left, width, height vs)... */
-  
-  /* Menü, overlay'in üzerinde, toggle ikonunun altında olmalı */
-  z-index: 1030; 
-}
+   /* Menü açıldığında sadece pozisyonunu değiştiriyoruz */
+   transform: translateX(0); /* Ekranın içine geri kaydır */
+ }
 
  .nav-links a {
   width: 100%;
