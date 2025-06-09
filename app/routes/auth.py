@@ -84,24 +84,17 @@ def confirm_email(token):
 
 @auth_bp.route('/google/login')
 def google_login():
-    print("➡️ Google login route tetiklendi")
     redirect_uri = url_for('auth.google_callback', _external=True)
     return oauth.google.authorize_redirect(redirect_uri)
 
-
 @auth_bp.route('/google/callback')
 def google_callback():
-    print("📥 Google callback tetiklendi")
-
     try:
         token = oauth.google.authorize_access_token()
-        print("🔑 Token alındı:", token)
     except Exception as e:
-        print("❌ Token alınamadı:", str(e))
         return redirect(url_for('auth.login'))
 
     user_info = oauth.google.get('https://www.googleapis.com/oauth2/v3/userinfo').json()
-    print("👤 Kullanıcı bilgisi alındı:", user_info)
 
     user = User.query.filter_by(email=user_info['email']).first()
     if not user:
@@ -115,13 +108,8 @@ def google_callback():
         print("🆕 Yeni kullanıcı oluşturuldu:", user.email)
     else:
         print("👤 Var olan kullanıcı bulundu:", user.email)
-
-    print("✅ login_user çağrılacak")
     login_user(user)
-    print("✅ login_user çağrıldı")
-    print("📌 Session içeriği:", dict(session))
-    print("👤 current_user.is_authenticated:", current_user.is_authenticated)
-
+    
     return redirect(url_for('public.index'))
 
 @auth_bp.route('/me')
@@ -173,7 +161,6 @@ def logout():
 
     # 🧹 Session temizliği
     session.clear()
-
     flash("Çıkış yapıldı.", "info")
     return redirect(url_for("public.index"))
 
