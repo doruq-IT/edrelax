@@ -122,7 +122,10 @@ def google_callback():
 
     return redirect(url_for('public.index'))
 
-
+@auth_bp.route('/me')
+@login_required
+def me():
+    return f"Giriş yapan kullanıcı: {current_user.email}"
 
 @auth_bp.route("/login", methods=["GET", "POST"])
 @limiter.limit("5 per minute")
