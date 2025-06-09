@@ -5,21 +5,12 @@ from app.extensions import db
 from sqlalchemy import func
 from datetime import datetime, date
 from app.models import Beach, Favorite  # Favorite burada olmalı
+from flask_login import login_required
 from flask_mail import Message
 from app.extensions import mail
 
 
 public_bp = Blueprint('public', __name__)
-
-def login_required(f):
-    from functools import wraps
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if "user_id" not in session:
-            flash("You must be logged in to access this page.", "warning")
-            return redirect(url_for("auth.login"))
-        return f(*args, **kwargs)
-    return decorated_function
 
 @public_bp.route('/')
 def index():
