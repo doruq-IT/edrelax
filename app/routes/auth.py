@@ -8,6 +8,7 @@ from app.forms.auth_forms import ForgotPasswordForm
 from app.forms.auth_forms import ResetPasswordForm
 from app.extensions import db
 from app.models import User
+from .. import oauth
 from app.extensions import limiter
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -81,33 +82,34 @@ def confirm_email(token):
 
     return redirect(url_for("auth.login"))
 
-@auth_bp.route('/google-login')
+@auth_bp.route('/google/login')
 def google_login():
-    if not google.authorized:
-        return redirect(url_for("google.login"))  # bu flask-dance’in otomatik endpoint’i
+    """Kullanıcıyı Google'a yönlendiren route."""
+    redirect_uri = url_for('auth.google_callback', _external=True)
+    return oauth.google.authorize_redirect(redirect_uri)
 
-    resp = google.get("/oauth2/v2/userinfo")
-    if not resp.ok:
-        flash("Google login failed.", "danger")
-        return redirect(url_for("public.index"))
-
-    user_info = resp.json()
-    email = user_info["email"]
-
-    user = User.query.filter_by(email=email).first()
+@auth_bp.route('/google/callback')
+def google_callback():
+    """Google'dan dönen kullanıcıyı karşılayan ve işleyen route."""
+    token = oauth.google.authorize_access_token()
+    user_info = oauth.google.get('https://www.googleapis.com/oauth2/v3/userinfo').json()
+    
+    user = User.query.filter_by(email=user_info['email']).first()
+    
     if not user:
+        # Eğer kullanıcı yoksa, yeni bir kullanıcı oluştur
         user = User(
-            first_name=user_info.get("given_name", ""),
-            last_name=user_info.get("family_name", ""),
-            email=email,
-            role="user"
+            email=user_info['email'],
+            first_name=user_info.get('given_name', ''),
+            last_name=user_info.get('family_name', ''),
+            # Not: Google'dan şifre gelmez, bu yüzden şifre alanı boş kalır
         )
         db.session.add(user)
         db.session.commit()
-
-    login_user(user)
-    flash("Welcome!", "success")
-    return redirect(url_for("public.index"))
+    
+    login_user(user) # Kullanıcı oturumunu başlat
+    
+    return redirect(url_for('public.index')) # Ana sayfaya yönlendir
 
 @auth_bp.route("/login", methods=["GET", "POST"])
 @limiter.limit("5 per minute")

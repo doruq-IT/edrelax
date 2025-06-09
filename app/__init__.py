@@ -6,6 +6,7 @@ from app.routes import auth_bp, admin_bp, public_bp, reservations_bp
 from .routes.auth import load_user  # Kullanıcı yükleme fonksiyonu
 from datetime import datetime
 from app.routes.beach_admin import beach_admin_bp
+from authlib.integrations.flask_client import OAuth
 from flask_wtf.csrf import generate_csrf
 from app.util import to_alphanumeric_bed_id
 from config import Config
@@ -20,7 +21,7 @@ load_dotenv()
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 # pymysql'i MySQLdb gibi davranması için kur
 pymysql.install_as_MySQLdb()
-
+oauth = OAuth()
 
 def create_app():
     app = Flask(
@@ -58,6 +59,7 @@ def create_app():
     
     csrf.init_app(app)
     mail.init_app(app)
+    oauth.init_app(app)
 
     # 🔌 Uzantıları başlat
     db.init_app(app)
@@ -67,6 +69,14 @@ def create_app():
     limiter.init_app(app)
     socketio.init_app(app)
 
+    # Google'ı bir OAuth sağlayıcısı olarak kaydet
+    oauth.register(
+        name='google',
+        server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+        client_kwargs={
+            'scope': 'openid email profile'
+        }
+    )
 
     # ✨ Jinja filtresini kaydet
     app.jinja_env.filters['to_alphanumeric_bed_id'] = to_alphanumeric_bed_id
