@@ -92,7 +92,7 @@ def google_login():
 @auth_bp.route('/google/callback')
 def google_callback():
     print("📥 Google callback tetiklendi")
-    
+
     try:
         token = oauth.google.authorize_access_token()
         print("🔑 Token alındı:", token)
@@ -100,17 +100,11 @@ def google_callback():
         print("❌ Token alınamadı:", str(e))
         return redirect(url_for('auth.login'))
 
-    try:
-        user_info = oauth.google.get('https://www.googleapis.com/oauth2/v3/userinfo').json()
-        print("👤 Kullanıcı bilgisi alındı:", user_info)
-    except Exception as e:
-        print("❌ Kullanıcı bilgisi alınamadı:", str(e))
-        return redirect(url_for('auth.login'))
+    user_info = oauth.google.get('https://www.googleapis.com/oauth2/v3/userinfo').json()
+    print("👤 Kullanıcı bilgisi alındı:", user_info)
 
     user = User.query.filter_by(email=user_info['email']).first()
-
     if not user:
-        print("🆕 Yeni kullanıcı oluşturuluyor:", user_info['email'])
         user = User(
             email=user_info['email'],
             first_name=user_info.get('given_name', ''),
@@ -118,7 +112,7 @@ def google_callback():
         )
         db.session.add(user)
         db.session.commit()
-        print("✅ Yeni kullanıcı veritabanına kaydedildi:", user.email)
+        print("🆕 Yeni kullanıcı oluşturuldu:", user.email)
     else:
         print("👤 Var olan kullanıcı bulundu:", user.email)
 
@@ -127,6 +121,7 @@ def google_callback():
     print("✅ login_user çağrıldı")
 
     return redirect(url_for('public.index'))
+
 
 
 @auth_bp.route("/login", methods=["GET", "POST"])
