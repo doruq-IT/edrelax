@@ -2,6 +2,7 @@
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
 from flask_wtf.csrf import CSRFProtect, CSRFError
+from flask_login import login_required, current_user
 from app.models import User
 from app.extensions import db, csrf
 from app.models import Beach, Reservation
@@ -11,15 +12,6 @@ from collections import defaultdict
 
 reservations_bp = Blueprint('reservations', __name__)
 
-def login_required(f):
-    from functools import wraps
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if "user_id" not in session:
-            flash("You must be logged in to access this page.", "warning")
-            return redirect(url_for("auth.login"))
-        return f(*args, **kwargs)
-    return decorated_function
 
 @reservations_bp.route('/beach/<slug>/select-beds')
 @login_required
@@ -52,7 +44,7 @@ def select_beds(slug):
 
     booked_beds = [r.bed_number for r in overlapping_reservations]
 
-    user_id = session['user_id']
+    user_id = current_user.id
     reservations_today_count = Reservation.query.filter(
         Reservation.user_id == user_id,
         Reservation.date == selected_date,
@@ -109,7 +101,7 @@ def make_reservation():
             return jsonify({"success": False, "message": f"Geçersiz şezlong ID formatı: {bed_id}"}), 400
 
     GUNLUK_MAKSIMUM_SEZLONG = 10
-    user_id = session['user_id']
+    user_id = current_user.id
     reservations_today_count = Reservation.query.filter_by(user_id=user_id, date=parsed_date).count()
 
     if (reservations_today_count + len(bed_ids)) > GUNLUK_MAKSIMUM_SEZLONG:
@@ -175,7 +167,7 @@ def make_reservation():
 @reservations_bp.route("/my-reservations")
 @login_required
 def my_reservations():
-    user_id = session['user_id']
+    user_id = current_user.id
     user_reservations = Reservation.query.filter_by(user_id=user_id).order_by(
         Reservation.date.desc(), Reservation.start_time.desc()
     ).all()
@@ -239,7 +231,7 @@ def my_reservations():
 @login_required
 def cancel_reservation(res_id):
     reservation = Reservation.query.get_or_404(res_id)
-    if reservation.user_id != session['user_id']:
+    if reservation.user_id != current_user.id:
         flash("Bu rezervasyonu iptal etmeye yetkiniz yok.", "danger")
         return redirect(url_for('reservations.my_reservations'))
 
@@ -262,7 +254,7 @@ def cancel_reservation(res_id):
 @login_required
 def get_user_info(reservation_id):
     reservation = Reservation.query.get_or_404(reservation_id)
-    current_user = User.query.get(session['user_id'])
+    current_user = User.query.get(current_user.id)
 
     is_admin = getattr(current_user, 'is_admin', False)
     is_beach_owner = (reservation.beach.owner_id == current_user.id)
