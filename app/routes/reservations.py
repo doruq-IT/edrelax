@@ -140,9 +140,12 @@ def make_reservation():
         db.session.add(new_reservation)
 
     db.session.commit()
+    print("📡 WebSocket emit başlıyor...")
+
 
     # ✅ WebSocket yayını — her şezlong için ayrı ayrı gönder
     for bed_id in bed_ids:
+        print(f"🛏️ Emit gönderiliyor: bed_id={bed_id}")
         socketio.emit("status_updated", {
             "beach_id": beach_id,
             "bed_number": bed_id,
