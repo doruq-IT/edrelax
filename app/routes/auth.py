@@ -119,6 +119,8 @@ def google_callback():
     print("✅ login_user çağrılacak")
     login_user(user)
     print("✅ login_user çağrıldı")
+    print("📌 Session içeriği:", dict(session))
+    print("👤 current_user.is_authenticated:", current_user.is_authenticated)
 
     return redirect(url_for('public.index'))
 
