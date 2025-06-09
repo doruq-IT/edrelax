@@ -3,12 +3,19 @@
   <head>
     <meta charset="UTF-8" />
     <title>{% block title %}Edrelax{% endblock %}</title>
-    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
-    <meta name="csrf-token" content="{{ csrf_token }}">
+    <link
+      rel="icon"
+      type="image/x-icon"
+      href="{{ url_for('static', filename='favicon.ico') }}"
+    />
+    <meta name="csrf-token" content="{{ csrf_token }}" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
     <!-- 🌐 CSS Dosyaları -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v={{ cache_buster('css/style.css') }}">
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/style.css') }}?v={{ cache_buster('css/style.css') }}"
+    />
     <link
       rel="stylesheet"
       href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
@@ -23,10 +30,9 @@
       href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap"
       rel="stylesheet"
     />
-    
   </head>
   <body class="{% block body_class %}{% endblock %}">
-
+    <div class="menu-overlay"></div>
     <!-- 🔝 Navbar -->
     <header class="top-nav">
       <div class="nav-section left">
@@ -61,7 +67,8 @@
           href="{{ url_for('beach_admin.reservations') }}"
           class="{% if request.path == url_for('beach_admin.reservations') %}active{% endif %}"
         >
-          📅 Rezervasyonlar  {# Bu beach admin'in kendi rezervasyon yönetimi, kullanıcıların "Rezervasyonlarım" değil #}
+          📅 Rezervasyonlar {# Bu beach admin'in kendi rezervasyon yönetimi,
+          kullanıcıların "Rezervasyonlarım" değil #}
         </a>
         <a
           href="{{ url_for('beach_admin.manage_beds') }}"
@@ -91,29 +98,40 @@
         </span>
         {# #}
         <a href="{{ url_for('auth.logout') }}">Çıkış Yap</a>
-        
-        {% elif session.get('user_id') %} {# Normal kullanıcı veya Süper Admin (beach_admin olmayan) #}
+
+        {% elif session.get('user_id') %} {# Normal kullanıcı veya Süper Admin
+        (beach_admin olmayan) #}
         <a href="{{ url_for('public.about') }}?tab=help">Yardım</a>
         <a href="{{ url_for('public.contact') }}">İletişim</a>
         <a href="{{ url_for('auth.profile') }}">Profil</a>
-        <a href="{{ url_for('public.my_favorites') }}">⭐ Favorilerim</a>    
+        <a href="{{ url_for('public.my_favorites') }}">⭐ Favorilerim</a>
 
-        {% if session.get('user_email') in admin_emails %} {# Süper admin linkleri #}
+        {% if session.get('user_email') in admin_emails %} {# Süper admin
+        linkleri #}
         <a href="{{ url_for('admin.beaches') }}">Yönetim Paneli</a>
         <a href="{{ url_for('admin.manage_users') }}">Kullanıcılar</a>
         <a href="{{ url_for('admin.dashboard') }}">İstatistikler</a>
         {# #}
         <span style="margin: 0 10px">
-          👋 Hoş geldin, <strong>{{ session.get('user_name', 'Kullanıcı') }}</strong>
+          👋 Hoş geldin,
+          <strong>{{ session.get('user_name', 'Kullanıcı') }}</strong>
         </span>
-        {# #}
-        {% else %} {# Normal kullanıcı (süper admin veya beach admin olmayan) #}
-        <a href="{{ url_for('reservations.my_reservations') }}">Rezervasyonlarım</a> {# Normal kullanıcılar için buraya eklendi #}
-        <a href="{{ url_for('public.kredi') }}" class="balance-box" title="Kredi Bilgisi">
+        {# #} {% else %} {# Normal kullanıcı (süper admin veya beach admin
+        olmayan) #}
+        <a href="{{ url_for('reservations.my_reservations') }}"
+          >Rezervasyonlarım</a
+        >
+        {# Normal kullanıcılar için buraya eklendi #}
+        <a
+          href="{{ url_for('public.kredi') }}"
+          class="balance-box"
+          title="Kredi Bilgisi"
+        >
           💰 {{ session.get('user_credit', 0) }} TL
         </a>
         <span style="margin: 0 10px">
-          👋 Hoş geldin, <strong>{{ session.get('user_name', 'Kullanıcı') }}</strong>
+          👋 Hoş geldin,
+          <strong>{{ session.get('user_name', 'Kullanıcı') }}</strong>
         </span>
         {% endif %}
         <a href="{{ url_for('auth.logout') }}">Çıkış Yap</a>
@@ -133,33 +151,28 @@
     </div>
 
     <!-- ✅ Gerçek içerik buraya yüklenecek -->
-    <div id="main-content" style="display: none;">
+    <div id="main-content" style="display: none">
       <!-- 📄 Sayfa içeriği -->
       <main class="container mt-4 mb-5">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-          {% if messages %}
-            {% for category, message in messages %}
-              <div
-                class="alert alert-{{ category }} alert-dismissible fade show"
-                role="alert"
-              >
-                {{ message }}
-                <button
-                  type="button"
-                  class="close"
-                  data-dismiss="alert"
-                  aria-label="Close"
-                >
-                  <span aria-hidden="true">&times;</span>
-                </button>
-              </div>
-            {% endfor %}
-          {% endif %}
-        {% endwith %}
-        {% block content %}{% endblock %}
+        {% with messages = get_flashed_messages(with_categories=true) %} {% if
+        messages %} {% for category, message in messages %}
+        <div
+          class="alert alert-{{ category }} alert-dismissible fade show"
+          role="alert"
+        >
+          {{ message }}
+          <button
+            type="button"
+            class="close"
+            data-dismiss="alert"
+            aria-label="Close"
+          >
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        {% endfor %} {% endif %} {% endwith %} {% block content %}{% endblock %}
       </main>
     </div>
-
 
     <!-- 👣 Footer -->
     {% include 'footer.html' %}
@@ -180,17 +193,43 @@
 
     <!-- 🌐 Hamburger Toggle Script -->
     <script>
-      const navToggle = document.getElementById("nav-toggle");
-      const navLinks = document.getElementById("nav-links");
+      // Sayfanın tüm HTML içeriği yüklendikten sonra bu kodun çalışmasını bekle.
+      // Bu, script'in aradığı elementleri bulamama riskini ortadan kaldırır.
+      document.addEventListener("DOMContentLoaded", function () {
+        // Gerekli HTML elementlerini class isimleriyle seç
+        const navToggle = document.querySelector(".nav-toggle");
+        const navLinks = document.querySelector(".nav-links");
+        const menuOverlay = document.querySelector(".menu-overlay");
+        const body = document.body;
 
-      navToggle.addEventListener("click", () => {
-        navLinks.classList.toggle("active");
+        // Elementlerin sayfada bulunduğundan emin ol (hata almamak için)
+        if (navToggle && navLinks && menuOverlay) {
+          // Menüyü kapatmak için tekrar kullanılabilir bir fonksiyon
+          function closeMenu() {
+            navLinks.classList.remove("active");
+            menuOverlay.classList.remove("active");
+            body.classList.remove("no-scroll");
+          }
+
+          // Hamburger menü ikonuna tıklandığında...
+          navToggle.addEventListener("click", (event) => {
+            event.stopPropagation(); // Olayın daha fazla yayılmasını engelle
+
+            // İlgili tüm elementlere "active" class'ını ekle/kaldır
+            navLinks.classList.toggle("active");
+            menuOverlay.classList.toggle("active");
+            body.classList.toggle("no-scroll"); // Arka plan kaymasını engelle
+          });
+
+          // Arka plan karartısına (overlay) tıklandığında menüyü kapat
+          menuOverlay.addEventListener("click", closeMenu);
+        }
       });
     </script>
     <script>
       document.addEventListener("DOMContentLoaded", function () {
         const forms = document.querySelectorAll("form");
-        forms.forEach(form => {
+        forms.forEach((form) => {
           form.addEventListener("submit", function () {
             const loader = document.getElementById("loader");
             if (loader) loader.style.display = "flex";
@@ -198,6 +237,5 @@
         });
       });
     </script>
-
   </body>
 </html>

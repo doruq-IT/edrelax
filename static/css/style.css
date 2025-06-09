@@ -599,6 +599,26 @@ main {
   color: white !important;
 }
 
+.menu-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5); /* Yarı saydam siyah */
+  z-index: 1029; /* Menünün bir katman arkasında */
+  
+  /* Başlangıçta görünmez ve tıklanamaz */
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+}
+
+.menu-overlay.active {
+  /* Aktif olduğunda görünür ve tıklanabilir */
+  opacity: 1;
+  visibility: visible;
+}
 .nav-links {
   display: flex;
   align-items: center;
@@ -712,33 +732,37 @@ a.active {
    position: absolute;
    right: 20px;
    top: 15px;
-   z-index: 1001; /* Menünün üzerinde kalması için */
+   z-index: 1031; /* Menünün üzerinde kalması için */
  }
 
  .nav-links {
-   /* Menü kapalıyken gizli kalır */
-   display: none;
- }
-
- .nav-links.active {
-   /* Menü açıldığında uygulanacak stiller */
-   display: flex;
+   /* Bu seçici artık menünün hem kapalı hem açık halinin temelini oluşturuyor */
+   display: flex; /* Her zaman flex olarak ayarlı */
    flex-direction: column;
    align-items: flex-start;
    gap: 15px;
    
-   /* Konumlandırma ve Boyutlandırma */
-   position: fixed; /* 👈 Ekrana sabitler */
-   top: 60px;       /* 👇 Navbar yüksekliğine göre ayarlanmalı */
-   left: 0;
-   width: 100%;
-   height: calc(100vh - 60px); /* Ekranın kalan tüm yüksekliğini kaplar */
+   position: fixed;
+   top: 0; /* Artık en tepeden başlasın */
+   right: 0; /* Ekrana sağdan hizalı */
    
-   /* Görünüm */
+   width: 280px; /* Menü genişliği (istediğiniz gibi ayarlayın, örn: 80%) */
+   height: 100vh; /* Tüm ekran yüksekliğini kapla */
+   
    background-color: #0a4857;
    padding: 20px;
-   z-index: 1000; /* Diğer her şeyin üzerinde görünür */
-   overflow-y: auto;
+   padding-top: 80px; /* Navbar'dan daha yüksek bir boşluk bırakmak için */
+   z-index: 1030; /* Yüksek bir z-index */
+   box-shadow: -5px 0 15px rgba(0,0,0,0.2);
+
+   /* --- ANİMASYON İÇİN EN ÖNEMLİ KISIM --- */
+   transform: translateX(100%); /* Başlangıçta ekranın sağında tamamen gizli */
+   transition: transform 0.3s ease-in-out; /* Yumuşak bir geçiş efekti ekle */
+ }
+
+ .nav-links.active {
+   /* Menü açıldığında sadece pozisyonunu değiştiriyoruz */
+   transform: translateX(0); /* Ekranın içine geri kaydır */
  }
 
  .nav-links a {
