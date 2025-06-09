@@ -694,37 +694,46 @@ a.active {
 
 /* Mobil görünümde nav-links davranışı */
 @media (max-width: 768px) {
-  .nav-toggle {
-    display: block;
-    position: absolute;
-    right: 20px;
-    top: 15px;
-  }
+ .nav-toggle {
+   display: block;
+   position: absolute;
+   right: 20px;
+   top: 15px;
+   z-index: 1001; /* Menünün üzerinde kalması için */
+ }
 
-  .nav-links {
-    display: none;
-    position: fixed;
-    top: 60px; /* navbar yüksekliğine göre */
-    right: 0;
-    width: 100%;
-    background-color: #0a4857;
-    padding: 20px;
-    z-index: 1000;
-  }
+ .nav-links {
+   /* Menü kapalıyken gizli kalır */
+   display: none;
+ }
 
-  .nav-links.active {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 15px;
-  }
+ .nav-links.active {
+   /* Menü açıldığında uygulanacak stiller */
+   display: flex;
+   flex-direction: column;
+   align-items: flex-start;
+   gap: 15px;
+   
+   /* Konumlandırma ve Boyutlandırma */
+   position: fixed; /* 👈 Ekrana sabitler */
+   top: 60px;       /* 👇 Navbar yüksekliğine göre ayarlanmalı */
+   left: 0;
+   width: 100%;
+   height: calc(100vh - 60px); /* Ekranın kalan tüm yüksekliğini kaplar */
+   
+   /* Görünüm */
+   background-color: #0a4857;
+   padding: 20px;
+   z-index: 1000; /* Diğer her şeyin üzerinde görünür */
+   overflow-y: auto;
+ }
 
-  .nav-links a {
-    width: 100%;
-    padding: 10px 0;
-    text-align: left;
-    color: white !important;
-  }
+ .nav-links a {
+   width: 100%;
+   padding: 10px 0;
+   text-align: left;
+   color: white !important;
+ }
 
 
 /* Footer bölümü responsive */
