@@ -13,6 +13,8 @@ from app.extensions import csrf, mail, limiter, google_bp
 from app.extensions import socketio
 from dotenv import load_dotenv
 from .extensions import csrf
+import hashlib
+
 
 load_dotenv()
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
@@ -28,6 +30,28 @@ def create_app():
     )
 
     app.config.from_object(Config)
+    
+    # --- CACHE BUSTER KODU BURAYA EKLENDİ ---
+    @app.context_processor
+    def inject_cache_buster():
+        
+        def cache_buster(filepath):
+            full_path = os.path.join(app.root_path, filepath)
+            if not os.path.exists(full_path):
+                return ""
+            
+            # Dosyanın içeriğinin hash'ini hesapla
+            hasher = hashlib.md5()
+            with open(full_path, 'rb') as f:
+                buf = f.read()
+                hasher.update(buf)
+            
+            # Hash'in ilk 10 karakterini sürüm olarak kullan
+            return hasher.hexdigest()[:10]
+            
+        return dict(cache_buster=cache_buster)
+    # --- EKLEME BÖLÜMÜ SONU ---
+    
     csrf.init_app(app)
     mail.init_app(app)
 
