@@ -1,11 +1,24 @@
 /* ✅ Genel Ayarlar */
+header { /* Bu bölüm doğru, aynen kalabilir */
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 1001;
+  /* Kendi header arkaplan renginiz vs. burada olmalı */
+}
+
 
 body {
+  /* Genel stil ayarları */
   font-family: Arial, sans-serif;
   margin: 0;
-  padding: 0;
   background-color: #fff;
   color: #333;
+
+  /* SABİT NAVBAR'IN İÇERİĞİ KAPATMAMASI İÇİN BU KURAL ŞART! */
+  /* Not: 60px, sizin navbar'ınızın gerçek yüksekliği ile aynı olmalı. */
+  padding-top: 60px; 
 }
 
 main {
