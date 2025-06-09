@@ -106,9 +106,9 @@ def google_callback():
         )
         db.session.add(user)
         db.session.commit()
-    
+    print("✅ login_user çağrılacak")
     login_user(user) # Kullanıcı oturumunu başlat
-    
+    print("✅ login_user çağrıldı")
     return redirect(url_for('public.index')) # Ana sayfaya yönlendir
 
 @auth_bp.route("/login", methods=["GET", "POST"])
