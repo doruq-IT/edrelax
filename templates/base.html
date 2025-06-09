@@ -151,13 +151,19 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
     <!-- 🔁 Sayfa yüklenince loader'ı kapat -->
     <script>
-      window.addEventListener("load", function () {
-        var loader = document.getElementById("loader");
+      function hideLoader() {
+        const loader = document.getElementById("loader");
         if (loader) loader.style.display = "none";
 
-        var content = document.getElementById("main-content");
+        const content = document.getElementById("main-content");
         if (content) content.style.display = "block";
-      });
+      }
+
+      // Sayfa normal yüklendiğinde
+      window.addEventListener("load", hideLoader);
+
+      // Sayfa geri gelince (back/forward)
+      window.addEventListener("pageshow", hideLoader);
     </script>
 
     <!-- 🌐 Hamburger Toggle Script -->
