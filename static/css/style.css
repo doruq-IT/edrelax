@@ -1,13 +1,11 @@
 /* ✅ Genel Ayarlar */
-header { /* Bu bölüm doğru, aynen kalabilir */
+header { 
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
-  z-index: 1001;
-  /* Kendi header arkaplan renginiz vs. burada olmalı */
+  z-index: 1030; /* 👈 DEĞERİ YÜKSELTTİK */
 }
-
 
 body {
   /* Genel stil ayarları */
