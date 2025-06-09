@@ -835,43 +835,26 @@ a.active {
   border-radius: 2px;
 }
 .advanced-container {
+    /* Ana taşıyıcıyı dikey (alt alta) sıralama moduna geçirir */
     flex-direction: column;
-    padding: 20px 10px;
-    gap: 20px;
+    
+    /* Paneller arasına boşluk ekler */
+    gap: 25px; 
   }
 
   .filter-panel {
-    width: 100%;
-    padding: 15px;
-    border-radius: 10px;
+    /* Filtre panelinin sabit genişliğini kaldırıp tam genişlik yapar */
+    width: 100%; 
   }
 
   .results-panel {
+    /* Sonuçlar panelinin de tam genişlik olmasını sağlar */
     width: 100%;
   }
 
   .map-area {
-    height: 300px;
-    width: 100%;
-    margin-bottom: 20px;
-  }
-
-  .beach-result {
-    padding: 10px;
-    border-bottom: 1px solid #ccc;
-  }
-
-  .beach-result h6 {
-    font-size: 16px;
-  }
-
-  .beach-result p {
-    font-size: 14px;
-    color: #666;
-  }
-
-  .btn-outline-primary {
-    width: 100%;
+    /* Mobil cihazlarda harita yüksekliğini ayarlayabilirsiniz */
+    height: 350px; 
   }
 
 }
