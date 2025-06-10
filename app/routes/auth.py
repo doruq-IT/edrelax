@@ -107,7 +107,6 @@ def google_callback():
         flash("Google hesabınızdan e-posta alınamadı.", "danger")
         return redirect(url_for('auth.login'))
 
-    # Kullanıcı veritabanında var mı?
     user = User.query.filter_by(email=email).first()
     if not user:
         user = User(
@@ -115,7 +114,7 @@ def google_callback():
             first_name=user_info.get('given_name', ''),
             last_name=user_info.get('family_name', ''),
             password='',  # Google kullanıcıları için boş
-            role='user'   # veya varsayılan rol neyse
+            role='user'
         )
         db.session.add(user)
         db.session.commit()
@@ -123,15 +122,16 @@ def google_callback():
     else:
         print("👤 Var olan kullanıcı ile giriş yapılıyor:", user.email)
 
-    # Flask-Login ile oturumu başlat
     login_user(user, remember=True)
-    
+    print("✅ Kullanıcı giriş yaptı (login_user)")
+
     # (İsteğe bağlı) Eğer navbar’da session’dan çekiyorsan aşağıyı bırak:
     session['user_name'] = user.first_name
     session['user_credit'] = getattr(user, 'credit', 0)
     session['user_role'] = user.role or 'user'
 
     return redirect(url_for('public.index'))
+
 
 
 
