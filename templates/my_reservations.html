@@ -95,6 +95,7 @@
                     action="{{ url_for('reservations.cancel_reservation', res_id=r.id) }}"
                     onsubmit="return confirm('Bu rezervasyonu iptal etmek istediğinizden emin misiniz?');"
                   >
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                     <button type="submit" class="btn btn-sm btn-outline-danger">
                         <i class="fas fa-times-circle fa-fw"></i> İptal Et
                     </button>
