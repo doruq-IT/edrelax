@@ -16,6 +16,8 @@
           action="{{ url_for('public.beach_application') }}"
           enctype="multipart/form-data">
       
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
       <h4 class="mt-4 mb-3">İletişim Bilgileriniz</h4>
       <div class="row">
         <div class="col-md-4">
@@ -68,6 +70,7 @@
       <div class="form-group">
           <label for="image_upload">Plaj Görseli Yükle (En iyi fotoğrafınızı seçin)</label>
           <input type="file" class="form-control-file" id="image_upload" name="image_upload" accept="image/png, image/jpeg" required>
+          <small class="form-text text-muted">Not: Lütfen maksimum 1MB boyutunda bir görsel yükleyin.</small>
       </div>
       
       <div class="row">
