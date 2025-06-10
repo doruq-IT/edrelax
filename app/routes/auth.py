@@ -125,11 +125,6 @@ def google_callback():
     login_user(user, remember=True)
     print("✅ Kullanıcı giriş yaptı (login_user)")
 
-    # (İsteğe bağlı) Eğer navbar’da session’dan çekiyorsan aşağıyı bırak:
-    session['user_name'] = user.first_name
-    session['user_credit'] = getattr(user, 'credit', 0)
-    session['user_role'] = user.role or 'user'
-
     return redirect(url_for('public.index'))
 
 
