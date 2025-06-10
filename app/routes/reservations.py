@@ -235,19 +235,34 @@ def cancel_reservation(res_id):
         flash("Bu rezervasyonu iptal etmeye yetkiniz yok.", "danger")
         return redirect(url_for('reservations.my_reservations'))
 
-    # 📅 Başlangıç zamanını hesapla
+    # İptal etmeye çalıştığı rezervasyonun durumu zaten 'cancelled' ise işlem yapma
+    if reservation.status == 'cancelled':
+        flash("Bu rezervasyon zaten daha önce iptal edilmiş.", "info")
+        return redirect(url_for('reservations.my_reservations'))
+
     start_datetime = datetime.combine(reservation.date, reservation.start_time)
     now = datetime.now()
 
-    # ⏰ Başlangıç saatine 1 saatten az kalmışsa iptal engellenir
+    # İYİLEŞTİRME 1: Geçmiş rezervasyonlar için farklı mesaj
+    if start_datetime < now:
+        flash("Başlangıç saati geçmiş bir rezervasyon iptal edilemez.", "danger")
+        return redirect(url_for('reservations.my_reservations'))
+
+    # İYİLEŞTİRME 2: İptal süresi kontrolü (örneğin 1 saat)
     if start_datetime - now < timedelta(hours=1):
         flash("Rezervasyonun başlamasına 1 saatten az kaldığı için iptal edilemez.", "warning")
         return redirect(url_for('reservations.my_reservations'))
 
-    # ✅ İptal işlemi
-    db.session.delete(reservation)
+    # İYİLEŞTİRME 3: Veriyi silmek yerine durumunu güncelle (Soft Delete)
+    reservation.status = 'cancelled'
+    
+    # Not: Eğer kredili bir sistem kullanıyorsanız, 
+    # bu noktada kullanıcıya kredisini iade eden kodu da ekleyebilirsiniz.
+    # Örneğin: current_user.credit += reservation.price
+
     db.session.commit()
-    flash("Rezervasyon başarıyla iptal edildi.", "info")
+    
+    flash("Rezervasyonunuz başarıyla iptal edildi.", "success")
     return redirect(url_for('reservations.my_reservations'))
 
 @reservations_bp.route("/get-user-info/<int:reservation_id>")
