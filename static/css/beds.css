@@ -156,7 +156,7 @@ body.beds-page {
     -webkit-overflow-scrolling: touch;
     scrollbar-width: thin;
     scrollbar-color: #ccc #f0f0f0;
-    padding-left: 200px;
+    padding-left: 10px;
     padding-right: 10px;
     width: 100%;
     box-sizing: border-box;
