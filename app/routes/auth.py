@@ -173,20 +173,27 @@ def login():
 @auth_bp.route("/logout")
 @login_required
 def logout():
-    # 🔐 Flask-Login çıkışı
-    logout_user()
+    # Bu loglar sunucunuzun terminalinde (journalctl) görünecektir
+    current_app.logger.warning("--- LOGOUT İŞLEMİ BAŞLADI ---")
+    current_app.logger.warning(f"Logout öncesi session içeriği: {dict(session)}")
 
-    # 🧹 Session temizliği
+    # Adım 1: Flask-Login çıkışı
+    logout_user()
+    current_app.logger.warning(f"logout_user() sonrası session içeriği: {dict(session)}")
+
+    # Adım 2: Session'ı tamamen temizle
     session.clear()
+    current_app.logger.warning(f"session.clear() sonrası session içeriği: {dict(session)}")
+
     flash("Çıkış yapıldı.", "info")
 
-    # Tarayıcıyı yönlendirirken önbelleği engellemek için bir yanıt nesnesi oluştur
+    # Adım 3: Tarayıcıya yönlendirme yanıtı hazırla
     response = make_response(redirect(url_for("public.index")))
-    
-    # Tarayıcıya ve aradaki proxy'lere bu yanıtı asla cache'lememelerini söyleyen başlıklar
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     response.headers["Pragma"] = "no-cache"
     response.headers["Expires"] = "0"
+    
+    current_app.logger.warning("--- LOGOUT BİTTİ, Yönlendirme yanıtı gönderiliyor. ---")
     
     return response
 
