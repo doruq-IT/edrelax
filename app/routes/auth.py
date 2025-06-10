@@ -170,8 +170,6 @@ def login():
 
     return render_template("login.html", form=form)
 
-
-
 @auth_bp.route("/logout")
 @login_required
 def logout():
@@ -191,8 +189,6 @@ def logout():
     response.headers["Expires"] = "0"
     
     return response
-
-
 
 @auth_bp.route('/forgot-password', methods=["GET", "POST"])
 def forgot_password():
