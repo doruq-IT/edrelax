@@ -122,12 +122,12 @@ def google_callback():
 
     login_user(user)
 
-    # ✅ Oturuma user_id ve diğer bilgileri manuel ekle
-    session['user_id'] = user.id
+    session.clear()
+    session['user_id'] = user.get_id()
     session['user_name'] = user.first_name
     session['user_email'] = user.email
     session['user_role'] = user.role or 'user'
-    session['user_credit'] = 0  # eğer varsa db'den çekebilirsin
+    session['user_credit'] = 0  # varsa değiştirilebilir
 
     print("✅ Session güncellendi:", dict(session))
 
