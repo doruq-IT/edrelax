@@ -87,30 +87,52 @@ def google_login():
     redirect_uri = url_for('auth.google_callback', _external=True)
     return oauth.google.authorize_redirect(redirect_uri)
 
+
 @auth_bp.route('/google/callback')
 def google_callback():
     try:
         token = oauth.google.authorize_access_token()
+        print("🔑 Google token alındı:", token)
     except Exception as e:
+        print("❌ Token alınamadı:", str(e))
+        flash("Google ile giriş yapılamadı.", "danger")
         return redirect(url_for('auth.login'))
 
     user_info = oauth.google.get('https://www.googleapis.com/oauth2/v3/userinfo').json()
+    print("👤 Kullanıcı bilgisi:", user_info)
 
-    user = User.query.filter_by(email=user_info['email']).first()
+    email = user_info.get('email')
+    if not email:
+        flash("Google hesabınızdan e-posta alınamadı.", "danger")
+        return redirect(url_for('auth.login'))
+
+    user = User.query.filter_by(email=email).first()
     if not user:
         user = User(
-            email=user_info['email'],
+            email=email,
             first_name=user_info.get('given_name', ''),
-            last_name=user_info.get('family_name', '')
+            last_name=user_info.get('family_name', ''),
+            password=''  # ❗ Google ile gelen kullanıcılar için şifre boş olabilir
         )
         db.session.add(user)
         db.session.commit()
         print("🆕 Yeni kullanıcı oluşturuldu:", user.email)
     else:
         print("👤 Var olan kullanıcı bulundu:", user.email)
+
     login_user(user)
-    
+
+    # ✅ Oturuma user_id ve diğer bilgileri manuel ekle
+    session['user_id'] = user.id
+    session['user_name'] = user.first_name
+    session['user_email'] = user.email
+    session['user_role'] = user.role or 'user'
+    session['user_credit'] = 0  # eğer varsa db'den çekebilirsin
+
+    print("✅ Session güncellendi:", dict(session))
+
     return redirect(url_for('public.index'))
+
 
 @auth_bp.route('/me')
 @login_required
