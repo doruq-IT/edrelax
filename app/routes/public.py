@@ -271,7 +271,7 @@ def beach_application():
         # E-posta gönderme işlemi
         try:
             # Yönetici e-postasını config dosyasından al
-            admin_email = current_app.config.get('ADMIN_EMAIL', 'edrelax.beach@mail.com')
+            admin_email = current_app.config.get('ADMIN_EMAIL', 'edrelax.beach@gmail.com')
             
             msg = Message(subject,
                           sender=current_app.config['MAIL_USERNAME'],
