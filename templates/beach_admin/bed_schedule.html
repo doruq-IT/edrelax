@@ -328,47 +328,82 @@ beach.name }}{% endblock %} {% block content %}
           if (!value) return 'Bir durum seçmelisiniz!';
         }
       }).then((result) => {
+        // Kullanıcı bir durum seçip "Uygula" butonuna bastıysa bu blok çalışır.
         if (result.isConfirmed && result.value) {
-          // Bu kısım zaten doğru çalıştığı için dokunmuyoruz.
-          // Mevcut kodunuzdaki gibi kalacak.
+          
           const newStatusToApply = result.value;
           const dateForUpdate = scheduleDateInput.value;
 
-          const updatePromises = currentlySelectedSlots.map((slotEl, index) => {
-            const reservationId = slotEl.dataset.reservationId;
-            const bedNum = slotEl.dataset.bedNumber;
-            const timeSlot = slotEl.dataset.timeSlot;
-
-            return updateStatusOnServer(
-              slotEl,
-              reservationId,
-              newStatusToApply,
-              bedNum,
-              timeSlot,
-              dateForUpdate,
-              beachId,
-              true,
-              index === 0
-            );
-          });
-
-          Promise.all(updatePromises)
-            .then(results => {
-              const allSuccessful = results.every(r => r.success);
-              if (allSuccessful) {
-                Swal.fire('Başarılı!', `${currentlySelectedSlots.length} saat diliminin durumu güncellendi.`, 'success');
-              } else {
-                Swal.fire('Kısmi Başarı!', 'Bazı saat dilimleri güncellenirken sorun oluştu. Lütfen kontrol edin.', 'warning');
-              }
-            })
-            .catch(error => {
-              console.error("Toplu güncelleme sırasında hata:", error);
-              Swal.fire('Hata!', 'Durumlar güncellenirken bir hata oluştu.', 'error');
-            })
-            .finally(() => {
+          // YENİ EKLENEN KONTROL: Eğer seçilen durum 'free' (iptal) ise, farklı çalış.
+          if (newStatusToApply === 'free') {
+            
+            // Seçilen slotların ilkini referans almamız yeterli, çünkü hepsi aynı rezervasyona ait.
+            const firstSlot = currentlySelectedSlots[0];
+            const reservationId = firstSlot.dataset.reservationId;
+            
+            // Eğer seçilen slotların bir rezervasyon ID'si yoksa (zaten boşlarsa) hata vermeden bilgi ver.
+            if (!reservationId) {
+              Swal.fire('Bilgi', 'Bu slotlar zaten boş olduğu için iptal edilemez.', 'info');
               clearCurrentMultiSelection();
               updateApplyToSelectedButtonState();
+              return; // İşlemi sonlandır.
+            }
+
+            // Sunucuya SADECE BİR TANE silme isteği gönder.
+            updateStatusOnServer(firstSlot, reservationId, newStatusToApply, null, null, dateForUpdate, beachId, false)
+              .then(response => {
+                // Başarılı olursa kullanıcıya bilgi ver. Arayüz zaten socket ile güncellendi.
+                Swal.fire('Başarılı!', response.message || 'Rezervasyon iptal edildi.', 'success');
+              })
+              .catch(error => {
+                // Bu tek istekte bir hata olursa kullanıcıya göster.
+                Swal.fire('Hata!', error.message || 'İşlem sırasında bir hata oluştu.', 'error');
+              })
+              .finally(() => {
+                // Her durumda seçimi temizle.
+                clearCurrentMultiSelection();
+                updateApplyToSelectedButtonState();
+              });
+
+          } else {
+            // DOKUNULMAYAN ORİJİNAL KOD: Durum 'free' DEĞİLSE (örn: 'used'), eski çalışan mantık devreye girer.
+            const updatePromises = currentlySelectedSlots.map((slotEl, index) => {
+              const reservationId = slotEl.dataset.reservationId;
+              const bedNum = slotEl.dataset.bedNumber;
+              const timeSlot = slotEl.dataset.timeSlot;
+
+              return updateStatusOnServer(
+                slotEl,
+                reservationId,
+                newStatusToApply,
+                bedNum,
+                timeSlot,
+                dateForUpdate,
+                beachId,
+                true,
+                index === 0
+              );
             });
+
+            Promise.all(updatePromises)
+              .then(results => {
+                const allSuccessful = results.every(r => r.success);
+                if (allSuccessful) {
+                  Swal.fire('Başarılı!', `${currentlySelectedSlots.length} saat diliminin durumu güncellendi.`, 'success');
+                } else {
+                  Swal.fire('Kısmi Başarı!', 'Bazı saat dilimleri güncellenirken sorun oluştu. Lütfen kontrol edin.', 'warning');
+                }
+              })
+              .catch(error => {
+                console.error("Toplu güncelleme sırasında hata:", error);
+                Swal.fire('Hata!', 'Durumlar güncellenirken bir hata oluştu.', 'error');
+              })
+              .finally(() => {
+                clearCurrentMultiSelection();
+                updateApplyToSelectedButtonState();
+              });
+          }
+        } 
         } else if (result.isDenied) {
           // Mail butonuna tıklandığında çalışacak kod
           const currentBeachName = document.getElementById('bedScheduleContainer').dataset.beachName || "Plajımız";
