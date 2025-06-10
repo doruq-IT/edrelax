@@ -777,7 +777,13 @@ a.active {
 .nav-links.active a:hover {
   background-color: rgba(255, 255, 255, 0.1); 
 }
-
+.btn-reserve-main {
+    font-size: 13px;
+    padding: 6px 12px;
+    border-radius: 16px;
+    width: auto;
+    display: inline-block;
+  }
 
 /* Footer bölümü responsive */
   .footer-container {
