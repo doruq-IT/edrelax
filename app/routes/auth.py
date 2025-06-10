@@ -173,33 +173,24 @@ def login():
 @auth_bp.route("/logout")
 @login_required
 def logout():
-    # Session cookie'sinin adını uygulamadan alalım (genellikle 'session' olur)
     session_cookie_name = current_app.config['SESSION_COOKIE_NAME']
     
-    # Sunucu loglarına cookie adını yazdıralım (kontrol için)
-    current_app.logger.info(f"Silinecek session cookie adı: {session_cookie_name}")
-
-    # Önce kullanıcıyı sistemden çıkarıp session'ı temizleyelim
     logout_user()
     session.clear()
 
     flash("Çıkış yapıldı.", "info")
-
-    # Tarayıcıyı ana sayfaya yönlendirecek yanıtı oluşturalım
     response = make_response(redirect(url_for("public.index")))
     
-    # Cache engelleme başlıklarımız kalsın, bunlar her zaman iyidir.
+    # Cache engelleme başlıkları
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     response.headers["Pragma"] = "no-cache"
     response.headers["Expires"] = "0"
+
+    response.delete_cookie(session_cookie_name, domain="www.edrelaxbeach.com")
     
-    # 1. Ana domain için sil (.edrelaxbeach.com, hem www hem de alt domainleri kapsar)
+    # 2. Garanti olsun diye diğer tüm varyasyonları da denemeye devam edelim.
     response.delete_cookie(session_cookie_name, domain=".edrelaxbeach.com")
-    
-    # 2. Sadece domain'in kendisi için sil (www olmadan)
     response.delete_cookie(session_cookie_name, domain="edrelaxbeach.com")
-    
-    # 3. Path ve domain belirtmeden varsayılanı sil (garanti olsun)
     response.delete_cookie(session_cookie_name)
     
     return response
