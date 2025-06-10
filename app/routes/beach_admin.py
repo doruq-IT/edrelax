@@ -380,7 +380,8 @@ def update_reservation_status():
                 deleted_info = {
                     "beach_id": reservation.beach_id,
                     "bed_number": reservation.bed_number,
-                    "time": reservation.start_time.strftime('%H:%M'),
+                    "start_time": reservation.start_time.strftime('%H:%M'), # <-- İsim değişikliği ve netlik
+                    "end_time": reservation.end_time.strftime('%H:%M'),   # <-- EKLENEN SATIR
                     "date": reservation.date.strftime('%Y-%m-%d')
                 }
 
@@ -391,7 +392,8 @@ def update_reservation_status():
                 socketio.emit('status_updated', {
                     'beach_id': deleted_info['beach_id'],
                     'bed_number': deleted_info['bed_number'],
-                    'time_slot': deleted_info['time'],
+                    'time_slot': deleted_info['start_time'], # <-- Artık start_time olarak daha net
+                    'end_time': deleted_info['end_time'],     # <-- BİTİŞ SAATİNİ DE GÖNDERİYORUZ
                     'date': deleted_info['date'],
                     'new_status': 'free',
                     'reservation_id': None,
