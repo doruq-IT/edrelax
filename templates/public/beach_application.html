@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% block title %}Plaj Başvurusu Yap{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<div class="container my-5">
+  <div class="card shadow-lg p-4">
+    <h2 class="mb-4 text-primary"><i class="fas fa-paper-plane"></i> Plajını Sitemize Ekle</h2>
+    <p class="text-muted">Aşağıdaki formu doldurarak plajınızın binlerce kullanıcıya ulaşmasını sağlayın. Başvurunuz incelendikten sonra yayına alınacaktır.</p>
+    <hr>
+    
+    <form id="beachApplicationForm"
+          method="POST"
+          action="{{ url_for('public.beach_application') }}"
+          enctype="multipart/form-data">
+      
+      <h4 class="mt-4 mb-3">İletişim Bilgileriniz</h4>
+      <div class="row">
+        <div class="col-md-4">
+          <div class="form-group">
+            <label for="applicant_name">Adınız Soyadınız</label>
+            <input type="text" class="form-control" id="applicant_name" name="applicant_name" required>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="form-group">
+            <label for="applicant_email">E-posta Adresiniz</label>
+            <input type="email" class="form-control" id="applicant_email" name="applicant_email" required>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="form-group">
+            <label for="applicant_phone">Telefon Numaranız</label>
+            <input type="tel" class="form-control" id="applicant_phone" name="applicant_phone">
+          </div>
+        </div>
+      </div>
+      
+      <hr class="my-4">
+      <h4 class="mb-3">Plaj Bilgileri</h4>
+      
+      <div class="row">
+        <div class="col-md-6">
+          <div class="form-group">
+            <label for="beach_name">Plaj Adı</label>
+            <input type="text" class="form-control" id="beach_name" name="beach_name" required>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="form-group">
+            <label for="location">Konum (Örn: Çeşme, Alaçatı)</label>
+            <input type="text" class="form-control" id="location" name="location" required>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="description">Kısa Tanıtım Yazısı (Liste görünümü için)</label>
+        <textarea class="form-control" id="description" name="description" rows="2"></textarea>
+      </div>
+      <div class="form-group">
+        <label for="long_description">Detaylı Açıklama (Plaj detay sayfası için)</label>
+        <textarea class="form-control mb-3" id="long_description" name="long_description" rows="6"></textarea>
+      </div>
+
+      <div class="form-group">
+          <label for="image_upload">Plaj Görseli Yükle (En iyi fotoğrafınızı seçin)</label>
+          <input type="file" class="form-control-file" id="image_upload" name="image_upload" accept="image/png, image/jpeg" required>
+      </div>
+      
+      <div class="row">
+        <div class="col-md-6">
+          <div class="form-group">
+            <label for="price">Başlangıç Fiyatı (TL)</label>
+            <input type="number" class="form-control" id="price" name="price" min="0" step="1">
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="form-group">
+            <label for="bed_count">Toplam Şezlong Sayısı</label>
+            <input type="number" class="form-control" id="bed_count" name="bed_count" min="1" required>
+          </div>
+        </div>
+      </div>
+
+      <hr />
+      <h5 class="mb-3">Plaj Özellikleri (Var olanları işaretleyin)</h5>
+      <div class="row">
+        {% for feature in [
+          ('has_booking', 'Rezerve Edilebilir'), ('has_food', 'Yiyecek & İçecek'),
+          ('has_parking', 'Otopark'), ('allows_pets', 'Evcil Hayvan İzni'),
+          ('has_wifi', 'Wi-Fi'), ('has_water_sports', 'Su Sporları'),
+          ('is_disabled_friendly', 'Engelli Dostu')] %}
+        <div class="col-md-4">
+          <div class="form-check mb-2">
+            <input type="checkbox" class="form-check-input" id="{{ feature[0] }}" name="{{ feature[0] }}">
+            <label class="form-check-label" for="{{ feature[0] }}">{{ feature[1] }}</label>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <div class="form-group mt-4">
+        <label>Haritadan Plajınızın Girişini İşaretleyin</label>
+        <div id="map" style="height: 300px; border: 1px solid #ccc; border-radius: 8px"></div>
+        <input type="hidden" name="latitude" id="latitude">
+        <input type="hidden" name="longitude" id="longitude">
+      </div>
+
+      <div class="mt-4">
+        <button type="submit" class="btn btn-primary btn-lg">
+          <i class="fas fa-paper-plane"></i> Başvuruyu Gönder
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  // Leaflet Harita Ayarı
+  const map = L.map("map").setView([38.5, 26.6], 8); // İzmir ve çevresine odaklı başlangıç
+
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: "&copy; OpenStreetMap contributors",
+  }).addTo(map);
+
+  setTimeout(() => { map.invalidateSize(); }, 500);
+
+  let marker;
+  map.on("click", function (e) {
+    const { lat, lng } = e.latlng;
+    document.getElementById("latitude").value = lat.toFixed(6);
+    document.getElementById("longitude").value = lng.toFixed(6);
+
+    if (marker) {
+      marker.setLatLng(e.latlng);
+    } else {
+      marker = L.marker(e.latlng).addTo(map).bindPopup("Plajınızın konumu burası.").openPopup();
+    }
+  });
+</script>
+{% endblock %}

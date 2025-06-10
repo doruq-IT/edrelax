@@ -1,6 +1,6 @@
 # app/routes/public.py
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify, current_app
 from app.extensions import db
 from sqlalchemy import func
 from datetime import datetime, date
@@ -208,3 +208,92 @@ def privacy():
 @login_required
 def kredi():
     return render_template('kredi.html')
+
+@public_bp.route('/beach-application', methods=['GET', 'POST'])
+def beach_application():
+    if request.method == 'POST':
+        # Formdan gelen verileri al
+        applicant_name = request.form.get('applicant_name')
+        applicant_email = request.form.get('applicant_email')
+        applicant_phone = request.form.get('applicant_phone')
+        beach_name = request.form.get('beach_name')
+        location = request.form.get('location')
+        description = request.form.get('description')
+        long_description = request.form.get('long_description')
+        price = request.form.get('price')
+        bed_count = request.form.get('bed_count')
+        latitude = request.form.get('latitude')
+        longitude = request.form.get('longitude')
+        image_file = request.files.get('image_upload')
+
+        # Checkbox verilerini al
+        features = {
+            'Rezerve Edilebilir': 'evet' if request.form.get('has_booking') else 'hayır',
+            'Yiyecek & İçecek': 'evet' if request.form.get('has_food') else 'hayır',
+            'Otopark': 'evet' if request.form.get('has_parking') else 'hayır',
+            'Evcil Hayvan İzni': 'evet' if request.form.get('allows_pets') else 'hayır',
+            'Wi-Fi': 'evet' if request.form.get('has_wifi') else 'hayır',
+            'Su Sporları': 'evet' if request.form.get('has_water_sports') else 'hayır',
+            'Engelli Dostu': 'evet' if request.form.get('is_disabled_friendly') else 'hayır',
+        }
+
+        # E-posta içeriğini oluştur
+        subject = f"Yeni Plaj Başvurusu: {beach_name}"
+        
+        html_body = f"""
+            <h2>Yeni Bir Plaj Başvurusu Aldınız!</h2>
+            <p>Lütfen aşağıdaki bilgileri inceleyip admin panelinden sisteme ekleyin.</p>
+            <hr>
+            <h3>Başvuran Bilgileri</h3>
+            <ul>
+                <li><strong>Adı Soyadı:</strong> {applicant_name}</li>
+                <li><strong>E-posta:</strong> {applicant_email}</li>
+                <li><strong>Telefon:</strong> {applicant_phone}</li>
+            </ul>
+            <h3>Plaj Bilgileri</h3>
+            <ul>
+                <li><strong>Plaj Adı:</strong> {beach_name}</li>
+                <li><strong>Konum:</strong> {location}</li>
+                <li><strong>Başlangıç Fiyatı:</strong> {price} TL</li>
+                <li><strong>Şezlong Sayısı:</strong> {bed_count}</li>
+                <li><strong>Koordinatlar:</strong> Lat: {latitude}, Lon: {longitude}</li>
+            </ul>
+            <h4>Kısa Açıklama:</h4>
+            <p>{description}</p>
+            <h4>Detaylı Açıklama:</h4>
+            <div>{long_description}</div>
+            <h4>Özellikler:</h4>
+            <ul>
+                {"".join([f"<li><strong>{feature}:</strong> {status}</li>" for feature, status in features.items()])}
+            </ul>
+        """
+        
+        # E-posta gönderme işlemi
+        try:
+            # Yönetici e-postasını config dosyasından al
+            admin_email = current_app.config.get('ADMIN_EMAIL', 'varsayilan-admin@mail.com')
+            
+            msg = Message(subject,
+                          sender=current_app.config['MAIL_USERNAME'],
+                          recipients=[admin_email])
+            msg.html = html_body
+
+            # Eğer görsel yüklendiyse e-postaya ekle
+            if image_file:
+                msg.attach(
+                    image_file.filename,
+                    image_file.content_type,
+                    image_file.read()
+                )
+
+            mail.send(msg)
+            flash('Başvurunuz başarıyla gönderildi. En kısa sürede incelenecektir.', 'success')
+            return redirect(url_for('public.index'))
+
+        except Exception as e:
+            # Hata durumunda logla ve kullanıcıya bilgi ver
+            current_app.logger.error(f"E-posta gönderim hatası: {e}")
+            flash('Başvurunuz gönderilirken bir hata oluştu. Lütfen daha sonra tekrar deneyin.', 'danger')
+
+    # GET request için formu göster
+    return render_template('public/beach_application.html')

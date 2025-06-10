@@ -689,6 +689,22 @@ a.active {
   transition: all 0.2s ease-in-out;
   text-decoration: none;
 }
+/* Plajını Ekle Butonu Stili */
+.btn-add-beach {
+  background-color: #ffc107; /* Dikkat çekici bir renk (örneğin sarı) */
+  color: #333 !important; /* Yazı rengi */
+  padding: 8px 15px;
+  border-radius: 20px;
+  font-weight: bold;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  text-decoration: none !important;
+  margin-right: 10px; /* Diğer linklerle arasına boşluk koyar */
+}
+
+.btn-add-beach:hover {
+  background-color: #ffca2c; /* Üzerine gelince biraz daha açık renk */
+  transform: scale(1.05);
+}
 
 .balance-box:hover {
   background-color: #d0e6fb;

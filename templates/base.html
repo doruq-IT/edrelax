@@ -82,6 +82,7 @@
           <a href="{{ url_for('auth.logout') }}" id="logout-link-admin">Çıkış Yap</a>
 
         {% elif current_user.is_authenticated %}
+          <a href="{{ url_for('public.beach_application') }}" class="btn-add-beach">Plajını Ekle</a>
           <a href="{{ url_for('public.about') }}?tab=help">Yardım</a>
           <a href="{{ url_for('public.contact') }}">İletişim</a>
           <a href="{{ url_for('auth.profile') }}">Profil</a>
@@ -105,13 +106,13 @@
 
         {% else %}
           {# Misafir Kullanıcı (giriş yapmamış) #}
+          <a href="{{ url_for('public.beach_application') }}" class="btn-add-beach">Plajını Ekle</a>
           <a href="{{ url_for('public.about') }}?tab=help">Yardım</a>
           <a href="{{ url_for('public.contact') }}">İletişim</a>
           <a href="{{ url_for('auth.signup') }}">Kayıt Ol</a>
           <a href="{{ url_for('auth.login') }}">Giriş Yap</a>
         {% endif %}
       </div>
-
     </header>
 
     <!-- 🔁 Yükleme ekranı -->
