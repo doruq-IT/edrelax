@@ -99,39 +99,44 @@ def google_callback():
         return redirect(url_for('auth.login'))
 
     user_info = oauth.google.get('https://www.googleapis.com/oauth2/v3/userinfo').json()
-    print("👤 Kullanıcı bilgisi:", user_info)
+    print("👤 Google kullanıcı bilgisi:", user_info)
 
     email = user_info.get('email')
     if not email:
         flash("Google hesabınızdan e-posta alınamadı.", "danger")
         return redirect(url_for('auth.login'))
 
+    # Kullanıcı veritabanında var mı?
     user = User.query.filter_by(email=email).first()
     if not user:
         user = User(
             email=email,
             first_name=user_info.get('given_name', ''),
             last_name=user_info.get('family_name', ''),
-            password=''  # ❗ Google ile gelen kullanıcılar için şifre boş olabilir
+            password='',  # Google kullanıcıları için boş
+            role='user'   # veya varsayılan rol neyse
         )
         db.session.add(user)
         db.session.commit()
         print("🆕 Yeni kullanıcı oluşturuldu:", user.email)
     else:
-        print("👤 Var olan kullanıcı bulundu:", user.email)
+        print("👤 Var olan kullanıcı ile giriş yapılıyor:", user.email)
 
+    # Flask-Login ile oturumu başlat
     login_user(user)
 
-    session.clear()
-    session['user_id'] = user.get_id()
+    # Session'a manuel olarak bilgileri yaz (zorunluysa)
+    session.permanent = True  # Oturum kalıcı olsun (config'e göre süre)
+    session['user_id'] = str(user.id)  # get_id() zaten id döndürür
     session['user_name'] = user.first_name
     session['user_email'] = user.email
     session['user_role'] = user.role or 'user'
-    session['user_credit'] = 0  # varsa değiştirilebilir
+    session['user_credit'] = getattr(user, 'credit', 0)
 
-    print("✅ Session güncellendi:", dict(session))
+    print("✅ Session başarıyla güncellendi:", dict(session))
 
     return redirect(url_for('public.index'))
+
 
 
 @auth_bp.route('/me')
