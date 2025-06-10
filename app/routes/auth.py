@@ -173,27 +173,34 @@ def login():
 @auth_bp.route("/logout")
 @login_required
 def logout():
-    # Bu loglar sunucunuzun terminalinde (journalctl) görünecektir
-    current_app.logger.warning("--- LOGOUT İŞLEMİ BAŞLADI ---")
-    current_app.logger.warning(f"Logout öncesi session içeriği: {dict(session)}")
+    # Session cookie'sinin adını uygulamadan alalım (genellikle 'session' olur)
+    session_cookie_name = current_app.config['SESSION_COOKIE_NAME']
+    
+    # Sunucu loglarına cookie adını yazdıralım (kontrol için)
+    current_app.logger.info(f"Silinecek session cookie adı: {session_cookie_name}")
 
-    # Adım 1: Flask-Login çıkışı
+    # Önce kullanıcıyı sistemden çıkarıp session'ı temizleyelim
     logout_user()
-    current_app.logger.warning(f"logout_user() sonrası session içeriği: {dict(session)}")
-
-    # Adım 2: Session'ı tamamen temizle
     session.clear()
-    current_app.logger.warning(f"session.clear() sonrası session içeriği: {dict(session)}")
 
     flash("Çıkış yapıldı.", "info")
 
-    # Adım 3: Tarayıcıya yönlendirme yanıtı hazırla
+    # Tarayıcıyı ana sayfaya yönlendirecek yanıtı oluşturalım
     response = make_response(redirect(url_for("public.index")))
+    
+    # Cache engelleme başlıklarımız kalsın, bunlar her zaman iyidir.
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     response.headers["Pragma"] = "no-cache"
     response.headers["Expires"] = "0"
     
-    current_app.logger.warning("--- LOGOUT BİTTİ, Yönlendirme yanıtı gönderiliyor. ---")
+    # 1. Ana domain için sil (.edrelaxbeach.com, hem www hem de alt domainleri kapsar)
+    response.delete_cookie(session_cookie_name, domain=".edrelaxbeach.com")
+    
+    # 2. Sadece domain'in kendisi için sil (www olmadan)
+    response.delete_cookie(session_cookie_name, domain="edrelaxbeach.com")
+    
+    # 3. Path ve domain belirtmeden varsayılanı sil (garanti olsun)
+    response.delete_cookie(session_cookie_name)
     
     return response
 
