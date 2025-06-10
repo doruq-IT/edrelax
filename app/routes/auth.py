@@ -14,6 +14,7 @@ from app.extensions import limiter
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from app.forms.auth_forms import SignUpForm
+from flask import make_response
 from flask_mail import Message
 from app.extensions import mail
 from flask_dance.contrib.google import google
@@ -180,7 +181,16 @@ def logout():
     # 🧹 Session temizliği
     session.clear()
     flash("Çıkış yapıldı.", "info")
-    return redirect(url_for("public.index"))
+
+    # Tarayıcıyı yönlendirirken önbelleği engellemek için bir yanıt nesnesi oluştur
+    response = make_response(redirect(url_for("public.index")))
+    
+    # Tarayıcıya ve aradaki proxy'lere bu yanıtı asla cache'lememelerini söyleyen başlıklar
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    
+    return response
 
 
 
