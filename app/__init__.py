@@ -99,7 +99,6 @@ def create_app():
     @app.before_request
     def make_session_permanent():
         session.permanent = True
-        # session.modified = True
 
     # ✅ Config değerini şablonlara aktarmak için context processor
     @app.context_processor
