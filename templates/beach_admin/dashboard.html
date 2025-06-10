@@ -15,18 +15,22 @@
     </div>
   </div>
 
-  {% if beaches %}
+  {# 'beaches' yerine 'dashboard_data' kontrolü yapılıyor #}
+  {% if dashboard_data %}
   <div class="row ms-2 me-2">
-    {% for beach in beaches %}
+    {# 'beach in beaches' yerine 'data in dashboard_data' döngüsü kullanılıyor #}
+    {% for data in dashboard_data %}
     <div class="col-lg-6 col-md-12 mb-4">
       <div class="card border-0 shadow-lg rounded-4 h-100">
         <div class="card-body pb-0">
-          <h4 class="card-title text-primary fw-bold mb-3">{{ beach.name }}</h4>
+          {# 'beach' objesine 'data.beach' üzerinden erişiliyor #}
+          <h4 class="card-title text-primary fw-bold mb-3">{{ data.beach.name }}</h4>
           <ul class="list-unstyled text-muted mb-4 small">
-            <li>📍 <strong>Lokasyon:</strong> {{ beach.location }}</li>
-            <li>📝 <strong>Açıklama:</strong> {{ beach.description }}</li>
-            <li>🛏️ <strong>Toplam Şezlong:</strong> {{ beach.bed_count }}</li>
-            <li>📅 <strong>Anlık Rezervasyon:</strong> {{ beach.reservations | length }}</li>
+            <li>📍 <strong>Lokasyon:</strong> {{ data.beach.location }}</li>
+            <li>📝 <strong>Açıklama:</strong> {{ data.beach.description }}</li>
+            <li>🛏️ <strong>Toplam Şezlong:</strong> {{ data.beach.bed_count }}</li>
+            {# Hesaplama yerine hazır veri kullanılıyor #}
+            <li>📅 <strong>Anlık Rezervasyon:</strong> {{ data.active_reservations_today }}</li>
           </ul>
         </div>
         <div class="px-4 pb-4">
@@ -46,33 +50,29 @@
     </div>
 
     <div class="col-lg-6 col-md-12 mb-4">
-      {# === DEĞİŞİKLİK BURADA BAŞLIYOR === #}
-      <div class="card bg-light shadow-sm rounded-4 p-4 h-100 d-flex flex-column"> {# d-flex flex-column eklendi #}
-      {# === DEĞİŞİKLİK BURADA BİTİYOR === #}
+      <div class="card bg-light shadow-sm rounded-4 p-4 h-100 d-flex flex-column">
         <h5 class="text-secondary fw-bold mb-3">📈 Plaj Durumu</h5>
         <ul class="list-group list-group-flush">
           <li class="list-group-item d-flex justify-content-between align-items-center">
             🌡️ <span>Doluluk Oranı</span>
-            <strong>
-              %{{ beach.bed_count > 0 and (beach.reservations|length * 100 // beach.bed_count) or 0 }}
-            </strong>
+            {# Hesaplama yerine hazır veri kullanılıyor #}
+            <strong>%{{ data.occupancy_rate_today }}</strong>
           </li>
           <li class="list-group-item d-flex justify-content-between align-items-center">
             ⏰ <span>Aktif Rezervasyon</span>
-            <strong>{{ beach.reservations | length }}</strong>
+            {# Hesaplama yerine hazır veri kullanılıyor #}
+            <strong>{{ data.active_reservations_today }}</strong>
           </li>
           <li class="list-group-item d-flex justify-content-between align-items-center">
             🧘 <span>Boş Şezlong</span>
-            <strong>
-              {{
-                (beach.bed_count - beach.reservations|length) if (beach.bed_count - beach.reservations|length) >= 0 else 0
-              }}
-            </strong>
+            {# Hesaplama yerine hazır veri kullanılıyor #}
+            <strong>{{ data.empty_sunbeds if data.empty_sunbeds >= 0 else 0 }}</strong>
           </li>
           <li class="list-group-item d-flex justify-content-between align-items-center">
             📢 <span>Rezervasyon Durumu</span>
             <strong>
-              {% set occupancy = (beach.reservations|length * 100 // beach.bed_count) if beach.bed_count > 0 else 0 %}
+              {# 'occupancy' değişkeni hazır veriden set ediliyor #}
+              {% set occupancy = data.occupancy_rate_today %}
               {% if occupancy >= 80 %}
                 Yoğun
               {% elif occupancy >= 50 %}
@@ -84,18 +84,17 @@
           </li>
         </ul>
         
-        {# === DEĞİŞİKLİK BURADA BAŞLIYOR === #}
         <div class="mt-auto pt-3 text-center"> 
           <button 
             class="btn btn-sm btn-outline-primary update-past-reservations-btn" 
-            data-beach-id="{{ beach.id }}"
+            {# Butonun ID'si 'data.beach.id' üzerinden alınıyor #}
+            data-beach-id="{{ data.beach.id }}"
             title="Bu plaja ait geçmiş 'Rezerve' ve 'Kullanımda' durumundaki rezervasyonları 'Tamamlandı' olarak günceller.">
-            <i class="fas fa-check-double me-1"></i> {# Örnek bir ikon, Font Awesome kullanıyorsanız #}
+            <i class="fas fa-check-double me-1"></i>
             Geçmişi Rezervasyonları Güncelle
           </button>
-          <div class="text-muted fst-italic mt-2">Güncellenme zamanı: {{ current_time }}</div> {# mt-4'ten mt-2'ye alındı ve butonla aynı div içine taşındı #}
+          <div class="text-muted fst-italic mt-2">Güncellenme zamanı: {{ current_time }}</div>
         </div>
-        {# === DEĞİŞİKLİK BURADA BİTİYOR === #}
         
       </div>
     </div>
@@ -108,6 +107,7 @@
   {% endif %}
 </div>
 <script>
+  // Bu script bölümünde bir değişiklik gerekmiyor, olduğu gibi kalabilir.
   document.addEventListener('DOMContentLoaded', function () {
     const updateButtons = document.querySelectorAll('.update-past-reservations-btn');
     const csrfTokenMeta = document.querySelector('meta[name="csrf-token"]');

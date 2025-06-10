@@ -44,23 +44,43 @@ def beach_admin_required(f):
 @beach_admin_required
 def dashboard():
     user_id = session.get('user_id')
-
-    # Bu kullanıcıya ait plaj(lar)
     beaches = Beach.query.filter_by(manager_id=user_id).all()
-
-    # ⏰ Güncel saat bilgisi
-    current_time = datetime.now().strftime('%H:%M')
-
-    # 🛠️ ÖNEMLİ: session'a beach_id yaz
-    # ⚠️ Eğer beach_id zaten varsa, tekrar yazma
+    today = date.today()
+    
+    # 1. Otomatik plaj seçimi (birden fazla plajı olan yöneticiler için)
     if not session.get('beach_id') and beaches:
         session['beach_id'] = beaches[0].id
 
+    # 2. Şablona göndermek için işlenmiş veri listesi oluştur
+    dashboard_data = []
+    for beach in beaches:
+        # Sadece bugüne ait ve durumu 'reserved' veya 'used' olanları say
+        active_reservations_count = Reservation.query.filter(
+            Reservation.beach_id == beach.id,
+            Reservation.date == today,
+            Reservation.status.in_(['reserved', 'used'])
+        ).count()
 
+        # Boş şezlong sayısını hesapla
+        empty_sunbeds = beach.bed_count - active_reservations_count
+        
+        # Doluluk oranını hesapla
+        occupancy_rate = 0
+        if beach.bed_count and beach.bed_count > 0:
+            occupancy_rate = round((active_reservations_count / beach.bed_count) * 100)
+
+        dashboard_data.append({
+            'beach': beach,
+            'active_reservations_today': active_reservations_count,
+            'empty_sunbeds': empty_sunbeds,
+            'occupancy_rate_today': occupancy_rate
+        })
+        
     return render_template(
         'beach_admin/dashboard.html',
-        beaches=beaches,
-        current_time=current_time
+        # Eski 'beaches' yerine işlenmiş 'dashboard_data' listesini gönderiyoruz
+        dashboard_data=dashboard_data, 
+        current_time=datetime.now().strftime('%H:%M')
     )
 
 @beach_admin_bp.route('/complete-past-reservations/<int:beach_id>', methods=['POST'])
