@@ -160,6 +160,7 @@ body.beds-page {
     padding-right: 10px;
     width: 100%;
     box-sizing: border-box;
+    justify-content: flex-start;
   }
 
   .bed {
