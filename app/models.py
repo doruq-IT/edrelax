@@ -83,12 +83,15 @@ class Reservation(db.Model):
     end_time = db.Column(db.Time, nullable=False)
     created_at = db.Column(db.DateTime, server_default=db.func.now())
     confirmation_sent = db.Column(db.Boolean, default=False)
-
     
-    status = db.Column(db.String(50), default='reserved', nullable=False)  # Olası değerler: reserved, used, cancelled, free
+    status = db.Column(db.String(50), default='reserved', nullable=False)
 
     beach = db.relationship('Beach', back_populates='reservations')
     user = db.relationship('User', back_populates='reservations')
+
+    __table_args__ = (
+        db.UniqueConstraint('beach_id', 'bed_number', 'date', 'start_time', name='_beach_bed_date_start_uc'),
+    )
 
 class Favorite(db.Model):
     __tablename__ = 'favorites'

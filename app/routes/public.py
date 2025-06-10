@@ -33,8 +33,10 @@ def contact():
         message = request.form.get("message")
 
         msg = Message(subject=f"New Contact Form Message from {name}",
-                      sender=email,
-                      recipients=["edrelax.beach@gmail.com"])
+                    sender=current_app.config['MAIL_USERNAME'],
+                    recipients=["edrelax.beach@gmail.com"],
+                    # Kullanıcının e-postasını "yanıtla" adresi olarak ayarlayın
+                    reply_to=email)
         msg.body = f"From: {name} <{email}>\n\n{message}"
         try:
             mail.send(msg)
@@ -50,24 +52,28 @@ def contact():
 @public_bp.route('/beach/<slug>')
 @login_required
 def beach_detail(slug):
+    """
+    Belirtilen plajın detay sayfasını gösterir ve mevcut kullanıcının
+    bu plajı favorilerine ekleyip eklemediğini kontrol eder.
+    """
     beach = Beach.query.filter_by(slug=slug).first_or_404()
 
-    # 🔥 Favori kontrolü eklendi
     is_favorited = False
-    if 'user_id' in session:
-        is_favorited = Favorite.query.filter_by(
-            user_id=session['user_id'], beach_id=beach.id
-        ).first() is not None
-
-    beach.is_favorited = is_favorited
+    if current_user.is_authenticated:
+        is_favorited = db.session.query(
+            Favorite.query.filter_by(
+                user_id=current_user.id,
+                beach_id=beach.id
+            ).exists()
+        ).scalar()
 
     return render_template(
         'beach_detail.html',
         beach=beach,
+        is_favorited=is_favorited,
         now=datetime.now(),
         current_date=date.today().isoformat()
     )
-
 
 @public_bp.route('/search_suggestions')
 def search_suggestions():

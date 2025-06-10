@@ -35,7 +35,13 @@ beach_admin_bp = Blueprint('beach_admin', __name__, url_prefix='/beach-admin')
 def beach_admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if session.get('user_role') != 'beach_admin':
+        # 1. Önce kimliğin doğrulanıp doğrulanmadığını KONTROL ET
+        if not current_user.is_authenticated:
+            flash("Bu sayfayı görüntülemek için giriş yapmalısınız.", "warning")
+            return redirect(url_for('auth.login'))
+        # 2. Sonra rolünün doğru olup olmadığını KONTROL ET
+        if current_user.role != 'beach_admin':
+            flash("Bu sayfaya erişim yetkiniz yok.", "danger")
             return redirect(url_for('public.index'))
         return f(*args, **kwargs)
     return decorated_function
@@ -43,7 +49,7 @@ def beach_admin_required(f):
 @beach_admin_bp.route('/dashboard')
 @beach_admin_required
 def dashboard():
-    user_id = session.get('user_id')
+    user_id = current_user.id
     beaches = Beach.query.filter_by(manager_id=user_id).all()
     today = date.today()
     
@@ -152,7 +158,7 @@ def select_beach():
 @beach_admin_required
 def reservations():
     from datetime import datetime
-    user_id = session.get('user_id')
+    user_id = current_user.id
 
     # Bu adminin yönettiği plaj(lar)
     beaches = Beach.query.filter_by(manager_id=user_id).all()
@@ -170,7 +176,7 @@ def reservations():
 @beach_admin_bp.route('/beds', methods=["GET", "POST"])
 @beach_admin_required # Kullandığınız decorator
 def manage_beds():
-    user_id = session.get('user_id')
+    user_id = current_user.id
     # Yöneticiye ait ham plaj nesnelerini al
     beaches_query_result = Beach.query.filter_by(manager_id=user_id).all()
 
@@ -227,7 +233,7 @@ def manage_beds():
 @beach_admin_bp.route('/occupancy')
 @beach_admin_required # Kullandığınız decorator
 def bed_occupancy():
-    user_id = session.get('user_id')
+    user_id = current_user.id
     beaches_query_result = Beach.query.filter_by(manager_id=user_id).all()
 
     labels = []
@@ -349,7 +355,6 @@ def bed_schedule(beach_id):
     )
 
 @beach_admin_bp.route('/update-reservation-status', methods=['POST'])
-@csrf.exempt
 @login_required
 def update_reservation_status():
     data = request.get_json()

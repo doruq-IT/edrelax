@@ -3,6 +3,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
 from flask_wtf.csrf import CSRFProtect, CSRFError
 from flask_login import login_required, current_user
+from sqlalchemy.exc import IntegrityError
 from app.models import User
 from app.extensions import db, csrf
 from app.models import Beach, Reservation
@@ -119,49 +120,64 @@ def make_reservation():
     if existing_reservation:
         return jsonify({"success": False, "message": "Seçtiğiniz şezlonglardan biri veya birkaçı bu saat aralığında başkası tarafından rezerve edilmiş."}), 409
 
-    for bed_id in bed_ids:
-        new_reservation = Reservation(
-            beach_id=beach_id,
-            user_id=user_id,
-            bed_number=bed_id,
-            date=parsed_date,
-            start_time=parsed_start,
-            end_time=parsed_end,
-            status='reserved'
-        )
-        db.session.add(new_reservation)
-
-    db.session.commit()
-    print("📡 WebSocket emit başlıyor...")
-
-    start_dt = datetime.combine(parsed_date, parsed_start)
-    end_dt = datetime.combine(parsed_date, parsed_end)
-    current_dt = start_dt
-
-    while current_dt < end_dt:
-        hour_str = current_dt.strftime("%H:%M")
+    # ---- YENİ VE GÜVENLİ KOD BURADA BAŞLIYOR ----
+    try:
+        # 1. Rezervasyonları session'a ekle
         for bed_id in bed_ids:
-            print(f"🛏️ Emit gönderiliyor: bed_id={bed_id}, time_slot={hour_str}")
-            socketio.emit("status_updated", {
-                "beach_id": beach_id,
-                "bed_number": bed_id,
-                "date": parsed_date.strftime("%Y-%m-%d"),
-                "time_slot": hour_str,
-                "new_status": "reserved"
-            }, broadcast=True)
-        current_dt += timedelta(hours=1)
+            new_reservation = Reservation(
+                beach_id=beach_id,
+                user_id=user_id,
+                bed_number=int(bed_id), # Güvenlik için int'e çevirelim
+                date=parsed_date,
+                start_time=parsed_start,
+                end_time=parsed_end,
+                status='reserved'
+            )
+            db.session.add(new_reservation)
 
-    return jsonify({
-        "success": True,
-        "message": "Rezervasyon başarıyla oluşturuldu.",
-        "summary": {
-            "date": parsed_date.strftime("%Y-%m-%d"),
-            "start_time": parsed_start.strftime("%H:%M"),
-            "end_time": parsed_end.strftime("%H:%M"),
-            "bed_count": len(bed_ids),
-            "total_price": beach.price * len(bed_ids) if beach.price else 0
-        }
-    })
+        # 2. Veritabanına kaydetmeyi dene.
+        # Eğer models.py'deki UniqueConstraint ihlal edilirse, burada IntegrityError fırlatacak.
+        db.session.commit()
+
+        # 3. Başarılı olursa, WebSocket mesajlarını gönder
+        print("📡 WebSocket emit başlıyor...")
+        start_dt = datetime.combine(parsed_date, parsed_start)
+        end_dt = datetime.combine(parsed_date, parsed_end)
+        current_dt = start_dt
+
+        while current_dt < end_dt:
+            hour_str = current_dt.strftime("%H:%M")
+            for bed_id in bed_ids:
+                print(f"🛏️ Emit gönderiliyor: bed_id={bed_id}, time_slot={hour_str}")
+                socketio.emit("status_updated", {
+                    "beach_id": beach_id,
+                    "bed_number": bed_id,
+                    "date": parsed_date.strftime("%Y-%m-%d"),
+                    "time_slot": hour_str,
+                    "new_status": "reserved"
+                }, broadcast=True)
+            current_dt += timedelta(hours=1)
+
+        # 4. Başarılı yanıtı kullanıcıya döndür
+        return jsonify({
+            "success": True,
+            "message": "Rezervasyon başarıyla oluşturuldu.",
+            "summary": {
+                "date": parsed_date.strftime("%Y-%m-%d"),
+                "start_time": parsed_start.strftime("%H:%M"),
+                "end_time": parsed_end.strftime("%H:%M"),
+                "bed_count": len(bed_ids),
+                "total_price": beach.price * len(bed_ids) if beach.price else 0
+            }
+        })
+
+    except IntegrityError: # Veritabanı "bu kayıt zaten var" hatası verirse
+        db.session.rollback() # İşlemi geri al
+        return jsonify({"success": False, "message": "Üzgünüz, siz işlemi tamamlarken seçtiğiniz şezlonglardan biri rezerve edildi. Lütfen sayfayı yenileyip tekrar deneyin."}), 409
+    
+    except Exception as e: # Diğer tüm beklenmedik hatalar için
+        db.session.rollback() # İşlemi geri al
+        return jsonify({"success": False, "message": "Beklenmedik bir sunucu hatası oluştu. Lütfen daha sonra tekrar deneyin."}), 500
 
     
 @reservations_bp.route("/my-reservations")

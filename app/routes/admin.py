@@ -46,10 +46,6 @@ def admin_required(f):
 @admin_bp.route('/beaches', methods=['GET', 'POST'])
 @admin_required
 def beaches():
-    image_folder = os.path.join(current_app.static_folder, 'images')
-    os.makedirs(image_folder, exist_ok=True)
-
-    image_files = [f for f in os.listdir(image_folder) if f.lower().endswith(('.jpg', '.png', '.jpeg'))]
 
     if request.method == 'POST':
         name = request.form.get('name')
@@ -127,7 +123,7 @@ def beaches():
         return redirect(url_for("admin.beaches"))
     
     all_beaches = Beach.query.order_by(Beach.id.desc()).all()
-    return render_template("admin_beaches.html", beaches=all_beaches, image_files=image_files)
+    return render_template("admin_beaches.html", beaches=all_beaches)
 
 
 @admin_bp.route('/beaches/delete/<int:beach_id>', methods=['POST'])
