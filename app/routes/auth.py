@@ -7,6 +7,7 @@ from app.forms.auth_forms import LoginForm
 from app.forms.auth_forms import ForgotPasswordForm
 from app.forms.auth_forms import ResetPasswordForm
 from app.extensions import db
+from flask_login import current_user
 from app.models import User
 from ..extensions import oauth
 from app.extensions import limiter
@@ -123,17 +124,12 @@ def google_callback():
         print("👤 Var olan kullanıcı ile giriş yapılıyor:", user.email)
 
     # Flask-Login ile oturumu başlat
-    login_user(user)
-
-    # Session'a manuel olarak bilgileri yaz (zorunluysa)
-    session.permanent = True  # Oturum kalıcı olsun (config'e göre süre)
-    session['user_id'] = str(user.id)  # get_id() zaten id döndürür
+    login_user(user, remember=True)
+    
+    # (İsteğe bağlı) Eğer navbar’da session’dan çekiyorsan aşağıyı bırak:
     session['user_name'] = user.first_name
-    session['user_email'] = user.email
-    session['user_role'] = user.role or 'user'
     session['user_credit'] = getattr(user, 'credit', 0)
-
-    print("✅ Session başarıyla güncellendi:", dict(session))
+    session['user_role'] = user.role or 'user'
 
     return redirect(url_for('public.index'))
 

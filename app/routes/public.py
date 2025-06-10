@@ -6,6 +6,7 @@ from sqlalchemy import func
 from datetime import datetime, date
 from app.models import Beach, Favorite  # Favorite burada olmalı
 from flask_login import login_required
+from flask_login import current_user
 from flask_mail import Message
 from app.extensions import mail
 
@@ -157,7 +158,8 @@ def toggle_favorite(beach_id):
 @public_bp.route("/my-favorites")
 @login_required
 def my_favorites():
-    user_id = session["user_id"]
+    # user_id = session["user_id"]
+    user_id = current_user.get_id()
     
     # Kullanıcının kendi favori plajları (mevcut kodunuz)
     user_favorite_entries = Favorite.query.filter_by(user_id=user_id).all()
