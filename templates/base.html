@@ -79,7 +79,7 @@
           <span style="margin: 0 10px">
             👋 Merhaba, <strong>{{ current_user.first_name }}</strong>
           </span>
-          <a href="{{ url_for('auth.logout') }}">Çıkış Yap</a>
+          <a href="{{ url_for('auth.logout') }}" id="logout-link-admin">Çıkış Yap</a>
 
         {% elif current_user.is_authenticated %}
           <a href="{{ url_for('public.about') }}?tab=help">Yardım</a>
@@ -101,10 +101,10 @@
           <span style="margin: 0 10px">
             👋 Hoş geldin, <strong>{{ current_user.first_name }}</strong>
           </span>
-          <a href="{{ url_for('auth.logout') }}">Çıkış Yap</a>
+          <a href="{{ url_for('auth.logout') }}" id="logout-link-user">Çıkış Yap</a>
 
         {% else %}
-          {# Misafir Kullanıcı #}
+          {# Misafir Kullanıcı (giriş yapmamış) #}
           <a href="{{ url_for('public.about') }}?tab=help">Yardım</a>
           <a href="{{ url_for('public.contact') }}">İletişim</a>
           <a href="{{ url_for('auth.signup') }}">Kayıt Ol</a>
@@ -219,6 +219,35 @@
             if (loader) loader.style.display = "flex";
           });
         });
+      });
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        // Her iki logout linkini de seçiyoruz
+        const logoutLinkAdmin = document.getElementById("logout-link-admin");
+        const logoutLinkUser = document.getElementById("logout-link-user");
+
+        // Tıklama olayını dinleyecek bir fonksiyon
+        function handleLogoutClick(event) {
+          // Normal link davranışını engelle
+          event.preventDefault();
+          
+          // Yükleme ekranını göster
+          const loader = document.getElementById("loader");
+          if (loader) loader.style.display = "flex";
+
+          // Tarayıcıyı logout URL'ine manuel olarak yönlendir.
+          // Bu, önbelleği atlayıp sayfanın taze olarak yüklenmesini sağlar.
+          window.location.href = this.href;
+        }
+
+        // Eğer linkler sayfada varsa, tıklama olayını ata
+        if (logoutLinkAdmin) {
+          logoutLinkAdmin.addEventListener("click", handleLogoutClick);
+        }
+        if (logoutLinkUser) {
+          logoutLinkUser.addEventListener("click", handleLogoutClick);
+        }
       });
     </script>
   </body>
