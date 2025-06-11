@@ -183,9 +183,18 @@ checkoutBtn.addEventListener("click", () => {
             <p>🪑 <strong>${bedIds.length}</strong> adet şezlong</p>
             <p>🔖 <strong>${selectedCodes}</strong></p>
             <p>💸 <strong>${totalPrice} TL</strong></p>
-            <hr style="border-top: 1px dashed #ccc; margin: 15px 0;">
-            <p style="color: #ff5722; font-weight: bold; font-size: 1.1em; animation: pulse 1.5s infinite;">
-              💰 Ödeme plajda alınacaktır.
+            <hr>
+
+            <p style="
+                color: #B85C00; 
+                font-weight: bold; 
+                font-size: 1.1em; 
+                margin-top: 15px; 
+                background-color: #FFF3E0; 
+                padding: 10px; 
+                border-radius: 5px;
+                border-left: 5px solid #FF9800;">
+                Ödeme plajda alınacaktır.
             </p>
           `,
           confirmButtonText: "Tamam",
