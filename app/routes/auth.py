@@ -162,7 +162,7 @@ def login():
             flash("Giriş başarılı.", "success")
 
             if user.role == "admin":
-                return redirect(url_for("admin_bp.admin_dashboard"))  # <- Blueprint ve endpoint ismini kontrol et!
+                return redirect(url_for("admin.dashboard"))  # <- Blueprint ve endpoint ismini kontrol et!
             elif user.role == "beach_admin":
                 return redirect(url_for("beach_admin.select_beach"))
             else:
