@@ -9,6 +9,7 @@ from app.extensions import db, csrf
 from app.models import Beach, Reservation
 from app.extensions import socketio
 from datetime import datetime, timedelta
+import pytz
 from collections import defaultdict
 
 reservations_bp = Blueprint('reservations', __name__)
@@ -24,39 +25,45 @@ def select_beds(slug):
     end_str = request.args.get('end_time')
 
     if not date_str or not start_str or not end_str:
-        flash("Please select a valid date and time range.", "warning")
+        flash("Lütfen geçerli bir tarih ve saat aralığı seçin.", "warning")
         return redirect(url_for('public.beach_detail', slug=slug))
 
+    # --- YENİ: SAAT DİLİMİ YÖNETİMİ ---
     try:
-        selected_date = datetime.strptime(date_str, "%Y-%m-%d").date()
-        start_time = datetime.strptime(start_str, "%H:%M").time()
-        end_time = datetime.strptime(end_str, "%H:%M").time()
-    except ValueError:
-        flash("Invalid date/time format.", "danger")
-        return redirect(url_for('public.beach_detail', slug=slug))
+        # Saat dilimini tanımla (kullanıcılarınızın bulunduğu bölge)
+        local_tz = pytz.timezone('Europe/Istanbul')
+        
+        # Kullanıcıdan gelen "saf" tarih ve saatleri birleştirip yerel saat dilimini ata
+        local_start_dt = local_tz.localize(datetime.strptime(f"{date_str} {start_str}", "%Y-%m-%d %H:%M"))
+        
+        # Veritabanı sorgusu için bu yerel saati evrensel saate (UTC) çevir
+        utc_start_dt = local_start_dt.astimezone(pytz.utc)
 
-    # --- DOĞRU SORGU BURADA ---
-    # Bu sorgu, kullanıcı kim olursa olsun, o plajdaki ve zaman aralığındaki
-    # TÜM dolu şezlongları getirmelidir. Herhangi bir "user_id" filtresi OLMAMALIDIR.
+    except (ValueError, pytz.exceptions.InvalidTimeError):
+        flash("Geçersiz tarih veya saat formatı.", "danger")
+        return redirect(url_for('public.beach_detail', slug=slug))
+    # --- SAAT DİLİMİ YÖNETİMİ BİTİŞ ---
+
+    # Veritabanındaki UTC'ye çevrilmiş saatlerle karşılaştırma yap
     overlapping_reservations = Reservation.query.filter(
         Reservation.beach_id == beach.id,
-        Reservation.date == selected_date,
-        Reservation.start_time < end_time,
-        Reservation.end_time > start_time,
+        # ÖNEMLİ: Veritabanındaki tarih ve saatlerin de UTC olarak kaydedildiğini varsayıyoruz.
+        # Bir sonraki adımda make_reservation fonksiyonunu da bu şekilde güncelleyeceğiz.
+        Reservation.date == utc_start_dt.date(),
+        Reservation.start_time < datetime.strptime(end_str, "%H:%M").time(),
+        Reservation.end_time > datetime.strptime(start_str, "%H:%M").time(),
         Reservation.status.in_(['reserved', 'used'])
     ).all()
 
     booked_beds = [r.bed_number for r in overlapping_reservations]
 
-    # --- HATA AYIKLAMA İÇİN EKLENEN SATIR ---
-    # Bu satır, sunucu loglarına hangi şezlongların dolu olarak listelendiğini yazdıracak.
-    print(f"DEBUG: User '{current_user.email}' (Role: {current_user.role}) is viewing beach '{slug}'. Booked beds found: {booked_beds}")
+    # Hata ayıklama log'u (isteğe bağlı, sorun çözüldüğünde silebilirsiniz)
+    print(f"DEBUG: User '{current_user.email}' viewing '{slug}'. Booked beds found: {booked_beds}")
 
-    # Bu kısım kullanıcının kendi günlük limitini hesaplamak için, bu doğru.
-    user_id = current_user.id
-    reservations_today_count = Reservation.query.filter(
-        Reservation.user_id == user_id,
-        Reservation.date == selected_date,
+    # Kullanıcının günlük limitini kendi yerel gününe göre hesapla
+    user_reservations_today = Reservation.query.filter(
+        Reservation.user_id == current_user.id,
+        Reservation.date == local_start_dt.date(), # Burada yerel tarih kullanmak daha doğru
         Reservation.status.in_(['reserved', 'used'])
     ).count()
   
@@ -67,7 +74,7 @@ def select_beds(slug):
         start_time=start_str,
         end_time=end_str,
         booked_beds=booked_beds,
-        kullanicinin_o_gun_rezerve_ettigi_sezlong_sayisi=reservations_today_count
+        kullanicinin_o_gun_rezerve_ettigi_sezlong_sayisi=user_reservations_today
     )
 
 
@@ -78,28 +85,44 @@ def make_reservation():
 
     beach_id = data.get("beach_id")
     bed_ids = data.get("bed_ids")
-    date = data.get("date")
-    start_time = data.get("start_time")
-    end_time = data.get("end_time")
+    date_str = data.get("date")
+    start_str = data.get("start_time")
+    end_str = data.get("end_time")
 
-    if not (beach_id and bed_ids and date and start_time and end_time):
+    if not (beach_id and bed_ids and date_str and start_str and end_str):
         return jsonify({"success": False, "message": "Eksik bilgi var."}), 400
 
+    # --- YENİ: SAAT DİLİMİ YÖNETİMİ BAŞLANGIÇ ---
     try:
-        parsed_date = datetime.strptime(date, "%Y-%m-%d").date()
-        parsed_start = datetime.strptime(start_time, "%H:%M").time()
-        parsed_end = datetime.strptime(end_time, "%H:%M").time()
-        if parsed_end <= parsed_start:
+        # Saat dilimini tanımla (sizin ve kullanıcılarınızın bulunduğu bölge)
+        local_tz = pytz.timezone('Europe/Istanbul')
+        
+        # Kullanıcıdan gelen "saf" tarih ve saatleri birleştirip yerel saat dilimini ata
+        local_start_dt = local_tz.localize(datetime.strptime(f"{date_str} {start_str}", "%Y-%m-%d %H:%M"))
+        local_end_dt = local_tz.localize(datetime.strptime(f"{date_str} {end_str}", "%Y-%m-%d %H:%M"))
+        
+        # Bu yerel saati evrensel saate (UTC) çevir. Tüm karşılaştırmalar ve kayıtlar UTC üzerinden yapılacak.
+        utc_start_dt = local_start_dt.astimezone(pytz.utc)
+        utc_end_dt = local_end_dt.astimezone(pytz.utc)
+        
+        if utc_end_dt <= utc_start_dt:
             return jsonify({"success": False, "message": "Bitiş saati, başlangıç saatinden sonra olmalı."}), 400
-    except ValueError:
+
+        # Veritabanı işlemleri için UTC tarih ve saatlerini ayrı değişkenlere ata
+        parsed_date_utc = utc_start_dt.date()
+        parsed_start_utc = utc_start_dt.time()
+        parsed_end_utc = utc_end_dt.time()
+
+    except (ValueError, pytz.exceptions.InvalidTimeError):
         return jsonify({"success": False, "message": "Tarih veya saat biçimi hatalı."}), 400
+    # --- SAAT DİLİMİ YÖNETİMİ BİTİŞ ---
 
     beach = Beach.query.get(beach_id)
     if not beach:
         return jsonify({"success": False, "message": "Plaj bulunamadı."}), 404
 
     if beach.bed_count < 1:
-        return jsonify({"success": False, "message": "Plajda şezlong tanımı yapılmamış. Contact Us bölümünden lütfen bize iletiniz."}), 400
+        return jsonify({"success": False, "message": "Plajda şezlong tanımı yapılmamış. İletişim bölümünden lütfen bize iletiniz."}), 400
 
     for bed_id in bed_ids:
         try:
@@ -108,71 +131,76 @@ def make_reservation():
         except (ValueError, TypeError):
             return jsonify({"success": False, "message": f"Geçersiz şezlong ID formatı: {bed_id}"}), 400
 
+    # --- İYİLEŞTİRME: Günlük limit sorgusu düzeltildi ---
     GUNLUK_MAKSIMUM_SEZLONG = 10
     user_id = current_user.id
-    reservations_today_count = Reservation.query.filter_by(user_id=user_id, date=parsed_date).count()
+    # Kullanıcının limiti, kendi yerel gününe göre hesaplanır ve 'cancelled' olanlar sayılmaz
+    reservations_today_count = Reservation.query.filter(
+        Reservation.user_id == user_id, 
+        Reservation.date == local_start_dt.date(),
+        Reservation.status.in_(['reserved', 'used'])
+    ).count()
 
     if (reservations_today_count + len(bed_ids)) > GUNLUK_MAKSIMUM_SEZLONG:
         return jsonify({"success": False, "message": f"Bir günde en fazla {GUNLUK_MAKSIMUM_SEZLONG} şezlong rezerve edebilirsiniz."}), 400
 
+    # Çifte rezervasyon kontrolü artık UTC zamanına göre yapılır
     existing_reservation = Reservation.query.filter(
         Reservation.beach_id == beach_id,
         Reservation.bed_number.in_(bed_ids),
-        Reservation.date == parsed_date,
-        Reservation.start_time < parsed_end,
-        Reservation.end_time > parsed_start,
+        Reservation.date == parsed_date_utc,
+        Reservation.start_time < parsed_end_utc,
+        Reservation.end_time > parsed_start_utc,
         Reservation.status.in_(['reserved', 'used'])
     ).first()
 
     if existing_reservation:
         return jsonify({"success": False, "message": "Seçtiğiniz şezlonglardan biri veya birkaçı bu saat aralığında başkası tarafından rezerve edilmiş."}), 409
 
-    # ---- YENİ VE GÜVENLİ KOD BURADA BAŞLIYOR ----
     try:
-        # 1. Rezervasyonları session'a ekle
+        # Rezervasyonları veritabanına UTC zamanı ile kaydet
         for bed_id in bed_ids:
             new_reservation = Reservation(
                 beach_id=beach_id,
                 user_id=user_id,
-                bed_number=int(bed_id), # Güvenlik için int'e çevirelim
-                date=parsed_date,
-                start_time=parsed_start,
-                end_time=parsed_end,
+                bed_number=int(bed_id),
+                date=parsed_date_utc,        # Veritabanına UTC tarihi kaydet
+                start_time=parsed_start_utc, # Veritabanına UTC başlangıç saati kaydet
+                end_time=parsed_end_utc,     # Veritabanına UTC bitiş saati kaydet
                 status='reserved'
             )
             db.session.add(new_reservation)
 
-        # 2. Veritabanına kaydetmeyi dene.
-        # Eğer models.py'deki UniqueConstraint ihlal edilirse, burada IntegrityError fırlatacak.
         db.session.commit()
 
-        # 3. Başarılı olursa, WebSocket mesajlarını gönder
+        # WebSocket mesajları için orijinal "saf" tarih/saatleri kullanabiliriz
+        # eğer istemci tarafı UTC'den haberdar değilse bu daha kolay bir yöntemdir.
         print("📡 WebSocket emit başlıyor...")
-        start_dt = datetime.combine(parsed_date, parsed_start)
-        end_dt = datetime.combine(parsed_date, parsed_end)
-        current_dt = start_dt
+        start_dt_naive = datetime.strptime(f"{date_str} {start_str}", "%Y-%m-%d %H:%M")
+        end_dt_naive = datetime.strptime(f"{date_str} {end_str}", "%Y-%m-%d %H:%M")
+        current_dt = start_dt_naive
 
-        while current_dt < end_dt:
+        while current_dt < end_dt_naive:
             hour_str = current_dt.strftime("%H:%M")
             for bed_id in bed_ids:
                 print(f"🛏️ Emit gönderiliyor: bed_id={bed_id}, time_slot={hour_str}")
                 socketio.emit("status_updated", {
                     "beach_id": beach_id,
                     "bed_number": bed_id,
-                    "date": parsed_date.strftime("%Y-%m-%d"),
+                    "date": date_str,
                     "time_slot": hour_str,
                     "new_status": "reserved"
                 }, broadcast=True)
             current_dt += timedelta(hours=1)
 
-        # 4. Başarılı yanıtı kullanıcıya döndür
+        # Başarılı yanıtı kullanıcıya döndür (kullanıcıya kendi saatini göster)
         return jsonify({
             "success": True,
             "message": "Rezervasyon başarıyla oluşturuldu.",
             "summary": {
-                "date": parsed_date.strftime("%Y-%m-%d"),
-                "start_time": parsed_start.strftime("%H:%M"),
-                "end_time": parsed_end.strftime("%H:%M"),
+                "date": date_str,
+                "start_time": start_str,
+                "end_time": end_str,
                 "bed_count": len(bed_ids),
                 "total_price": beach.price * len(bed_ids) if beach.price else 0
             }
@@ -184,9 +212,11 @@ def make_reservation():
     
     except Exception as e: # Diğer tüm beklenmedik hatalar için
         db.session.rollback() # İşlemi geri al
+        # Geliştirme ortamında hatayı loglamak faydalı olabilir:
+        print(f"AN UNEXPECTED ERROR OCCURRED: {e}")
         return jsonify({"success": False, "message": "Beklenmedik bir sunucu hatası oluştu. Lütfen daha sonra tekrar deneyin."}), 500
 
-    
+
 @reservations_bp.route("/my-reservations")
 @login_required
 def my_reservations():
