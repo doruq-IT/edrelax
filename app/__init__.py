@@ -9,7 +9,6 @@ from app.routes.beach_admin import beach_admin_bp
 from .extensions import oauth
 from flask_wtf.csrf import generate_csrf
 from app.util import to_alphanumeric_bed_id
-from flask import send_from_directory
 from app import socket_events
 from config import Config
 from app.extensions import csrf, mail, limiter, google_bp
@@ -125,9 +124,6 @@ def create_app():
         GOOGLE_CLIENT_SECRET: {app.config.get("GOOGLE_CLIENT_SECRET")}
         </pre>
         """
-    @app.route('/robots.txt')
-    def robots_txt():
-        return send_from_directory('static', 'robots.txt')
 
     return app
     
