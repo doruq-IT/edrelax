@@ -116,7 +116,20 @@ body.beds-page {
   margin: 10px auto 25px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
-
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.03);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
 #beach-front-banner {
   width: 100%;
   height: 150px;
