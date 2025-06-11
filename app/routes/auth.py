@@ -161,10 +161,12 @@ def login():
 
             flash("Giriş başarılı.", "success")
 
-            if user.role == "beach_admin":
+            if user.role == "admin":
+                return redirect(url_for("admin_bp.admin_dashboard"))  # <- Blueprint ve endpoint ismini kontrol et!
+            elif user.role == "beach_admin":
                 return redirect(url_for("beach_admin.select_beach"))
-
-            return redirect(url_for("public.index"))
+            else:
+                return redirect(url_for("public.index"))
         else:
             flash("Hatalı e-posta veya şifre.", "danger")
 
