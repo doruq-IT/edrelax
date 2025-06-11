@@ -125,7 +125,6 @@ def create_app():
         GOOGLE_CLIENT_SECRET: {app.config.get("GOOGLE_CLIENT_SECRET")}
         </pre>
         """
-    
     @app.route('/robots.txt')
     def robots_txt():
         return send_from_directory('static', 'robots.txt')
