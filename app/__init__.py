@@ -51,6 +51,12 @@ def create_app():
     admin_email = get_secret_from_gcp("admin_notification_email")
     app.config["ADMIN_EMAIL"] = admin_email
     app.config["ADMIN_EMAILS"] = [admin_email]
+    
+    mail_user = get_secret_from_gcp("mail_username")
+    app.config["MAIL_USERNAME"] = mail_user
+    app.config["MAIL_PASSWORD"] = get_secret_from_gcp("mail_password")
+    app.config["MAIL_DEFAULT_SENDER"] = mail_user
+
 
     
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
