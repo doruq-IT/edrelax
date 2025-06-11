@@ -35,6 +35,9 @@ def select_beds(slug):
         flash("Invalid date/time format.", "danger")
         return redirect(url_for('public.beach_detail', slug=slug))
 
+    # --- DOĞRU SORGU BURADA ---
+    # Bu sorgu, kullanıcı kim olursa olsun, o plajdaki ve zaman aralığındaki
+    # TÜM dolu şezlongları getirmelidir. Herhangi bir "user_id" filtresi OLMAMALIDIR.
     overlapping_reservations = Reservation.query.filter(
         Reservation.beach_id == beach.id,
         Reservation.date == selected_date,
@@ -45,6 +48,11 @@ def select_beds(slug):
 
     booked_beds = [r.bed_number for r in overlapping_reservations]
 
+    # --- HATA AYIKLAMA İÇİN EKLENEN SATIR ---
+    # Bu satır, sunucu loglarına hangi şezlongların dolu olarak listelendiğini yazdıracak.
+    print(f"DEBUG: User '{current_user.email}' (Role: {current_user.role}) is viewing beach '{slug}'. Booked beds found: {booked_beds}")
+
+    # Bu kısım kullanıcının kendi günlük limitini hesaplamak için, bu doğru.
     user_id = current_user.id
     reservations_today_count = Reservation.query.filter(
         Reservation.user_id == user_id,
@@ -59,7 +67,6 @@ def select_beds(slug):
         start_time=start_str,
         end_time=end_str,
         booked_beds=booked_beds,
-        # --- HTML'İN BEKLEDİĞİ DEĞİŞKENİ BURADA GÖNDERİYORUZ ---
         kullanicinin_o_gun_rezerve_ettigi_sezlong_sayisi=reservations_today_count
     )
 
