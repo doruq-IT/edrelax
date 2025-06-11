@@ -303,8 +303,3 @@ def beach_application():
 
     # GET request için formu göster
     return render_template('public/beach_application.html')
-
-@public_bp.route("/debug/admin-emails")
-def debug_admins():
-    from flask import current_app
-    return f"Admin emails: {current_app.config.get('ADMIN_EMAILS')}"
