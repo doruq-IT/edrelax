@@ -202,7 +202,13 @@ checkoutBtn.addEventListener("click", () => {
             popup: 'swal-wide'
           }
         }).then(() => {
-          location.reload();
+          // ESKİ KOD: location.reload();
+          
+          // YENİ KOD: URL'yi her zaman benzersiz kılmak için zaman damgası ekle.
+          // Bu, sunucu veya tarayıcı önbelleğine takılmayı engeller.
+          const currentUrl = new URL(window.location.href);
+          currentUrl.searchParams.set('_v', new Date().getTime()); // _v = version
+          window.location.href = currentUrl.toString();
         });
       } else {
         Swal.fire({
