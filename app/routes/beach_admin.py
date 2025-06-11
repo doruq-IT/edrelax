@@ -282,90 +282,77 @@ def bed_schedule(beach_id):
     # 🔒 Erişim kontrolü
     if beach.manager_id != current_user.id:
         flash("Bu plaja erişim izniniz yok.", "danger")
-        return redirect(url_for('public.index'))
+        return redirect(url_for('public.index')) # Veya uygun bir yönlendirme
 
     # 📅 Tarih parametresi (varsayılan: bugün)
     date_str = request.args.get('date') or datetime.today().strftime('%Y-%m-%d')
-    selected_date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
+    selected_date_obj = datetime.strptime(date_str, '%Y-%m-%d').date() # Tarih nesnesi olarak kalsın
 
-    # --- YENİ: SAAT DİLİMİ TANIMLAMALARI ---
-    local_tz = pytz.timezone('Europe/Istanbul')
-    utc_tz = pytz.utc
-
-    # ⏱️ Saat aralıkları (plajınızın çalışma saatlerine göre)
-    start_hour, end_hour = 9, 18 
+    # ⏱️ Saat aralıkları (örn. 09:00 - 18:00)
+    start_hour, end_hour = 9, 18 # Plajınızın çalışma saatlerine göre ayarlayabilirsiniz
     hours = [f"{h:02d}:00" for h in range(start_hour, end_hour + 1)]
 
-    # 🛏️ Şezlong sayısı kadar boş bir takvim yapısı kur
-    bed_count = beach.bed_count or 20
-    bed_schedule_data = {
+    # 🛏️ Şezlong sayısı kadar başlangıç yapısı kur
+    bed_count = beach.bed_count or 20 # Varsayılan şezlong sayısı
+    bed_schedule_data = { # İsim değişikliği kafa karışıklığını önlemek için
         bed_num: {
-            hour: {"status": "free", "time": hour, "reservation_id": None, "user_info": None}
+            hour: {"status": "free", "time": hour, "reservation_id": None, "user_info": None} # Varsayılan değerler güncellendi
             for hour in hours
         }
         for bed_num in range(1, bed_count + 1)
     }
 
-    # 📦 Veritabanından, seçilen GÜN'e ait TÜM rezervasyonları al (Verilerin UTC olduğunu unutma)
-    # Sorguyu, UTC gün başlangıcı ve bitişine göre daha sağlam hale getirelim.
-    # Yerel günün başlangıcını UTC'ye çevir:
-    local_day_start = local_tz.localize(datetime.combine(selected_date_obj, datetime.min.time()))
-    utc_day_start = local_day_start.astimezone(utc_tz)
-    # Yerel günün bitişini UTC'ye çevir:
-    utc_day_end = utc_day_start + timedelta(days=1)
-
-    # Sorguyu UTC tarih aralığına göre yap
-    reservations_on_selected_date = Reservation.query.filter(
-        Reservation.beach_id == beach_id,
-        # Veritabanındaki 'date' sütunu UTC olduğu için bu şekilde karşılaştırmak daha doğru
-        Reservation.date >= utc_day_start.date(),
-        Reservation.date < utc_day_end.date() 
-    ).all()
-
+    # 📦 Belirtilen tarihteki tüm rezervasyonları al
+    reservations_on_selected_date = Reservation.query.filter_by(beach_id=beach_id, date=selected_date_obj).all()
 
     for res in reservations_on_selected_date:
         bed_num = res.bed_number
+        
+        # Şezlong numarasının bed_schedule_data içinde olduğundan emin olalım
         if bed_num not in bed_schedule_data:
+            # Bu durum, veritabanındaki bed_number'ın plajın toplam şezlong sayısından büyük olması 
+            # veya 0 ya da negatif olması gibi bir veri tutarsızlığına işaret edebilir.
+            # Şimdilik bu tür bir rezervasyonu atlayabilir veya loglayabilirsiniz.
             print(f"Uyarı: {res.id} ID'li rezervasyon için {bed_num} numaralı şezlong, takvimde bulunamadı.")
             continue
 
-        # --- YENİ: REZERVASYON SAATLERİNİ YEREL SAAATE ÇEVİR ---
-        # 1. Veritabanındaki UTC tarih ve saatleri birleştirip UTC saat dilimini ata
-        utc_start_time = utc_tz.localize(datetime.combine(res.date, res.start_time))
-        utc_end_time = utc_tz.localize(datetime.combine(res.date, res.end_time))
-
-        # 2. Bu UTC saatleri, plaj yöneticisinin göreceği yerel saate çevir
-        local_start_time = utc_start_time.astimezone(local_tz)
-        local_end_time = utc_end_time.astimezone(local_tz)
-
         user = User.query.get(res.user_id)
         user_info_str = f"{user.first_name} {user.last_name}" if user else "Bilinmiyor"
-        user_email = user.email if user else None
+        user_email = user.email
 
-        # --- GÜNCELLENMİŞ: REZERVASYON SÜRESİ KADAR DÖNGÜ KUR ---
-        # Rezervasyonun geçerli olduğu her saat dilimi için takvimi doldur
-        current_hour = local_start_time
-        while current_hour < local_end_time:
-            hour_key = current_hour.strftime("%H:00") # "09:00", "10:00" formatında
+        # Rezervasyonun geçerli olduğu saat dilimlerini belirle
+        current_slot_time = res.start_time
+        while current_slot_time < res.end_time:
+            hour_key = current_slot_time.strftime("%H:00") # "09:00", "10:00" formatında
 
-            if hour_key in bed_schedule_data[bed_num]:
+            if hour_key in bed_schedule_data[bed_num]: # Saatin tanımlı aralıkta olduğundan emin ol
                 bed_schedule_data[bed_num][hour_key] = {
-                    "status": res.status,
+                    "status": res.status,  # Veritabanındaki gerçek status
                     "user_info": user_info_str,
                     "user_email": user_email,
                     "time": hour_key,
-                    "reservation_id": res.id
+                    "reservation_id": res.id # Rezervasyon ID'si eklendi
                 }
             
-            # Bir sonraki saate geç
-            current_hour += timedelta(hours=1)
+            # Bir sonraki saat dilimine geç (her slot 1 saatlik varsayılıyor)
+            # datetime objesine çevirip 1 saat ekleyip tekrar time objesine dönüştürüyoruz
+            current_dt_for_increment = datetime.combine(selected_date_obj, current_slot_time)
+            next_slot_dt = current_dt_for_increment + timedelta(hours=1)
+            current_slot_time = next_slot_dt.time()
+            
+            # Eğer bir sonraki slot, ana saat listemizin (hours) dışına taşıyorsa döngüden çık
+            if current_slot_time.strftime("%H:00") not in hours and current_slot_time < res.end_time :
+                 # Eğer rezervasyon bitiş saati tam saat başı değilse ve bir sonraki slot listemizde yoksa
+                 # bu, son slotun kısmi olduğu anlamına gelebilir. Bu durumu nasıl ele alacağınız
+                 # iş mantığınıza bağlı. Şimdilik, listemizdeki saat başlarını dolduruyoruz.
+                 pass # Gerekirse burada ek mantık eklenebilir
 
     return render_template(
         'beach_admin/bed_schedule.html',
         beach=beach,
-        selected_date=date_str,
+        selected_date=date_str, # Şablona orijinal string formatında gönderiyoruz
         hours=hours,
-        bed_schedule=bed_schedule_data
+        bed_schedule=bed_schedule_data # Güncellenmiş veri
     )
 
 @beach_admin_bp.route('/update-reservation-status', methods=['POST'])
