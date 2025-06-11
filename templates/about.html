@@ -1,5 +1,27 @@
 {% extends 'base.html' %}
-{% block title %}Hakkımızda - Edrelax{% endblock %}
+
+{% block title %}
+Hakkımızda - Edrelax
+{% endblock %}
+
+{% block meta %}
+<meta name="description" content="Edrelax Beach hakkında bilgi alın. Misyonumuz, Edremit sahilinde kullanıcılarımıza konforlu ve dijital rezervasyonlu bir plaj deneyimi sunmaktır.">
+<link rel="canonical" href="{{ request.url }}" />
+
+<!-- Open Graph -->
+<meta property="og:title" content="Hakkımızda | Edrelax Beach">
+<meta property="og:description" content="Edrelax Beach ekibiyle tanışın. Hedefimiz, sahil keyfini daha kolay, şeffaf ve teknolojik hale getirmek.">
+<meta property="og:image" content="https://www.edrelaxbeach.com/static/images/og-banner.webp">
+<meta property="og:url" content="{{ request.url }}">
+<meta property="og:type" content="profile" />
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Hakkımızda | Edrelax Beach" />
+<meta name="twitter:description" content="Edrelax Beach misyonunu ve vizyonunu öğrenin. Plaj deneyimini dijitalleştirme yolculuğumuz.">
+<meta name="twitter:image" content="https://www.edrelaxbeach.com/static/images/og-banner.webp">
+{% endblock %}
+
 {% block content %}
 <style>
   .tabs-container {

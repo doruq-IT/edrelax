@@ -1,36 +1,56 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="UTF-8" />
-    <title>{% block title %}Edrelax{% endblock %}</title>
-    <link
-        rel="icon"
-        type="image/x-icon"
-        href="{{ url_for('static', filename='images/favicon.ico') }}"
-    />
-    <meta name="csrf-token" content="{{ csrf_token }}" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8" />
+  <title>{% block title %}Edrelax Beach | Edremit’te Şezlong Keyfi{% endblock %}</title>
+  <link
+      rel="icon"
+      type="image/x-icon"
+      href="{{ url_for('static', filename='images/favicon.ico') }}"
+  />
+  <meta name="csrf-token" content="{{ csrf_token }}" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <!-- 🌐 CSS Dosyaları -->
-    <link
-      rel="stylesheet"
-      href="{{ url_for('static', filename='css/style.css') }}?v={{ cache_buster('css/style.css') }}"
-    />
-    <link
-      rel="stylesheet"
-      href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
-    />
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
-    />
+  {# 🔽 SEO & Sosyal Medya Meta Tag Blokları - override edilebilir #}
+  {% block meta %}
+  <meta name="description" content="Edrelax Beach ile Edremit sahilinde online şezlong ve gündelik rezervasyonu yapın. Tatilinizi önceden planlayın, rahatlığın tadını çıkarın.">
+  <link rel="canonical" href="https://www.edrelaxbeach.com/" />
 
-    <!-- ✨ Fancy Font for Logo -->
-    <link
-      href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap"
-      rel="stylesheet"
-    />
-  </head>
+  <!-- Open Graph -->
+  <meta property="og:title" content="Edrelax Beach | Edremit’te Şezlong Keyfi">
+  <meta property="og:description" content="Online şezlong ve gündelik kiralama. Edremit sahilinde rahat ve hızlı rezervasyon.">
+  <meta property="og:image" content="https://www.edrelaxbeach.com/static/images/og-banner.webp">
+  <meta property="og:url" content="https://www.edrelaxbeach.com/" />
+  <meta property="og:type" content="website" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Edrelax Beach | Edremit’te Şezlong Keyfi" />
+  <meta name="twitter:description" content="Şezlong ve gündelik rezervasyonunuzu kolayca yapın. Edrelax Beach ile konforlu bir sahil deneyimi yaşayın.">
+  <meta name="twitter:image" content="https://www.edrelaxbeach.com/static/images/og-banner.webp" />
+  {% endblock %}
+
+  <!-- 🌐 CSS Dosyaları -->
+  <link
+    rel="stylesheet"
+    href="{{ url_for('static', filename='css/style.css') }}?v={{ cache_buster('css/style.css') }}"
+  />
+  <link
+    rel="stylesheet"
+    href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+  />
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+  />
+
+  <!-- ✨ Fancy Font for Logo -->
+  <link
+    href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap"
+    rel="stylesheet"
+  />
+</head>
+
   <body class="{% block body_class %}{% endblock %}">
     <div class="menu-overlay"></div>
     <!-- 🔝 Navbar -->

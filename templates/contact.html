@@ -1,5 +1,26 @@
 {% extends 'base.html' %}
-{% block title %}Bize Ulaşın - Edrelax{% endblock %}
+
+{% block title %}
+Bize Ulaşın - Edrelax
+{% endblock %}
+
+{% block meta %}
+<meta name="description" content="Edrelax Beach ile iletişime geçin. Geri bildirim, öneri veya iş birliği talepleriniz için bizimle hemen bağlantı kurabilirsiniz.">
+<link rel="canonical" href="{{ request.url }}" />
+
+<!-- Open Graph -->
+<meta property="og:title" content="İletişim | Edrelax Beach">
+<meta property="og:description" content="Bize ulaşmak çok kolay. Sorularınızı, görüşlerinizi ve önerilerinizi bizimle paylaşın.">
+<meta property="og:image" content="https://www.edrelaxbeach.com/static/images/og-banner.webp">
+<meta property="og:url" content="{{ request.url }}">
+<meta property="og:type" content="website" />
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="İletişim | Edrelax Beach" />
+<meta name="twitter:description" content="Edrelax ekibiyle doğrudan iletişime geçmek için formu doldurun veya harita üzerinden konumumuzu inceleyin.">
+<meta name="twitter:image" content="https://www.edrelaxbeach.com/static/images/og-banner.webp">
+{% endblock %}
 
 {% block content %}
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />

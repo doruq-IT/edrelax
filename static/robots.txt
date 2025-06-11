@@ -1,0 +1,10 @@
+User-agent: *
+Disallow: /admin
+Disallow: /beach_admin
+Disallow: /login
+Disallow: /signup
+Disallow: /static/
+
+Allow: /
+
+Sitemap: https://www.edrelaxbeach.com/sitemap.xml

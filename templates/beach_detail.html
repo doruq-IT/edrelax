@@ -1,5 +1,28 @@
-{% extends "base.html" %} {% block title %}{{ beach.name }} - Beach Details{%
-endblock %} {% block content %}
+{% extends "base.html" %}
+
+{% block title %}
+{{ beach.name }} - Beach Details
+{% endblock %}
+
+{% block meta %}
+<meta name="description" content="{{ beach.description[:150] }}">
+<link rel="canonical" href="{{ request.url }}" />
+
+<!-- Open Graph -->
+<meta property="og:title" content="{{ beach.name }} | Edrelax Beach">
+<meta property="og:description" content="{{ beach.description[:150] }}">
+<meta property="og:image" content="{{ beach.image_url }}">
+<meta property="og:url" content="{{ request.url }}">
+<meta property="og:type" content="article" />
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="{{ beach.name }} | Edrelax Beach" />
+<meta name="twitter:description" content="{{ beach.description[:150] }}">
+<meta name="twitter:image" content="{{ beach.image_url }}">
+{% endblock %}
+
+{% block content %}
 
 <!-- 🌐 Flatpickr CSS -->
 <link
@@ -66,6 +89,7 @@ endblock %} {% block content %}
     max-width: 800px;
     text-align: left;
   }
+
   .heart-btn {
     background: none;
     border: none;
@@ -82,8 +106,8 @@ endblock %} {% block content %}
   .heart-btn:hover i {
     transform: scale(1.2);
   }
-  
 </style>
+
 
 <div class="hero">
   <div class="hero-content">

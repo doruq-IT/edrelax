@@ -1,5 +1,26 @@
 {% extends "base.html" %}
-{% block title %}Gelişmiş Arama - Edrelax{% endblock %}
+
+{% block title %}
+Gelişmiş Arama - Edrelax
+{% endblock %}
+
+{% block meta %}
+<meta name="description" content="Tatil planınızı kolaylaştırın! Edrelax Beach ile harita üzerinden plaj arayın, şezlong ve gölgelik kriterlerine göre filtreleme yapın.">
+<link rel="canonical" href="{{ request.url }}" />
+
+<!-- Open Graph -->
+<meta property="og:title" content="Gelişmiş Plaj Arama | Edrelax Beach">
+<meta property="og:description" content="Şezlong ve gölgelik ihtiyaçlarınıza göre en uygun plajları keşfedin. Harita ve gelişmiş filtreleme seçenekleriyle tatil planınızı oluşturun.">
+<meta property="og:image" content="https://www.edrelaxbeach.com/static/images/og-banner.webp">
+<meta property="og:url" content="{{ request.url }}">
+<meta property="og:type" content="website" />
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Gelişmiş Arama | Edrelax Beach" />
+<meta name="twitter:description" content="Kriterlerinize uygun plajları filtreleyin, şezlongları önceden seçin. Tatilinizi kolaylaştıracak araç burada.">
+<meta name="twitter:image" content="https://www.edrelaxbeach.com/static/images/og-banner.webp">
+{% endblock %}
 
 {% block content %}
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
