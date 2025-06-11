@@ -16,7 +16,7 @@ public_bp = Blueprint('public', __name__)
 @public_bp.route('/')
 def index():
     beaches = Beach.query.all()
-    latest_beaches = Beach.query.order_by(Beach.id.desc()).limit(2).all()
+    latest_beaches = Beach.query.order_by(Beach.id.desc()).limit(5).all()
     return render_template('index.html', beaches=beaches, latest_beaches=latest_beaches)
 
 @public_bp.route('/about')
