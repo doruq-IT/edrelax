@@ -45,6 +45,14 @@ def create_app():
     app.config["GOOGLE_CLIENT_ID"] = get_secret_from_gcp("google_client_id")
     app.config["GOOGLE_CLIENT_SECRET"] = get_secret_from_gcp("google_client_secret")
     
+    app.config["DB_USER"] = get_secret_from_gcp("db_user")
+    app.config["DB_PASSWORD"] = get_secret_from_gcp("db_password")
+    
+    admin_email = get_secret_from_gcp("admin_notification_email")
+    app.config["ADMIN_EMAIL"] = admin_email
+    app.config["ADMIN_EMAILS"] = [admin_email]
+
+    
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
     # --- CACHE BUSTER KODU BURAYA EKLENDİ ---
