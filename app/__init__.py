@@ -6,6 +6,7 @@ from app.routes import auth_bp, admin_bp, public_bp, reservations_bp
 from .routes.auth import load_user  # Kullanıcı yükleme fonksiyonu
 from datetime import datetime
 from app.routes.beach_admin import beach_admin_bp
+from google.cloud import secretmanager
 from .extensions import oauth
 from flask_wtf.csrf import generate_csrf
 from app.util import to_alphanumeric_bed_id
@@ -23,6 +24,12 @@ os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 # pymysql'i MySQLdb gibi davranması için kur
 pymysql.install_as_MySQLdb()
 
+def get_secret_from_gcp(secret_name):
+    client = secretmanager.SecretManagerServiceClient()
+    project_id = os.getenv("GOOGLE_CLOUD_PROJECT")
+    name = f"projects/{project_id}/secrets/{secret_name}/versions/latest"
+    response = client.access_secret_version(name=name)
+    return response.payload.data.decode("UTF-8")
 
 def create_app():
     from werkzeug.middleware.proxy_fix import ProxyFix
@@ -31,10 +38,15 @@ def create_app():
         template_folder=os.path.abspath(os.path.join(os.path.dirname(__file__), '../templates')),
         static_folder=os.path.abspath(os.path.join(os.path.dirname(__file__), '../static'))
     )
+    app.config.from_object(Config)
+    app.config["SECRET_KEY"] = get_secret_from_gcp("flask_secret_key")
+    app.config["WTF_CSRF_SECRET_KEY"] = app.config["SECRET_KEY"]
+    
+    app.config["GOOGLE_CLIENT_ID"] = get_secret_from_gcp("google_client_id")
+    app.config["GOOGLE_CLIENT_SECRET"] = get_secret_from_gcp("google_client_secret")
+    
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
-    app.config.from_object(Config)
-    
     # --- CACHE BUSTER KODU BURAYA EKLENDİ ---
     @app.context_processor
     def inject_cache_buster():
