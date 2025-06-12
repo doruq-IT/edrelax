@@ -4,7 +4,6 @@ from app.extensions import db
 from datetime import datetime
 from flask_login import UserMixin
 
-
 class User(db.Model, UserMixin):
     __tablename__ = 'users'
 
@@ -19,8 +18,6 @@ class User(db.Model, UserMixin):
 
 
     reservations = db.relationship('Reservation', back_populates='user', cascade='all, delete')
-
-    
 
 class Beach(db.Model):
     __tablename__ = 'beaches'
@@ -102,3 +99,14 @@ class Favorite(db.Model):
 
     user = db.relationship('User', backref='favorites')
     beach = db.relationship('Beach', backref='favorited_by')
+    
+
+class BeachComment(db.Model):
+    __tablename__ = "beach_comments"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    beach_id = db.Column(db.Integer, db.ForeignKey("beaches.id"), nullable=False)
+    comment_text = db.Column(db.Text, nullable=False)
+    sentiment_score = db.Column(db.Integer)  # 1–5 arası değer beklenir
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
