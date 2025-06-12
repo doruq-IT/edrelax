@@ -188,6 +188,7 @@
   <div class="mt-5" style="max-width: 600px; margin: auto;">
   <h4>Bu plaj hakkında kısa bir yorum bırak:</h4>
   <form method="POST" action="{{ url_for('public.submit_beach_comment', beach_id=beach.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <textarea 
       name="comment_text" 
       class="form-control mb-3" 
