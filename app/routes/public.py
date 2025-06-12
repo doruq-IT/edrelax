@@ -9,7 +9,8 @@ from flask_login import login_required
 from flask_login import current_user
 from flask_mail import Message
 from app.extensions import mail
-
+from app.models import BeachComment, db
+from transformers import pipeline
 
 public_bp = Blueprint('public', __name__)
 
@@ -303,3 +304,28 @@ def beach_application():
 
     # GET request için formu göster
     return render_template('public/beach_application.html')
+
+@public_bp.route("/submit-beach-comment/<int:beach_id>", methods=["POST"])
+@login_required
+def submit_beach_comment(beach_id):
+    comment_text = request.form.get("comment_text", "").strip()
+
+    if not comment_text:
+        flash("Yorum boş bırakılamaz.", "danger")
+        return redirect(url_for("public.beach_detail", slug=request.args.get("slug")))
+
+    # 🔸 NLP model burada çağrılacak (bir sonraki adımda detaylı yazacağız)
+    sentiment_score = 3  # şimdilik dummy değer koyuyoruz (placeholder)
+
+    new_comment = BeachComment(
+        user_id=current_user.id,
+        beach_id=beach_id,
+        comment_text=comment_text,
+        sentiment_score=sentiment_score
+    )
+
+    db.session.add(new_comment)
+    db.session.commit()
+
+    flash("Yorumunuz alındı, teşekkürler!", "success")
+    return redirect(url_for("public.beach_detail", slug=request.args.get("slug")))
