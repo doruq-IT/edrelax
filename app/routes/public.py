@@ -309,13 +309,14 @@ def beach_application():
 @login_required
 def submit_beach_comment(beach_id):
     comment_text = request.form.get("comment_text", "").strip()
+    slug = request.form.get("slug")  # 🔄 artık slug'ı form'dan alıyoruz
 
     if not comment_text:
         flash("Yorum boş bırakılamaz.", "danger")
-        return redirect(url_for("public.beach_detail", slug=request.args.get("slug")))
+        return redirect(url_for("public.beach_detail", slug=slug))
 
     # 🔸 NLP model burada çağrılacak (bir sonraki adımda detaylı yazacağız)
-    sentiment_score = 3  # şimdilik dummy değer koyuyoruz (placeholder)
+    sentiment_score = 3  # şimdilik dummy değer koyduk
 
     new_comment = BeachComment(
         user_id=current_user.id,
@@ -328,4 +329,4 @@ def submit_beach_comment(beach_id):
     db.session.commit()
 
     flash("Yorumunuz alındı, teşekkürler!", "success")
-    return redirect(url_for("public.beach_detail", slug=request.args.get("slug")))
+    return redirect(url_for("public.beach_detail", slug=slug))

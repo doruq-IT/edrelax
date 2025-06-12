@@ -189,14 +189,18 @@
   <h4>Bu plaj hakkında kısa bir yorum bırak:</h4>
   <form method="POST" action="{{ url_for('public.submit_beach_comment', beach_id=beach.id) }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="slug" value="{{ beach.slug }}">
+
     <textarea 
       name="comment_text" 
       class="form-control mb-3" 
       rows="3" 
       placeholder="Yorumunuzu buraya yazın (kısa ve anlamlı olsun)"
       required></textarea>
+      
     <button type="submit" class="btn btn-success">Yorumu Gönder</button>
   </form>
+
 </div>
 
 </div>
