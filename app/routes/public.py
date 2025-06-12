@@ -312,12 +312,12 @@ def beach_application():
 def get_sentiment_score(comment_text):
     api_url = "https://api-inference.huggingface.co/models/tabularisai/multilingual-sentiment-analysis"
     headers = {
-        "Authorization": f"Bearer {HF_API_TOKEN}"
+        "Authorization": f"Bearer " + HF_API_TOKEN
     }
     payload = {"inputs": comment_text}
 
     try:
-        response = requests.post(api_url, headers=headers, json=payload, timeout=10)
+        response = requests.post(api_url, headers=headers, json=payload, timeout=15)
         response.raise_for_status()
         result = response.json()
 
@@ -331,22 +331,23 @@ def get_sentiment_score(comment_text):
             "Very Positive": 5
         }
 
-        # En yaygın format: [[{label: ..., score: ...}, ...]]
-        if isinstance(result, list):
-            if isinstance(result[0], list):  # Beklenen format
-                label = result[0][0]["label"]
-            elif isinstance(result[0], dict):  # Alternatif format
-                label = result[0]["label"]
-            else:
-                label = None
+        label = None
 
-            score = label_to_score.get(label, 3)
-            print(f"[INFO] Dönüştürülen puan: {score}")
-            return score
+        # Çoklu olasılık (en yaygın)
+        if isinstance(result, list):
+            if isinstance(result[0], list):
+                label = result[0][0]["label"]
+            elif isinstance(result[0], dict):
+                label = result[0]["label"]
+
+        score = label_to_score.get(label, 3)
+        print(f"[INFO] Yorum: '{comment_text}' → {label} → {score}")
+        return score
 
     except Exception as e:
-        print(f"❌ NLP model hata: {e}")
+        print(f"❌ Sentiment API hatası: {e}")
         return 3
+
 
 
 # 🔻 Flask route
