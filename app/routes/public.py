@@ -192,8 +192,10 @@ def my_favorites():
     # 2. Skor hesapla ve sırala
     scored_beaches = []
     for row in results:
-        score = (row.fav_count or 0) * 0.6 + (row.avg_sentiment or 0) * 0.4
-        scored_beaches.append((row.beach_id, row.fav_count or 0, row.avg_sentiment or 0, score))
+        fav_count = float(row.fav_count or 0)
+        avg_sent = float(row.avg_sentiment or 0)
+        score = fav_count * 0.6 + avg_sent * 0.4
+        scored_beaches.append((row.beach_id, fav_count, avg_sent, score))
 
     # 3. En yüksek skor alan top_n plajı seç
     scored_beaches.sort(key=lambda x: x[3], reverse=True)
