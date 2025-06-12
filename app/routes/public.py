@@ -11,8 +11,12 @@ from flask_mail import Message
 from app.extensions import mail
 from app.models import BeachComment, db
 from transformers import pipeline
+import os
+import requests
 
 public_bp = Blueprint('public', __name__)
+
+HF_API_TOKEN = os.getenv("HF_TOKEN")
 
 @public_bp.route('/')
 def index():
@@ -305,18 +309,47 @@ def beach_application():
     # GET request için formu göster
     return render_template('public/beach_application.html')
 
+def get_sentiment_score(comment_text):
+    api_url = "https://api-inference.huggingface.co/models/tabularisai/multilingual-sentiment-analysis"
+    headers = {
+        "Authorization": f"Bearer {HF_API_TOKEN}"
+    }
+    payload = {"inputs": comment_text}
+
+    try:
+        response = requests.post(api_url, headers=headers, json=payload, timeout=10)
+        response.raise_for_status()
+        result = response.json()
+
+        label_to_score = {
+            "Very Negative": 1,
+            "Negative": 2,
+            "Neutral": 3,
+            "Positive": 4,
+            "Very Positive": 5
+        }
+
+        if isinstance(result, list) and len(result) > 0 and isinstance(result[0], list):
+            label = result[0][0]["label"]
+            return label_to_score.get(label, 3)  # fallback 3
+
+    except Exception as e:
+        print(f"❌ NLP model hata: {e}")
+        return 3
+
+# 🔻 Flask route
 @public_bp.route("/submit-beach-comment/<int:beach_id>", methods=["POST"])
 @login_required
 def submit_beach_comment(beach_id):
     comment_text = request.form.get("comment_text", "").strip()
-    slug = request.form.get("slug")  # 🔄 artık slug'ı form'dan alıyoruz
+    slug = request.form.get("slug")  # 🔄 slug'ı formdan alıyoruz
 
     if not comment_text:
         flash("Yorum boş bırakılamaz.", "danger")
         return redirect(url_for("public.beach_detail", slug=slug))
 
-    # 🔸 NLP model burada çağrılacak (bir sonraki adımda detaylı yazacağız)
-    sentiment_score = 3  # şimdilik dummy değer koyduk
+    # 🔸 Modelden gelen puanı al
+    sentiment_score = get_sentiment_score(comment_text)
 
     new_comment = BeachComment(
         user_id=current_user.id,
