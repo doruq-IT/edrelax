@@ -321,6 +321,8 @@ def get_sentiment_score(comment_text):
         response.raise_for_status()
         result = response.json()
 
+        print(f"[INFO] HuggingFace cevabı: {result}")
+
         label_to_score = {
             "Very Negative": 1,
             "Negative": 2,
@@ -329,13 +331,23 @@ def get_sentiment_score(comment_text):
             "Very Positive": 5
         }
 
-        if isinstance(result, list) and len(result) > 0 and isinstance(result[0], list):
-            label = result[0][0]["label"]
-            return label_to_score.get(label, 3)  # fallback 3
+        # En yaygın format: [[{label: ..., score: ...}, ...]]
+        if isinstance(result, list):
+            if isinstance(result[0], list):  # Beklenen format
+                label = result[0][0]["label"]
+            elif isinstance(result[0], dict):  # Alternatif format
+                label = result[0]["label"]
+            else:
+                label = None
+
+            score = label_to_score.get(label, 3)
+            print(f"[INFO] Dönüştürülen puan: {score}")
+            return score
 
     except Exception as e:
         print(f"❌ NLP model hata: {e}")
         return 3
+
 
 # 🔻 Flask route
 @public_bp.route("/submit-beach-comment/<int:beach_id>", methods=["POST"])
