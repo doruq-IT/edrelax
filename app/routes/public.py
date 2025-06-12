@@ -171,47 +171,54 @@ def toggle_favorite(beach_id):
 @public_bp.route("/my-favorites")
 @login_required
 def my_favorites():
-    # user_id = session["user_id"]
     user_id = current_user.get_id()
-    
-    # Kullanıcının kendi favori plajları (mevcut kodunuz)
+
     user_favorite_entries = Favorite.query.filter_by(user_id=user_id).all()
     current_user_favorite_beaches = [fav.beach for fav in user_favorite_entries if fav.beach]
 
-    # ---- YENİ: En Çok Favorilenen Plajları Hesaplama ----
-    top_n_favorites = 3 # Kaç tane popüler plaj göstermek istediğiniz
+    # 🔥 Popüler plajları hem favori sayısı hem de yorum skoru ile sıralayacağız
+    top_n = 3
 
-    # beach_id'ye göre favori sayısını say, en çok olanları al
-    popular_beach_ids_with_counts = db.session.query(
-        Favorite.beach_id, 
-        func.count(Favorite.beach_id).label('favorite_count')
-    ).group_by(Favorite.beach_id).order_by(func.count(Favorite.beach_id).desc()).limit(top_n_favorites).all()
-    # Bu sorgu [(beach_id_1, count_1), (beach_id_2, count_2), ...] şeklinde bir liste döndürür.
+    # 1. Plaj başına favori ve yorum ortalaması topla
+    results = db.session.query(
+        Beach.id.label("beach_id"),
+        func.count(Favorite.id).label("fav_count"),
+        func.avg(BeachComment.sentiment_score).label("avg_sentiment")
+    ).outerjoin(Favorite, Beach.id == Favorite.beach_id
+    ).outerjoin(BeachComment, Beach.id == BeachComment.beach_id
+    ).group_by(Beach.id
+    ).all()
 
+    # 2. Skor hesapla ve sırala
+    scored_beaches = []
+    for row in results:
+        score = (row.fav_count or 0) * 0.6 + (row.avg_sentiment or 0) * 0.4
+        scored_beaches.append((row.beach_id, row.fav_count or 0, row.avg_sentiment or 0, score))
+
+    # 3. En yüksek skor alan top_n plajı seç
+    scored_beaches.sort(key=lambda x: x[3], reverse=True)
+    top_beach_ids = [item[0] for item in scored_beaches[:top_n]]
+    beach_map = {b.id: b for b in Beach.query.filter(Beach.id.in_(top_beach_ids)).all()}
+
+    # 4. Şablona göndermek için liste hazırla
     top_popular_beaches = []
-    if popular_beach_ids_with_counts:
-        popular_beach_ids = [item[0] for item in popular_beach_ids_with_counts]
-        
-        # En basit yol, ID'leri alıp sonra Beach objelerini çekmek:
-        beaches_from_db = Beach.query.filter(Beach.id.in_(popular_beach_ids)).all()
-        # Veritabanından gelen plajları bir sözlüğe atayalım ki kolayca erişebilelim
-        beach_map_for_popular = {b.id: b for b in beaches_from_db}
-        
-        # Orijinal sıralamayı (favori sayısına göre) koruyarak listeyi oluşturalım
-        for beach_id, fav_count in popular_beach_ids_with_counts:
-            beach = beach_map_for_popular.get(beach_id)
-            if beach:
-                # İsteğe bağlı olarak favori sayısını da plaj nesnesine ekleyebiliriz
-                # setattr(beach, 'times_favorited', fav_count) # Veya yeni bir dict içinde gönder
-                top_popular_beaches.append({
-                    'beach_obj': beach,
-                    'times_favorited': fav_count
-                })
+    for beach_id, fav_count, avg_sent, score in scored_beaches[:top_n]:
+        beach = beach_map.get(beach_id)
+        if beach:
+            top_popular_beaches.append({
+                'beach_obj': beach,
+                'times_favorited': fav_count,
+                'avg_sentiment': round(avg_sent, 2),
+                'rank_score': round(score, 2)
+            })
+
     return render_template(
         "my_favorites.html", 
-        beaches=current_user_favorite_beaches, # Kullanıcının kendi favorileri
-        popular_beaches=top_popular_beaches  # YENİ: En popüler plajlar listesi
+        beaches=current_user_favorite_beaches,
+        popular_beaches=top_popular_beaches
     )
+
+
 
 @public_bp.route('/privacy')
 def privacy():

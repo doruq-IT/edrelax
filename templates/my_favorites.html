@@ -80,7 +80,13 @@
     <div class="col">
       <div class="card h-100 shadow-sm">
         <div style="position: relative;">
-          <span class="popular-badge"><i class="fas fa-fire"></i> {{ item.times_favorited }} Favori</span>
+          <span class="popular-badge" title="Skor: {{ item.rank_score }}">
+            <i class="fas fa-fire"></i> {{ item.times_favorited }} Favori | Skor: {{ item.rank_score }}
+          </span>
+          <div class="px-2 pt-1 small text-muted">
+            <i class="fas fa-comment-dots"></i> Yorum Ortalaması: {{ item.avg_sentiment }}
+          </div>
+
           <img src="{{ beach.image_url or url_for('static', filename='images/default.jpg') }}" 
                class="card-img-top beach-fav-img" alt="{{ beach.name }}">
           
