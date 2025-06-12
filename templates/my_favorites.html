@@ -183,6 +183,7 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute("content");
     const favoriteBeachesContainer = document.getElementById('favoriteBeachesContainer');
     
     favoriteBeachesContainer?.addEventListener('click', function(event) {
@@ -210,7 +211,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 fetch(`/toggle-favorite/${beachId}`, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        "X-CSRFToken": csrfToken,
                     }
                 })
                 .then(response => {
