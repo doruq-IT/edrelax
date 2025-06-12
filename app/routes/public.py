@@ -13,6 +13,8 @@ from app.models import BeachComment, db
 from transformers import pipeline
 import os
 import requests
+from dotenv import load_dotenv
+load_dotenv()
 
 public_bp = Blueprint('public', __name__)
 
