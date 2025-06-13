@@ -119,9 +119,7 @@
         data-beach-id="{{ beach.id }}"
         style="background: none; border: none; cursor: pointer; font-size: 28px"
       >
-        <i
-          class="{% if beach.is_favorited %}fas{% else %}far{% endif %} fa-heart"
-        ></i>
+        <i class="{% if is_favorited %}fas{% else %}far{% endif %} fa-heart"></i>
       </button>
     </h1>
 
