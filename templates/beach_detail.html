@@ -126,8 +126,8 @@
     </h1>
 
     <p style="font-size: 18px">{{ beach.location }}</p>
-
-    {% comment %} <form
+    <!-- 
+      <form
       class="date-form"
       method="GET"
       action="{{ url_for('reservations.select_beds', slug=beach.slug) }}"
@@ -156,9 +156,10 @@
         style="padding: 10px; border-radius: 8px; border: none"
       />
       <button type="submit" class="btn btn-info" style="border-radius: 25px">
-        Hemen Rezerve Et
-      </button>
-    </form> {% endcomment %}
+          Hemen Rezerve Et
+        </button>
+      </form> 
+    -->
     <form
       class="date-form"
       method="GET"
