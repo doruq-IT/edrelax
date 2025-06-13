@@ -76,35 +76,41 @@
   <h3 class="mb-3"><i class="fas fa-star text-warning"></i> Popüler Plajlar (En Çok Favorilenenler)</h3>
   <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
     {% for item in popular_beaches %}
-    {% set beach = item.beach_obj %} {# beach nesnesini almak için #}
+    {% set beach = item.beach_obj %}
     <div class="col">
       <div class="card h-100 shadow-sm">
         <div style="position: relative;">
+
+          <!-- ✅ GÜNCELLENEN BADGE -->
           <span class="popular-badge" title="Skor: {{ item.rank_score }}">
-            <i class="fas fa-fire"></i> {{ item.times_favorited }} Favori | Skor: {{ item.rank_score }}
+            <i class="fas fa-fire"></i> {{ item.times_favorited }} Favori |
+            <i class="fas fa-comment-dots"></i> {{ item.avg_sentiment }} |
+            Skor: {{ item.rank_score }}
           </span>
-          <div class="px-2 pt-1 small text-muted">
-            <i class="fas fa-comment-dots"></i> Yorum Ortalaması: {{ item.avg_sentiment }}
-          </div>
+
+          <!-- ✅ Gri yorum kutusu kaldırıldı -->
 
           <img src="{{ beach.image_url or url_for('static', filename='images/default.jpg') }}" 
                class="card-img-top beach-fav-img" alt="{{ beach.name }}">
-          
-          {# YENİ EKLENEN KISIM: Resim Üzerine Plaj Adı #}
-          <div style="position: absolute; bottom: 0; left: 0; width: 100%; background-color: rgba(0, 0, 0, 0.6); color: white; padding: 8px 12px; border-bottom-left-radius: calc(0.25rem - 1px); border-bottom-right-radius: calc(0.25rem - 1px);">
-            <h6 class="mb-0 text-truncate" title="{{ beach.name }}" style="font-size: 0.95rem;">{{ beach.name }}</h6>
+
+          <div style="position: absolute; bottom: 0; left: 0; width: 100%;
+                      background-color: rgba(0, 0, 0, 0.6); color: white;
+                      padding: 8px 12px;
+                      border-bottom-left-radius: calc(0.25rem - 1px);
+                      border-bottom-right-radius: calc(0.25rem - 1px);">
+            <h6 class="mb-0 text-truncate" title="{{ beach.name }}" style="font-size: 0.95rem;">
+              {{ beach.name }}
+            </h6>
           </div>
-          {# YENİ EKLENEN KISIM SONU #}
         </div>
+
         <div class="card-body d-flex flex-column pt-2">           
-          
           <p class="card-text card-text-fav">{{ beach.description | striptags | truncate(100, True, '...') }}</p>
-          
+
           <div class="card-amenities mb-3">
             {% if beach.has_food %}<span class="amenity-icon" title="Yiyecek & İçecek"><i class="fas fa-utensils"></i></span>{% endif %}
             {% if beach.has_parking %}<span class="amenity-icon" title="Otopark"><i class="fas fa-parking"></i></span>{% endif %}
             {% if beach.has_wifi %}<span class="amenity-icon" title="Wi-Fi"><i class="fas fa-wifi"></i></span>{% endif %}
-            {# Diğer olanak ikonları buraya eklenebilir (allows_pets, has_water_sports, is_disabled_friendly) #}
             {% if beach.allows_pets %}<span class="amenity-icon" title="Evcil Hayvan Dostu"><i class="fas fa-paw"></i></span>{% endif %}
             {% if beach.has_water_sports %}<span class="amenity-icon" title="Su Sporları"><i class="fas fa-swimmer"></i></span>{% endif %}
             {% if beach.is_disabled_friendly %}<span class="amenity-icon" title="Engelli Dostu"><i class="fas fa-wheelchair"></i></span>{% endif %}
@@ -121,8 +127,9 @@
     {% endfor %}
   </div>
 </div>
-<hr class="my-5"> {# Bölümler arası ayırıcı #}
+<hr class="my-5">
 {% endif %}
+
 {# ---- EN ÇOK FAVORİLENEN PLAJLAR BÖLÜMÜ SONU ---- #}
 
 
