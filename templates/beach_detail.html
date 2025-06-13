@@ -127,7 +127,7 @@
 
     <p style="font-size: 18px">{{ beach.location }}</p>
 
-    <form
+    {% comment %} <form
       class="date-form"
       method="GET"
       action="{{ url_for('reservations.select_beds', slug=beach.slug) }}"
@@ -158,7 +158,41 @@
       <button type="submit" class="btn btn-info" style="border-radius: 25px">
         Hemen Rezerve Et
       </button>
+    </form> {% endcomment %}
+    <form
+      class="date-form"
+      method="GET"
+      action="{{ url_for('reservations.select_beds', slug=beach.slug) }}"
+    >
+      <input
+        type="date"
+        name="date"
+        id="date"
+        value="{{ current_date }}"
+        min="{{ current_date }}"
+        required
+        style="padding: 10px; border-radius: 8px; border: none"
+      />
+
+      <!-- Saat input'ları gizli ve default değerli -->
+      <input
+        type="hidden"
+        name="start_time"
+        id="start_time"
+        value="09:00"
+      />
+      <input
+        type="hidden"
+        name="end_time"
+        id="end_time"
+        value="13:00"
+      />
+
+      <button type="submit" class="btn btn-info" style="border-radius: 25px">
+        Hemen Rezerve Et
+      </button>
     </form>
+
   </div>
 </div>
 
