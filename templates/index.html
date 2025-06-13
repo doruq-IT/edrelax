@@ -169,18 +169,17 @@ Ana Sayfa - Edrelax
       </div>
 
       <div class="beach-grid" id="beach-grid">
-        {% for beach in beaches %}
-        <div class="beach-card" data-index="{{ loop.index0 }}" style="{% if loop.index0 >= 6 %}display: none;{% endif %}">
-          <div class="card-img">
-            <img
-              src="{{ beach.image_url }}"
-              alt="{{ beach.name }}"
-            />
+        {% for item in beaches %}
+          {% set beach = item.beach %}
+          <div class="beach-card">
+            <div class="card-img">
+              <img src="{{ beach.image_url }}" alt="{{ beach.name }}">
             <span class="price-tag">BAŞLANGIÇ {{ beach.price or "?" }} TL</span>
           </div>
           <div class="card-content">
             <span class="popular-badge">
-              <i class="fas fa-fire"></i> Trend Plaj
+              <i class="fas fa-fire"></i> {{ item.times_favorited }} Favori |
+              Skor: {{ item.rank_score }}
             </span>
             <strong class="beach-name">{{ beach.name }}</strong>
             <p class="beach-location">{{ beach.location }}</p>

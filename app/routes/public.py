@@ -20,11 +20,39 @@ public_bp = Blueprint('public', __name__)
 
 HF_API_TOKEN = os.getenv("HF_TOKEN")
 
+
+
 @public_bp.route('/')
 def index():
+    # Tüm plajları çek
     beaches = Beach.query.all()
+
+    # En son eklenenler (slider kısmı)
     latest_beaches = Beach.query.order_by(Beach.id.desc()).limit(5).all()
-    return render_template('index.html', beaches=beaches, latest_beaches=latest_beaches)
+
+    # Her plajın favori sayısını hesapla
+    fav_counts = dict(
+        db.session.query(Favorite.beach_id, func.count(Favorite.id))
+        .group_by(Favorite.beach_id)
+        .all()
+    )
+
+    # Yapıyı dönüştür: her plaj + favori sayısı
+    enriched_beaches = []
+    for beach in beaches:
+        enriched_beaches.append({
+            "beach": beach,
+            "times_favorited": fav_counts.get(beach.id, 0),
+            # Skor örneği (gelişmiş versiyonda yorum ortalamasından alınabilir)
+            "rank_score": beach.rank_score if hasattr(beach, 'rank_score') else 0
+        })
+
+    return render_template(
+        'index.html',
+        beaches=enriched_beaches,
+        latest_beaches=latest_beaches
+    )
+
 
 @public_bp.route('/about')
 def about():
