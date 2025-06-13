@@ -675,6 +675,17 @@ a.active {
   padding: 6px 10px;
   border-radius: 10px;
 }
+/* Ana sayfadaki kartlardaki badge için */
+.popular-badge {
+  display: inline-block;
+  background-color: #ffc107;
+  color: #212529;
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  border-radius: 4px;
+  margin-bottom: 6px;
+}
 
 /* kredi button */
 .balance-box {
