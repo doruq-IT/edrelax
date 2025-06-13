@@ -126,7 +126,8 @@ def google_callback():
     login_user(user, remember=True)
     print("✅ Kullanıcı giriş yaptı (login_user)")
 
-    return redirect(url_for('public.index'))
+    # return redirect(url_for('public.index'))
+    return redirect(url_for("auth.me"))
 
 
 
@@ -150,7 +151,8 @@ def login():
         if user and check_password_hash(user.password, password):
             if not user.confirmed:
                 flash("Lütfen e-posta adresinizi doğrulayın.", "warning")
-                return redirect(url_for("auth.login"))
+                # return redirect(url_for("auth.login"))
+                return redirect(url_for("auth.me"))
             login_user(user, remember=form.remember.data)
             print(f"🚀 login_user çağrıldı: {user.email}")
             session.permanent = True
