@@ -19,7 +19,7 @@ login_manager = LoginManager()
 limiter = Limiter(key_func=get_remote_address)
 csrf = CSRFProtect()
 mail = Mail()
-socketio = SocketIO(cors_allowed_origins="*")
+socketio = SocketIO(cors_allowed_origins="*", async_mode="gevent")
 oauth = OAuth()
 
 
