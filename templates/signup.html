@@ -216,7 +216,7 @@
       </div>
     </div>
 
-    <button type="submit">Kayıt Ol</button>
+    <button type="submit" id="signupBtn" disabled>Kayıt Ol</button>
     <p class="login-link">
       Zaten bir Edrelax üyesi misiniz?
       <a href="{{ url_for('auth.login') }}">Giriş Yap</a>
@@ -232,36 +232,30 @@
     const form = document.querySelector("form");
     const password = form.querySelector('input[name="password"]');
     const confirmPassword = form.querySelector('input[name="confirm_password"]');
+    const submitButton = document.getElementById("signupBtn");
     const mismatchMsg = document.getElementById("password-mismatch");
 
-    // Bu değişken submit sırasında tekrar kontrol için global tutuluyor
-    let passwordsMatch = false;
+    function validatePasswords() {
+      const pw = password.value.trim();
+      const cpw = confirmPassword.value.trim();
 
-    function validatePasswordMatch() {
-      if (password.value !== confirmPassword.value) {
-        confirmPassword.style.borderColor = "red";
-        mismatchMsg.style.display = "block";
-        passwordsMatch = false;
-      } else {
+      if (pw !== "" && cpw !== "" && pw === cpw) {
+        // Şifreler eşleşiyor ✅
         confirmPassword.style.borderColor = "#3dc0d3";
         mismatchMsg.style.display = "none";
-        passwordsMatch = true;
+        submitButton.disabled = false;
+      } else {
+        // Şifreler uyuşmuyor ❌
+        confirmPassword.style.borderColor = "red";
+        mismatchMsg.style.display = "block";
+        submitButton.disabled = true;
       }
     }
 
-    // Her input değiştiğinde canlı kontrol
-    password.addEventListener("input", validatePasswordMatch);
-    confirmPassword.addEventListener("input", validatePasswordMatch);
-
-    form.addEventListener("submit", function (e) {
-      validatePasswordMatch(); // submit öncesi son kez kontrol et
-      if (!passwordsMatch) {
-        e.preventDefault(); // 🚫 Kesinlikle gönderme
-        e.stopPropagation(); // ❗️Event zincirini tamamen durdur
-        return false;
-      }
-    });
+    password.addEventListener("input", validatePasswords);
+    confirmPassword.addEventListener("input", validatePasswords);
   });
 </script>
+
 
 {% endblock %}
