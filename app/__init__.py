@@ -1,5 +1,5 @@
 import os
-import pymysql
+# import pymysql
 from flask import Flask, render_template, redirect, url_for, flash, request, current_app, session
 from app.extensions import db, login_manager, limiter
 from app.routes import auth_bp, admin_bp, public_bp, reservations_bp
@@ -30,7 +30,7 @@ os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 #     return response.payload.data.decode("UTF-8")
 
 def create_app():
-    pymysql.install_as_MySQLdb()
+    # pymysql.install_as_MySQLdb()
     from werkzeug.middleware.proxy_fix import ProxyFix
     app = Flask(
         __name__,
