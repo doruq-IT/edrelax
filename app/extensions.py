@@ -20,10 +20,11 @@ limiter = Limiter(key_func=get_remote_address)
 csrf = CSRFProtect()
 mail = Mail()
 
-# ==================== NİHAİ DÜZELTME BURADA ====================
-# SocketIO'ya hangi alan adlarından gelen bağlantıların güvenli olduğunu açıkça belirtiyoruz.
-# Bu, "400 Bad Request" CORS hatasını çözecektir.
+# ==================== NİHAİ DÜZELTME v2 ====================
+# Flask-SocketIO ve Flask-Login arasındaki olası oturum (session)
+# çakışmasını önlemek için 'manage_session=False' parametresini ekliyoruz.
 socketio = SocketIO(
+    manage_session=False,
     cors_allowed_origins=["https://edrelaxbeach.com", "https://www.edrelaxbeach.com"],
     async_mode="gevent"
 )
