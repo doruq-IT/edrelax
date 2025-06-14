@@ -137,40 +137,84 @@ def google_callback():
 def me():
     return f"Giriş yapan kullanıcı: {current_user.email}"
 
+# @auth_bp.route("/login", methods=["GET", "POST"])
+# @limiter.limit("5 per minute")
+# def login():
+#     form = LoginForm()
+#     print("🟢 Login route tetiklendi")
+#     if form.validate_on_submit():
+#         print("✅ Form valid")
+#         email = form.email.data
+#         password = form.password.data
+#         user = User.query.filter_by(email=email).first()
+
+#         if user and check_password_hash(user.password, password):
+#             if not user.confirmed:
+#                 flash("Lütfen e-posta adresinizi doğrulayın.", "warning")
+#                 # return redirect(url_for("auth.login"))
+#                 return redirect(url_for("public.test_quick"))
+#             login_user(user, remember=form.remember.data)
+#             print(f"🚀 login_user çağrıldı: {user.email}")
+#             session.permanent = True
+#             session["user_id"] = user.id
+#             session["user_name"] = user.first_name
+#             session["user_email"] = user.email
+#             session["user_role"] = user.role
+
+#             flash("Giriş başarılı.", "success")
+
+#             if user.role == "admin":
+#                 return redirect(url_for("admin.dashboard"))  # <- Blueprint ve endpoint ismini kontrol et!
+#             elif user.role == "beach_admin":
+#                 return redirect(url_for("beach_admin.select_beach"))
+#             else:
+#                 return redirect(url_for("public.index"))
+#         else:
+#             flash("Hatalı e-posta veya şifre.", "danger")
+
+#     return render_template("login.html", form=form)
+
 @auth_bp.route("/login", methods=["GET", "POST"])
 @limiter.limit("5 per minute")
 def login():
     form = LoginForm()
     print("🟢 Login route tetiklendi")
+
     if form.validate_on_submit():
         print("✅ Form valid")
         email = form.email.data
         password = form.password.data
         user = User.query.filter_by(email=email).first()
+        print(f"🔍 Kullanıcı bulundu mu: {bool(user)}")
 
-        if user and check_password_hash(user.password, password):
-            if not user.confirmed:
-                flash("Lütfen e-posta adresinizi doğrulayın.", "warning")
-                # return redirect(url_for("auth.login"))
-                return redirect(url_for("public.test_quick"))
-            login_user(user, remember=form.remember.data)
-            print(f"🚀 login_user çağrıldı: {user.email}")
-            session.permanent = True
-            session["user_id"] = user.id
-            session["user_name"] = user.first_name
-            session["user_email"] = user.email
-            session["user_role"] = user.role
+        if user:
+            print(f"➡️ Kullanıcı email: {user.email}")
+            print("🧪 Şifre kontrolü başlıyor")
+            if check_password_hash(user.password, password):
+                print("✅ Şifre doğru")
 
-            flash("Giriş başarılı.", "success")
+                if not user.confirmed:
+                    print("⚠️ Kullanıcı doğrulanmamış")
+                    return redirect(url_for("auth.login"))
 
-            if user.role == "admin":
-                return redirect(url_for("admin.dashboard"))  # <- Blueprint ve endpoint ismini kontrol et!
-            elif user.role == "beach_admin":
-                return redirect(url_for("beach_admin.select_beach"))
+                print("🚀 login_user çağrılıyor")
+                login_user(user, remember=form.remember.data)
+                print("📦 Session ayarları")
+                session.permanent = True
+                session["user_id"] = user.id
+                session["user_name"] = user.first_name
+                session["user_email"] = user.email
+                session["user_role"] = user.role
+                print("🎯 Redirect yapılıyor (me route)")
+
+                return redirect(url_for("auth.me"))
+
             else:
-                return redirect(url_for("public.index"))
+                print("❌ Şifre hatalı")
         else:
-            flash("Hatalı e-posta veya şifre.", "danger")
+            print("❌ Kullanıcı bulunamadı")
+
+        flash("Hatalı e-posta veya şifre.", "danger")
 
     return render_template("login.html", form=form)
 
