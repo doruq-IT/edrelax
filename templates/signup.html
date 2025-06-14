@@ -224,15 +224,26 @@
   </form>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-  const form = document.querySelector('form');
-  form.addEventListener('submit', function(e) {
-    const pw = form.querySelector('[name="password"]').value;
-    const cpw = form.querySelector('[name="confirm_password"]').value;
-    if (pw !== cpw) {
-      e.preventDefault();
-      alert("Passwords do not match!");
-    }
+  document.addEventListener('DOMContentLoaded', function () {
+    const form = document.querySelector('form');
+    const password = form.querySelector('input[name="password"]');
+    const confirmPassword = form.querySelector('input[name="confirm_password"]');
+
+    form.addEventListener('submit', function (e) {
+      if (password.value !== confirmPassword.value) {
+        e.preventDefault(); // ❌ form gönderimini engelle
+        Swal.fire({
+          icon: 'error',
+          title: 'Şifreler uyuşmuyor',
+          text: 'Lütfen şifrenizi iki kez aynı şekilde girin.',
+          confirmButtonText: 'Tamam',
+          confirmButtonColor: '#3dc0d3'
+        });
+      }
+    });
   });
 </script>
+
 {% endblock %}
