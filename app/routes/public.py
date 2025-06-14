@@ -22,60 +22,50 @@ HF_API_TOKEN = os.getenv("HF_TOKEN")
 
 
 
-# @public_bp.route('/')
-# def index():
-#     # Son eklenen plajlar
-#     latest_beaches = Beach.query.order_by(Beach.id.desc()).limit(5).all()
-
-#     # Tüm plajlar için favori sayısı ve sentiment ortalaması topla
-#     results = db.session.query(
-#         Beach.id.label("beach_id"),
-#         func.count(Favorite.id).label("fav_count"),
-#         func.avg(BeachComment.sentiment_score).label("avg_sentiment")
-#     ).outerjoin(Favorite, Beach.id == Favorite.beach_id
-#     ).outerjoin(BeachComment, Beach.id == BeachComment.beach_id
-#     ).group_by(Beach.id
-#     ).all()
-
-#     # Skor hesapla
-#     scored_beaches = []
-#     for row in results:
-#         fav_count = float(row.fav_count or 0)
-#         avg_sent = float(row.avg_sentiment or 0)
-#         score = fav_count * 0.6 + avg_sent * 0.4
-#         scored_beaches.append((row.beach_id, fav_count, avg_sent, score))
-
-#     # Beach objelerini getir
-#     beach_map = {b.id: b for b in Beach.query.all()}
-
-#     # render'a uygun hale getir
-#     enriched_beaches = []
-#     for beach_id, fav_count, avg_sent, score in scored_beaches:
-#         beach = beach_map.get(beach_id)
-#         if beach:
-#             enriched_beaches.append({
-#                 'beach': beach,
-#                 'times_favorited': fav_count,
-#                 'avg_sentiment': round(avg_sent, 2),
-#                 'rank_score': round(score, 2)
-#             })
-
-#     return render_template(
-#         'index.html',
-#         beaches=enriched_beaches,
-#         latest_beaches=latest_beaches
-#     )
-
 @public_bp.route('/')
 def index():
-    # Sadece son eklenen 5 plajı getir
+    # Son eklenen plajlar
     latest_beaches = Beach.query.order_by(Beach.id.desc()).limit(5).all()
+
+    # Tüm plajlar için favori sayısı ve sentiment ortalaması topla
+    results = db.session.query(
+        Beach.id.label("beach_id"),
+        func.count(Favorite.id).label("fav_count"),
+        func.avg(BeachComment.sentiment_score).label("avg_sentiment")
+    ).outerjoin(Favorite, Beach.id == Favorite.beach_id
+    ).outerjoin(BeachComment, Beach.id == BeachComment.beach_id
+    ).group_by(Beach.id
+    ).all()
+
+    # Skor hesapla
+    scored_beaches = []
+    for row in results:
+        fav_count = float(row.fav_count or 0)
+        avg_sent = float(row.avg_sentiment or 0)
+        score = fav_count * 0.6 + avg_sent * 0.4
+        scored_beaches.append((row.beach_id, fav_count, avg_sent, score))
+
+    # Beach objelerini getir
+    beach_map = {b.id: b for b in Beach.query.all()}
+
+    # render'a uygun hale getir
+    enriched_beaches = []
+    for beach_id, fav_count, avg_sent, score in scored_beaches:
+        beach = beach_map.get(beach_id)
+        if beach:
+            enriched_beaches.append({
+                'beach': beach,
+                'times_favorited': fav_count,
+                'avg_sentiment': round(avg_sent, 2),
+                'rank_score': round(score, 2)
+            })
 
     return render_template(
         'index.html',
-        beaches=[],  # Şimdilik boş
+        beaches=enriched_beaches,
         latest_beaches=latest_beaches
     )
+
 
 
 @public_bp.route('/about')
