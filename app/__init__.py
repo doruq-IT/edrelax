@@ -19,7 +19,7 @@ import hashlib
 
 load_dotenv()
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
-pymysql.install_as_MySQLdb()
+
 
 # GCP Secret Manager kullanımı devre dışı bırakıldı
 # def get_secret_from_gcp(secret_name):
@@ -30,6 +30,7 @@ pymysql.install_as_MySQLdb()
 #     return response.payload.data.decode("UTF-8")
 
 def create_app():
+    pymysql.install_as_MySQLdb()
     from werkzeug.middleware.proxy_fix import ProxyFix
     app = Flask(
         __name__,
