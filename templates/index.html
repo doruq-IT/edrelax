@@ -10,5 +10,16 @@
             <li>{{ beach.name }}</li>
         {% endfor %}
     </ul>
+
+    <h2>📊 Favori Sayısı ve Ortalama Yorum Skoru</h2>
+    <ul>
+        {% for row in results %}
+            <li>
+                Beach ID: {{ row.beach_id }} |
+                Favori Sayısı: {{ row.fav_count }} |
+                Ortalama Sentiment: {{ row.avg_sentiment }}
+            </li>
+        {% endfor %}
+    </ul>
 </body>
 </html>
