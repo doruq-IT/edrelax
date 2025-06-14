@@ -173,24 +173,12 @@ def me():
 #     return render_template("login.html", form=form)
 @auth_bp.route("/login", methods=["GET", "POST"])
 def login():
-    form = LoginForm()
-    print("🟢 Login route tetiklendi")
-    if form.validate_on_submit():
-        print("✅ Form valid")
-        email = form.email.data
-        password = form.password.data
-        user = User.query.filter_by(email=email).first()
+    print("🟢 Login route tetiklendi - FORM BİLE KONTROL EDİLMİYOR")
 
-        if user and check_password_hash(user.password, password):
-            print("🟡 login_user çalıştırılmadı (test amaçlı)")
-            # login_user(user, remember=form.remember.data)  ← bunu YORUM yap
+    # Formu yorum satırı yaptık
+    # form = LoginForm()
 
-            return redirect(url_for("auth.test_quick"))
-
-        else:
-            flash("Hatalı e-posta veya şifre.", "danger")
-
-    return render_template("login.html", form=form)
+    return redirect(url_for("auth.test_quick"))
 
 
 @auth_bp.route("/logout")
