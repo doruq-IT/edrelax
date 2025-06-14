@@ -324,3 +324,45 @@ def get_user_info(reservation_id):
         "email": user.email
     })
 
+@reservations_bp.route('/notify-when-free', methods=['POST'])
+@login_required
+def notify_when_free():
+    data = request.get_json()
+
+    beach_id = data.get("beach_id")
+    bed_number = data.get("bed_number")
+    date = data.get("date")
+    time_slot = data.get("time_slot")
+
+    if not all([beach_id, bed_number, date, time_slot]):
+        return jsonify({"success": False, "message": "Eksik veri gönderildi."}), 400
+
+    # Aynı kullanıcı, aynı yatak için daha önce kayıt açmış mı kontrol et
+    from app.models import WaitingList  # gerekiyorsa yukarıya taşı
+    existing = WaitingList.query.filter_by(
+        user_id=current_user.id,
+        beach_id=beach_id,
+        bed_number=bed_number,
+        date=date,
+        time_slot=time_slot,
+        notified=False
+    ).first()
+
+    if existing:
+        return jsonify({"success": False, "message": "Bu şezlong için zaten bildirim isteğiniz mevcut."}), 200
+
+    # Yeni kayıt oluştur
+    new_entry = WaitingList(
+        user_id=current_user.id,
+        beach_id=beach_id,
+        bed_number=bed_number,
+        date=date,
+        time_slot=time_slot,
+        notified=False,
+        created_at=datetime.utcnow()
+    )
+
+    db.session.add(new_entry)
+    db.session.commit()
+
+    return jsonify({"success": True, "message": "Bildirim talebiniz alındı. Şezlong boşalınca size haber vereceğiz."})
