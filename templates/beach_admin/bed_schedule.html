@@ -158,7 +158,7 @@ beach.name }}{% endblock %} {% block content %}
 <script>
   document.addEventListener('DOMContentLoaded', function () {
     // ===============================================================
-    // ADIM 2: SOCKET.IO ENTEGRASYONU - BAŞLANGIÇ
+    // SOCKET.IO ENTEGRASYONU - GÜNCELLENMİŞ KOD
     // ===============================================================
     try {
         const socket = io();
@@ -167,75 +167,59 @@ beach.name }}{% endblock %} {% block content %}
             console.log('Socket.IO sunucusuna başarıyla bağlanıldı!');
         });
 
-        socket.on('status_updated', function(data) {
-        console.log('--- Yeni Anlık Güncelleme ---');
-        console.log('Gelen Veri:', data); 
+        // YENİ EKLENEN KOD: Sunucudan gelen yeni toplu güncelleme mesajını dinle
+        socket.on('bulk_status_updated', function(data) {
+            console.log('--- Yeni Toplu Güncelleme Alındı ---');
+            console.log('Gelen Veri:', data);
 
-        const currentPageBeachId = document.getElementById('bedScheduleContainer').dataset.beachId;
-        const currentPageDate = document.getElementById('scheduleDate').value;
+            const currentPageBeachId = document.getElementById('bedScheduleContainer').dataset.beachId;
+            const currentPageDate = document.getElementById('scheduleDate').value;
 
-        console.log(`Karşılaştırma: Plaj ID (${data.beach_id} == ${currentPageBeachId})? | Tarih (${data.date} == ${currentPageDate})?`);
-        
-        // Sadece ilgili plaj ve tarihteki güncellemeleri işle
-        if (data.beach_id.toString() !== currentPageBeachId || data.date !== currentPageDate) {
-            console.log('Koşul başarısız. Bu güncelleme bu sayfa için değil.');
-            return; // Fonksiyondan çık
-        }
-        
-        // EĞER REZERVASYON İPTAL EDİLDİYSE (BOŞ'A ÇEVRİLDİYSE) TÜM SAATLERİ GÜNCELLE
-        if (data.new_status === 'free' && data.end_time) {
-            console.log('✅ Çoklu saat iptali algılandı. Döngü başlatılıyor...');
-            
-            // Başlangıç ve bitiş saatlerini sayısal olarak al (örn: 9, 12)
-            const startHour = parseInt(data.time_slot.split(':')[0]);
+            // Güncellemenin bu sayfa için olup olmadığını kontrol et
+            if (data.beach_id.toString() !== currentPageBeachId || data.date !== currentPageDate) {
+                console.log('Bu güncelleme bu sayfa için değil, işlem yapılmıyor.');
+                return; // Fonksiyondan çık
+            }
+
+            // Gelen başlangıç ve bitiş saatlerini sayıya çevir (örn: "10:00" -> 10)
+            const startHour = parseInt(data.start_time.split(':')[0]);
             const endHour = parseInt(data.end_time.split(':')[0]);
 
-            // Başlangıçtan bitişe kadar olan tüm saat dilimleri için döngü kur
-            for (let h = startHour; h < endHour; h++) {
-                // Saati "HH:00" formatına geri çevir
-                const currentHourStr = h.toString().padStart(2, '0') + ':00';
+            // Gelen her bir şezlong ID'si için döngü başlat
+            data.bed_ids.forEach(bed_number => {
                 
-                // O anki saate ait hücreyi bulmak için seçiciyi oluştur
-                const selector = `.bed-slot[data-bed-number="${data.bed_number}"][data-time-slot="${currentHourStr}"]`;
-                const cellToUpdate = document.querySelector(selector);
-                
-                if (cellToUpdate) {
-                    console.log(`Döngü: ${currentHourStr} hücresi güncelleniyor...`);
-                    updateCellUI(cellToUpdate, data); // Arayüzü güncelle
-                } else {
-                    console.error(`Döngü: ${currentHourStr} hücresi bulunamadı!`);
+                // Başlangıç ve bitiş saatleri arasındaki her bir saat dilimi için döngü başlat
+                for (let h = startHour; h < endHour; h++) {
+                    const time_slot = h.toString().padStart(2, '0') + ':00';
+                    const selector = `.bed-slot[data-bed-number="${bed_number}"][data-time-slot="${time_slot}"]`;
+                    const cellToUpdate = document.querySelector(selector);
+
+                    if (cellToUpdate) {
+                        console.log(`Hücre güncelleniyor: Şezlong #${bed_number}, Saat: ${time_slot}`);
+                        
+                        // Dosyanızda zaten var olan merkezi arayüz güncelleme fonksiyonunu çağırıyoruz
+                        updateCellUI(cellToUpdate, {
+                            new_status: data.new_status
+                        });
+                    } else {
+                        console.error(`Hücre bulunamadı: ${selector}`);
+                    }
                 }
-            }
-            Toast.fire({
-                icon: 'success',
-                title: `Şezlong #${data.bed_number} için rezervasyon iptal edildi.`
             });
 
-        } else {
-            // DİĞER DURUMLAR İÇİN ESKİSİ GİBİ SADECE TEK BİR HÜCREYİ GÜNCELLE
-            console.log('✅ Tekli saat güncellemesi algılandı.');
-            const selector = `.bed-slot[data-bed-number="${data.bed_number}"][data-time-slot="${data.time_slot}"]`;
-            const cellToUpdate = document.querySelector(selector);
-
-            if (cellToUpdate) {
-                console.log('✅ Hücre bulundu! Arayüz güncelleniyor.');
-                updateCellUI(cellToUpdate, data);
-                Toast.fire({
-                    icon: 'info',
-                    title: `Şezlong #${data.bed_number} (${data.time_slot}) durumu güncellendi.`
-                });
-            } else {
-                console.error('❌ HATA: Hücre bu seçici ile bulunamadı!', selector);
-            }
-        }
-        console.log('--- Güncelleme Sonu ---');
-    });
+            // İşlem sonunda kullanıcıya bir bildirim göster
+            Toast.fire({
+                icon: 'success',
+                title: `${data.bed_ids.length} adet şezlong başarıyla rezerve edildi!`
+            });
+            console.log('--- Toplu Güncelleme Tamamlandı ---');
+        });
 
     } catch (e) {
         console.error("Socket.IO başlatılırken bir hata oluştu. Kütüphanenin doğru yüklendiğinden emin olun.", e);
     }
     
-    // Küçük, anlık bildirimler için bir yardımcı
+    // Küçük, anlık bildirimler için bir yardımcı (Bu kısım değişmedi)
     const Toast = Swal.mixin({
         toast: true,
         position: 'top-end',

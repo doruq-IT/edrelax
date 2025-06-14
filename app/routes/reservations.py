@@ -175,25 +175,17 @@ def make_reservation():
 
         # WebSocket mesajları için orijinal "saf" tarih/saatleri kullanabiliriz
         # eğer istemci tarafı UTC'den haberdar değilse bu daha kolay bir yöntemdir.
-        print("📡 WebSocket emit başlıyor...")
-        start_dt_naive = datetime.strptime(f"{date_str} {start_str}", "%Y-%m-%d %H:%M")
-        end_dt_naive = datetime.strptime(f"{date_str} {end_str}", "%Y-%m-%d %H:%M")
-        current_dt = start_dt_naive
+        print("📡 WebSocket için tek bir birleştirilmiş olay ('bulk_status_updated') gönderiliyor...")
+        socketio.emit("bulk_status_updated", {
+            "beach_id": beach_id,
+            "bed_ids": bed_ids,       # Örnek: ['1', '2'] gibi bir liste
+            "date": date_str,
+            "start_time": start_str,  # Örnek: "10:00"
+            "end_time": end_str,      # Örnek: "13:00"
+            "new_status": "reserved"
+        }, broadcast=True)
 
-        while current_dt < end_dt_naive:
-            hour_str = current_dt.strftime("%H:%M")
-            for bed_id in bed_ids:
-                print(f"🛏️ Emit gönderiliyor: bed_id={bed_id}, time_slot={hour_str}")
-                socketio.emit("status_updated", {
-                    "beach_id": beach_id,
-                    "bed_number": bed_id,
-                    "date": date_str,
-                    "time_slot": hour_str,
-                    "new_status": "reserved"
-                }, broadcast=True)
-            current_dt += timedelta(hours=1)
-
-        # Başarılı yanıtı kullanıcıya döndür (kullanıcıya kendi saatini göster)
+        # Başarılı HTTP yanıtını rezervasyonu yapan kullanıcıya döndür
         return jsonify({
             "success": True,
             "message": "Rezervasyon başarıyla oluşturuldu.",
