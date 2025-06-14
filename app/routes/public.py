@@ -25,7 +25,8 @@ HF_API_TOKEN = os.getenv("HF_TOKEN")
 @public_bp.route('/')
 def index():
     # Son eklenen plajlar
-    latest_beaches = Beach.query.order_by(Beach.id.desc()).limit(5).all()
+    # latest_beaches = Beach.query.order_by(Beach.id.desc()).limit(5).all()
+    return "✅ Public index route çalışıyor!"
 
     # Tüm plajlar için favori sayısı ve sentiment ortalaması topla
     # results = db.session.query(
@@ -65,11 +66,11 @@ def index():
     #     beaches=enriched_beaches,
     #     latest_beaches=latest_beaches
     # )
-    return render_template(
-        'index.html',
-        beaches=[],
-        latest_beaches=latest_beaches
-    )
+    # return render_template(
+    #     'index.html',
+    #     beaches=[],
+    #     latest_beaches=latest_beaches
+    # )
 
 @public_bp.route("/test-quick")
 def test_quick():
