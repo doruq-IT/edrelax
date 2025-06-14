@@ -12,9 +12,6 @@ from threading import Thread
 import time
 import pytz
 
-
-
-
 def send_confirmation_email(user_email, beach_name, bed_number, date, time_slot):
     subject = "Rezervasyon Onaylandı ✅"
     body = f"""Merhaba,
@@ -308,9 +305,6 @@ def bed_schedule(beach_id):
         for bed_num in range(1, bed_count + 1)
     }
 
-    # --- GÜNCELLENMİŞ VERİ ÇEKME MANTIĞI ---
-    # Saat dilimi farkından dolayı, seçilen yerel güne denk gelebilecek UTC kayıtlarını
-    # (o gün ve bir önceki gün) çekerek işi garantiye alıyoruz.
     date_range_to_check = [selected_date_obj, selected_date_obj - timedelta(days=1)]
     
     reservations_to_process = Reservation.query.filter(

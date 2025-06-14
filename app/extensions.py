@@ -20,19 +20,12 @@ limiter = Limiter(key_func=get_remote_address)
 csrf = CSRFProtect()
 mail = Mail()
 
-# ==================== GÜVENLİ AYARA DÖNÜŞ ====================
-# Sorunu Nginx katmanında çözmek üzere, Flask-SocketIO'yu
-# en basit ve en uyumlu haliyle yapılandırıyoruz.
 socketio = SocketIO(
     cors_allowed_origins="*",
     async_mode="gevent"
 )
-# ======================== DÜZELTME SONU =======================
-
 oauth = OAuth()
 
-
-# Role-based erişim kontrolü
 def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):

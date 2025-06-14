@@ -21,14 +21,6 @@ load_dotenv()
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 
 
-# GCP Secret Manager kullanımı devre dışı bırakıldı
-# def get_secret_from_gcp(secret_name):
-#     client = secretmanager.SecretManagerServiceClient()
-#     project_id = os.getenv("GOOGLE_CLOUD_PROJECT")
-#     name = f"projects/{project_id}/secrets/{secret_name}/versions/latest"
-#     response = client.access_secret_version(name=name)
-#     return response.payload.data.decode("UTF-8")
-
 def create_app():
     # pymysql.install_as_MySQLdb()
     from werkzeug.middleware.proxy_fix import ProxyFix
@@ -39,19 +31,6 @@ def create_app():
     )
     app.config.from_object(Config)
     app.config["WTF_CSRF_SECRET_KEY"] = app.config["SECRET_KEY"]
-
-    # GCP üzerinden gizli bilgileri alma işlemleri devre dışı bırakıldı
-    # app.config["GOOGLE_CLIENT_ID"] = get_secret_from_gcp("google_client_id")
-    # app.config["GOOGLE_CLIENT_SECRET"] = get_secret_from_gcp("google_client_secret")
-    # app.config["DB_USER"] = get_secret_from_gcp("db_user")
-    # app.config["DB_PASSWORD"] = get_secret_from_gcp("db_password")
-    # admin_email = get_secret_from_gcp("admin_notification_email")
-    # app.config["ADMIN_EMAIL"] = admin_email
-    # app.config["ADMIN_EMAILS"] = [admin_email]
-    # mail_user = get_secret_from_gcp("mail_username")
-    # app.config["MAIL_USERNAME"] = mail_user
-    # app.config["MAIL_PASSWORD"] = get_secret_from_gcp("mail_password")
-    # app.config["MAIL_DEFAULT_SENDER"] = mail_user
 
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
@@ -78,17 +57,6 @@ def create_app():
     login_manager.user_loader(load_user)
     limiter.init_app(app)
     socketio.init_app(app, async_mode='gevent')
-
-    # GCP ayarları kapalı olduğu için bu register da devre dışı
-    # oauth.register(
-    #     name='google',
-    #     client_id=app.config.get("GOOGLE_CLIENT_ID"),
-    #     client_secret=app.config.get("GOOGLE_CLIENT_SECRET"),
-    #     server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
-    #     client_kwargs={
-    #         'scope': 'openid email profile'
-    #     }
-    # )
 
     app.jinja_env.filters['to_alphanumeric_bed_id'] = to_alphanumeric_bed_id
     app.register_blueprint(google_bp, url_prefix="/login")

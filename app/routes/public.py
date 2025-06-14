@@ -20,8 +20,6 @@ public_bp = Blueprint('public', __name__)
 
 HF_API_TOKEN = os.getenv("HF_TOKEN")
 
-
-
 @public_bp.route('/')
 def index():
     # Son eklenen plajlar
@@ -66,13 +64,9 @@ def index():
         latest_beaches=latest_beaches
     )
 
-
-
 @public_bp.route('/about')
 def about():
     return render_template('about.html')
-
-
 
 @public_bp.route("/contact", methods=["GET", "POST"])
 def contact():
@@ -262,8 +256,6 @@ def my_favorites():
         popular_beaches=top_popular_beaches
     )
 
-
-
 @public_bp.route('/privacy')
 def privacy():
     return render_template('about/privacy.html')
@@ -331,7 +323,6 @@ def beach_application():
                 {"".join([f"<li><strong>{feature}:</strong> {status}</li>" for feature, status in features.items()])}
             </ul>
         """
-        
         # E-posta gönderme işlemi
         try:
             # Yönetici e-postasını config dosyasından al
@@ -385,9 +376,7 @@ def get_sentiment_score(comment_text):
             "Positive": 4,
             "Very Positive": 5
         }
-
         label = None
-
         # Çoklu olasılık (en yaygın)
         if isinstance(result, list):
             if isinstance(result[0], list):
@@ -403,9 +392,6 @@ def get_sentiment_score(comment_text):
         print(f"❌ Sentiment API hatası: {e}")
         return 3
 
-
-
-# 🔻 Flask route
 @public_bp.route("/submit-beach-comment/<int:beach_id>", methods=["POST"])
 @login_required
 def submit_beach_comment(beach_id):

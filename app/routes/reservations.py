@@ -14,7 +14,6 @@ from collections import defaultdict
 
 reservations_bp = Blueprint('reservations', __name__)
 
-
 @reservations_bp.route('/beach/<slug>/select-beds')
 @login_required
 def select_beds(slug):
@@ -76,7 +75,6 @@ def select_beds(slug):
         booked_beds=booked_beds,
         kullanicinin_o_gun_rezerve_ettigi_sezlong_sayisi=user_reservations_today
     )
-
 
 @reservations_bp.route('/make-reservation', methods=['POST'])
 @login_required
@@ -270,8 +268,6 @@ def my_reservations():
 
     return render_template("my_reservations.html", reservations=user_reservations, stats=stats_data)
 
-
-
 @reservations_bp.route('/cancel-reservation/<int:res_id>', methods=['POST'])
 @login_required
 def cancel_reservation(res_id):
@@ -300,10 +296,6 @@ def cancel_reservation(res_id):
 
     # İYİLEŞTİRME 3: Veriyi silmek yerine durumunu güncelle (Soft Delete)
     reservation.status = 'cancelled'
-    
-    # Not: Eğer kredili bir sistem kullanıyorsanız, 
-    # bu noktada kullanıcıya kredisini iade eden kodu da ekleyebilirsiniz.
-    # Örneğin: current_user.credit += reservation.price
 
     db.session.commit()
     
