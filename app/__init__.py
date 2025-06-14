@@ -76,7 +76,7 @@ def create_app():
     login_manager.login_view = 'auth.login'
     login_manager.user_loader(load_user)
     limiter.init_app(app)
-    socketio.init_app(app)
+    socketio.init_app(app, async_mode='gevent')
 
     # GCP ayarları kapalı olduğu için bu register da devre dışı
     # oauth.register(
