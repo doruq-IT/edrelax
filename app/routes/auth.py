@@ -126,8 +126,7 @@ def google_callback():
     login_user(user, remember=True)
     print("✅ Kullanıcı giriş yaptı (login_user)")
 
-    # return redirect(url_for('public.index'))
-    return redirect(url_for("public.test_quick"))
+    return redirect(url_for('public.index'))
 
 
 
@@ -151,8 +150,7 @@ def me():
 #         if user and check_password_hash(user.password, password):
 #             if not user.confirmed:
 #                 flash("Lütfen e-posta adresinizi doğrulayın.", "warning")
-#                 # return redirect(url_for("auth.login"))
-#                 return redirect(url_for("public.test_quick"))
+#                 return redirect(url_for("auth.login"))
 #             login_user(user, remember=form.remember.data)
 #             print(f"🚀 login_user çağrıldı: {user.email}")
 #             session.permanent = True
@@ -173,13 +171,10 @@ def me():
 #             flash("Hatalı e-posta veya şifre.", "danger")
 
 #     return render_template("login.html", form=form)
-
-# auth.py
 @auth_bp.route("/login", methods=["GET", "POST"])
 def login():
     form = LoginForm()
     print("🟢 Login route tetiklendi")
-
     if form.validate_on_submit():
         print("✅ Form valid")
         email = form.email.data
@@ -187,18 +182,15 @@ def login():
         user = User.query.filter_by(email=email).first()
 
         if user and check_password_hash(user.password, password):
-            print("✅ Kullanıcı bulundu ve şifre doğru")
-            login_user(user)  # sadece bu kadar
-            return redirect(url_for("auth.test_quick"))  # test için yönlendirme
+            print("🟡 login_user çalıştırılmadı (test amaçlı)")
+            # login_user(user, remember=form.remember.data)  ← bunu YORUM yap
+
+            return redirect(url_for("auth.test_quick"))
 
         else:
             flash("Hatalı e-posta veya şifre.", "danger")
 
     return render_template("login.html", form=form)
-
-@auth_bp.route('/test_quick')
-def test_quick():
-    return "Quick test OK"
 
 
 @auth_bp.route("/logout")
