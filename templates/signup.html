@@ -224,7 +224,6 @@
     <p id="password-mismatch" style="color: red; font-size: 13px; display: none; margin-top: -10px; margin-bottom: 10px;">
       Şifreler uyuşmuyor.
     </p>
-
   </form>
 </div>
 
@@ -235,28 +234,34 @@
     const confirmPassword = form.querySelector('input[name="confirm_password"]');
     const mismatchMsg = document.getElementById("password-mismatch");
 
+    // Bu değişken submit sırasında tekrar kontrol için global tutuluyor
+    let passwordsMatch = false;
+
     function validatePasswordMatch() {
-      if (confirmPassword.value !== "" && password.value !== confirmPassword.value) {
+      if (password.value !== confirmPassword.value) {
         confirmPassword.style.borderColor = "red";
         mismatchMsg.style.display = "block";
-        return false;
+        passwordsMatch = false;
       } else {
-        confirmPassword.style.borderColor = "#3dc0d3"; // normal rengine geri dön
+        confirmPassword.style.borderColor = "#3dc0d3";
         mismatchMsg.style.display = "none";
-        return true;
+        passwordsMatch = true;
       }
     }
 
-    confirmPassword.addEventListener("input", validatePasswordMatch);
+    // Her input değiştiğinde canlı kontrol
     password.addEventListener("input", validatePasswordMatch);
+    confirmPassword.addEventListener("input", validatePasswordMatch);
 
     form.addEventListener("submit", function (e) {
-      if (!validatePasswordMatch()) {
-        e.preventDefault();
+      validatePasswordMatch(); // submit öncesi son kez kontrol et
+      if (!passwordsMatch) {
+        e.preventDefault(); // 🚫 Kesinlikle gönderme
+        e.stopPropagation(); // ❗️Event zincirini tamamen durdur
+        return false;
       }
     });
   });
 </script>
-
 
 {% endblock %}
