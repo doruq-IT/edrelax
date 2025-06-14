@@ -1,9 +1,14 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Test Sayfa</title>
+    <title>Plajlar</title>
 </head>
 <body>
-    <h1>🧪 Template başarıyla render edildi!</h1>
+    <h1>📍 Son Eklenen Plajlar</h1>
+    <ul>
+        {% for beach in latest_beaches %}
+            <li>{{ beach.name }}</li>
+        {% endfor %}
+    </ul>
 </body>
 </html>
