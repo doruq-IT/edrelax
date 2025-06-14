@@ -221,31 +221,42 @@
       Zaten bir Edrelax üyesi misiniz?
       <a href="{{ url_for('auth.login') }}">Giriş Yap</a>
     </p>
+    <p id="password-mismatch" style="color: red; font-size: 13px; display: none; margin-top: -10px; margin-bottom: 10px;">
+      Şifreler uyuşmuyor.
+    </p>
+
   </form>
 </div>
 
 <script>
-  document.addEventListener('DOMContentLoaded', function () {
-    const form = document.querySelector('form');
+  document.addEventListener("DOMContentLoaded", function () {
+    const form = document.querySelector("form");
     const password = form.querySelector('input[name="password"]');
     const confirmPassword = form.querySelector('input[name="confirm_password"]');
+    const mismatchMsg = document.getElementById("password-mismatch");
 
-    form.addEventListener('submit', async function (e) {
-      if (password.value !== confirmPassword.value) {
-        e.preventDefault();  // ✅ Formu önce kesinlikle durdur
+    function validatePasswordMatch() {
+      if (confirmPassword.value !== "" && password.value !== confirmPassword.value) {
+        confirmPassword.style.borderColor = "red";
+        mismatchMsg.style.display = "block";
+        return false;
+      } else {
+        confirmPassword.style.borderColor = "#3dc0d3"; // normal rengine geri dön
+        mismatchMsg.style.display = "none";
+        return true;
+      }
+    }
 
-        await Swal.fire({
-          icon: 'error',
-          title: 'Şifreler uyuşmuyor',
-          text: 'Lütfen şifrenizi iki kez aynı şekilde girin.',
-          confirmButtonText: 'Tamam',
-          confirmButtonColor: '#3dc0d3'
-        });
+    confirmPassword.addEventListener("input", validatePasswordMatch);
+    password.addEventListener("input", validatePasswordMatch);
 
-        return false;  // ❗️Formun devam etmesini kesinlikle engelle
+    form.addEventListener("submit", function (e) {
+      if (!validatePasswordMatch()) {
+        e.preventDefault();
       }
     });
   });
 </script>
+
 
 {% endblock %}
