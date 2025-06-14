@@ -19,7 +19,16 @@ login_manager = LoginManager()
 limiter = Limiter(key_func=get_remote_address)
 csrf = CSRFProtect()
 mail = Mail()
-socketio = SocketIO(cors_allowed_origins="*", async_mode="gevent")
+
+# ==================== NİHAİ DÜZELTME BURADA ====================
+# SocketIO'ya hangi alan adlarından gelen bağlantıların güvenli olduğunu açıkça belirtiyoruz.
+# Bu, "400 Bad Request" CORS hatasını çözecektir.
+socketio = SocketIO(
+    cors_allowed_origins=["https://edrelaxbeach.com", "https://www.edrelaxbeach.com"],
+    async_mode="gevent"
+)
+# ======================== DÜZELTME SONU =======================
+
 oauth = OAuth()
 
 
