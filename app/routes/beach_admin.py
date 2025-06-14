@@ -1,5 +1,3 @@
-import gevent
-from gevent import sleep
 from flask import Blueprint, render_template, session, redirect, url_for, request, flash, jsonify, current_app
 from app.models import User, Beach, Reservation
 from datetime import datetime, timedelta, date
@@ -10,6 +8,8 @@ from ..extensions import mail, socketio
 from flask_mail import Message
 from ..extensions import mail
 from app.extensions import csrf
+from threading import Thread
+import time
 import pytz
 
 
@@ -435,7 +435,7 @@ def update_reservation_status():
                 if new_status == 'used':
                     if data.get('mail_trigger') == True:
                         app_ctx = current_app._get_current_object()
-                        gevent.spawn(delayed_confirmation_check, app_ctx, reservation.id)
+                        Thread(target=delayed_confirmation_check, args=(app_ctx, reservation.id)).start()
 
                 db.session.commit()
 
@@ -520,8 +520,7 @@ def update_reservation_status():
 
 
 def delayed_confirmation_check(app, reservation_id):
-    # time.sleep(5)
-    sleep(5)
+    time.sleep(5)
     print(f"[DEBUG] Mail trigger geldi: res_id={reservation_id}")
 
 
