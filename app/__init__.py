@@ -1,6 +1,3 @@
-from gevent import monkey
-monkey.patch_all()
-
 import os
 import pymysql
 from flask import Flask, render_template, redirect, url_for, flash, request, current_app, session
