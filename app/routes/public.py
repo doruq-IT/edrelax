@@ -363,12 +363,14 @@ def beach_application():
     return render_template('public/beach_application.html')
 
 def get_sentiment_score(comment_text):
+    print("🧪 get_sentiment_score() tetiklendi")
     api_url = "https://api-inference.huggingface.co/models/tabularisai/multilingual-sentiment-analysis"
+    print("🧪 get_sentiment_score() tetiklendi2")
     headers = {
         "Authorization": f"Bearer " + HF_API_TOKEN
     }
     payload = {"inputs": comment_text}
-
+    print("🧪 get_sentiment_score() tetiklendi3")
     try:
         response = requests.post(api_url, headers=headers, json=payload, timeout=15)
         response.raise_for_status()

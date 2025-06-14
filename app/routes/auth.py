@@ -155,22 +155,23 @@ def login():
                 return redirect(url_for("public.test_quick"))
             login_user(user, remember=form.remember.data)
             print(f"🚀 login_user çağrıldı: {user.email}")
-            session.permanent = True
-            session["user_id"] = user.id
-            session["user_name"] = user.first_name
-            session["user_email"] = user.email
-            session["user_role"] = user.role
+            return "OK GİRİŞ BAŞARILI"
+        #     session.permanent = True
+        #     session["user_id"] = user.id
+        #     session["user_name"] = user.first_name
+        #     session["user_email"] = user.email
+        #     session["user_role"] = user.role
 
-            flash("Giriş başarılı.", "success")
+        #     flash("Giriş başarılı.", "success")
 
-            if user.role == "admin":
-                return redirect(url_for("admin.dashboard"))  # <- Blueprint ve endpoint ismini kontrol et!
-            elif user.role == "beach_admin":
-                return redirect(url_for("beach_admin.select_beach"))
-            else:
-                return redirect(url_for("public.index"))
-        else:
-            flash("Hatalı e-posta veya şifre.", "danger")
+        #     if user.role == "admin":
+        #         return redirect(url_for("admin.dashboard"))  # <- Blueprint ve endpoint ismini kontrol et!
+        #     elif user.role == "beach_admin":
+        #         return redirect(url_for("beach_admin.select_beach"))
+        #     else:
+        #         return redirect(url_for("public.index"))
+        # else:
+        #     flash("Hatalı e-posta veya şifre.", "danger")
 
     return render_template("login.html", form=form)
 
