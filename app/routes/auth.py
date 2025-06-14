@@ -173,6 +173,8 @@ def me():
 #             flash("Hatalı e-posta veya şifre.", "danger")
 
 #     return render_template("login.html", form=form)
+from flask import current_app
+
 @auth_bp.route("/login", methods=["GET", "POST"])
 def login():
     form = LoginForm()
@@ -185,13 +187,20 @@ def login():
 
         if user and check_password_hash(user.password, password):
             print("📛 Giriş başarılı, kullanıcı:", user.email)
-            login_user(user)
-            return "Giriş başarılı. Session çalıştı."
+            try:
+                login_user(user)
+                print("✅ login_user başarılı")
+            except Exception as e:
+                print("❌ login_user HATA:", e)
+                return "login_user çöktü: " + str(e)
+
+            return "Giriş başarılı (login_user sonrası buraya geldik)"
 
         else:
             flash("Hatalı giriş", "danger")
 
     return render_template("login.html", form=form)
+
 
 @auth_bp.route("/logout")
 @login_required
