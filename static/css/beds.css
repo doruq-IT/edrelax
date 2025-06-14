@@ -68,8 +68,30 @@ body.beds-page {
 
 .bed.booked {
   opacity: 0.4;
-  cursor: not-allowed;
   filter: grayscale(100%);
+  cursor: default; /* tıklanamaz gibi durmasın ama yasak da göstermesin */
+  pointer-events: auto; /* butonlar tıklanabilsin */
+  position: relative;
+}
+
+.bed.booked .btn-notify {
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  padding: 2px 6px;
+  background-color: #ffe07a;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  z-index: 1;
+  opacity: 1;
+  transition: background-color 0.2s ease;
+}
+
+.bed.booked .btn-notify:hover {
+  background-color: #ffca28;
 }
 .bed.free {
   background-color: #b6fcb6;
