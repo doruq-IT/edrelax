@@ -529,9 +529,9 @@ beach.name }}{% endblock %} {% block content %}
       return new Promise((resolve, reject) => {
         const payload = { new_status: newStatus };
 
-        if (isBatchOperation && mailTrigger === true) {
+        if (newStatus === 'used') {
           payload.mail_trigger = true;
-        }
+      }
 
         if (reservationId) {
           payload.reservation_id = reservationId;
