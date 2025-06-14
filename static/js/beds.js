@@ -31,27 +31,50 @@ for (let i = 0; i < totalBeds; i++) {
   bedDiv.title = `Şezlong ${bedCode}`;
 
   const isBooked = bookedBeds.includes(i + 1);
+
   if (isBooked) {
     bedDiv.classList.add("booked");
     bedDiv.title += " (DOLU)";
+
+    // 🔔 "Boşalınca haber ver" butonunu HTML'e ekle
+    const date = document.getElementById("selected-date")?.value;
+    const start = document.getElementById("selected-start")?.value;
+    const end = document.getElementById("selected-end")?.value;
+    const timeSlot = `${start}-${end}`;
+    const beachId = document.getElementById("reservation-wrapper")?.dataset.beachId;
+
+    bedDiv.innerHTML = `
+      <span>${bedCode}</span>
+      <button class="btn-notify" 
+              data-beach-id="${beachId}" 
+              data-bed-number="${i + 1}" 
+              data-date="${date}" 
+              data-time-slot="${timeSlot}">
+        🔔 Boşalınca haber ver
+      </button>
+    `;
   } else {
+    // Dolu değilse tıklanabilir yap
     bedDiv.addEventListener("click", () => {
       const suAnSeciliOlanlarUI = document.querySelectorAll(".bed.selected").length;
       const buSezlongSeciliMi = bedDiv.classList.contains("selected");
 
-      // Eğer kullanıcı yeni bir şezlong seçmeye çalışıyorsa (yani bu şezlong henüz seçili değilse)
-      // ve bu seçimle birlikte günlük limiti aşacaksa:
-      if (!buSezlongSeciliMi &&
-          (kullanicininOncedenRezerveEttigiSayi + suAnSeciliOlanlarUI + 1) > GUNLUK_MAKSIMUM_SEZLONG) {
+      if (
+        !buSezlongSeciliMi &&
+        kullanicininOncedenRezerveEttigiSayi + suAnSeciliOlanlarUI + 1 >
+          GUNLUK_MAKSIMUM_SEZLONG
+      ) {
         Swal.fire({
           icon: "warning",
           title: "Limit Aşıldı",
-          text: "Bir günde en fazla " + GUNLUK_MAKSIMUM_SEZLONG + " adet şezlong seçebilirsiniz. Daha fazlası için lütfen iletişime geçin."
+          text:
+            "Bir günde en fazla " +
+            GUNLUK_MAKSIMUM_SEZLONG +
+            " adet şezlong seçebilirsiniz. Daha fazlası için lütfen iletişime geçin.",
         });
-        return; // Şezlongun seçilmesini engelle
+        return;
       }
 
-      // Limit aşılmadıysa veya kullanıcı bir seçimi kaldırıyorsa
       bedDiv.classList.toggle("selected");
       updatePrice();
     });
@@ -59,6 +82,7 @@ for (let i = 0; i < totalBeds; i++) {
 
   bedsContainer.appendChild(bedDiv);
 }
+
 
 // 💰 Fiyatı ve seçilen şezlongları güncelle
 function updatePrice() {
@@ -231,3 +255,51 @@ checkoutBtn.addEventListener("click", () => {
       checkoutBtn.innerText = "Ödemeye Geç";
     });
 });
+
+document.addEventListener("click", async (event) => {
+  const button = event.target.closest(".btn-notify");
+  if (!button) return; // tıklanan şey bir notify butonu değilse çık
+
+  const beachId = button.dataset.beachId;
+  const bedNumber = button.dataset.bedNumber;
+  const date = button.dataset.date;
+  const timeSlot = button.dataset.timeSlot;
+
+  const confirm = await Swal.fire({
+    title: "Bu şezlong dolu!",
+    text: "Boşalınca size haber verelim mi?",
+    icon: "info",
+    showCancelButton: true,
+    confirmButtonText: "Evet, haber ver",
+    cancelButtonText: "Hayır"
+  });
+
+  if (confirm.isConfirmed) {
+    try {
+      const res = await fetch("/notify-when-free", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          beach_id: beachId,
+          bed_number: bedNumber,
+          date: date,
+          time_slot: timeSlot
+        })
+      });
+
+      const result = await res.json();
+
+      if (res.ok) {
+        Swal.fire("Tamamdır!", result.message, "success");
+      } else {
+        Swal.fire("Hata", result.message || "Bir hata oluştu", "error");
+      }
+    } catch (error) {
+      console.error("Hata:", error);
+      Swal.fire("Hata", "Sunucuya ulaşılamadı.", "error");
+    }
+  }
+});
+

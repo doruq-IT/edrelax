@@ -109,3 +109,18 @@ class BeachComment(db.Model):
     comment_text = db.Column(db.Text, nullable=False)
     sentiment_score = db.Column(db.Integer)  # 1–5 arası değer beklenir
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+class WaitingList(db.Model):
+    __tablename__ = 'waiting_list'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    beach_id = db.Column(db.Integer, db.ForeignKey('beaches.id'), nullable=False)
+    bed_number = db.Column(db.Integer, nullable=False)
+    date = db.Column(db.Date, nullable=False)
+    time_slot = db.Column(db.Time, nullable=False)
+    notified = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User', backref='waiting_entries')
+    beach = db.relationship('Beach', backref='waiting_entries')
