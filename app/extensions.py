@@ -20,12 +20,11 @@ limiter = Limiter(key_func=get_remote_address)
 csrf = CSRFProtect()
 mail = Mail()
 
-# ==================== NİHAİ DÜZELTME v2 ====================
-# Flask-SocketIO ve Flask-Login arasındaki olası oturum (session)
-# çakışmasını önlemek için 'manage_session=False' parametresini ekliyoruz.
+# ==================== GÜVENLİ AYARA DÖNÜŞ ====================
+# Sorunu Nginx katmanında çözmek üzere, Flask-SocketIO'yu
+# en basit ve en uyumlu haliyle yapılandırıyoruz.
 socketio = SocketIO(
-    manage_session=False,
-    cors_allowed_origins=["https://edrelaxbeach.com", "https://www.edrelaxbeach.com"],
+    cors_allowed_origins="*",
     async_mode="gevent"
 )
 # ======================== DÜZELTME SONU =======================
