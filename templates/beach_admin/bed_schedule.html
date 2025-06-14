@@ -511,48 +511,40 @@ beach.name }}{% endblock %} {% block content %}
   }
     function updateStatusOnServer(cellElement, reservationId, newStatus, bedNumber, timeSlot, date, beachId, isBatchOperation = false, mailTrigger = false) {
       return new Promise((resolve, reject) => {
-        const payload = { new_status: newStatus };
+        const payload = { 
+          new_status: newStatus,
+          bed_number: parseInt(bedNumber),
+          beach_id: parseInt(beachId),
+          date: date,
+          time_slot: timeSlot
+        };
 
         if (newStatus === 'used') {
           payload.mail_trigger = true;
-      }
+        }
 
         if (reservationId) {
           payload.reservation_id = reservationId;
-        } else {
-          if (newStatus !== 'free' && newStatus !== 'cancelled') {
-            payload.bed_number = parseInt(bedNumber);
-            payload.beach_id = parseInt(beachId);
-            payload.date = date;
-            payload.time_slot = timeSlot;
-          } else {
-            if (!isBatchOperation) {
-              Swal.fire('Bilgi', 'Slot zaten boş veya iptal edilmiş durumda.', 'info');
-            }
-            resolve({ success: true, message: 'Slot zaten uygun durumda.', cellElement });
-            return;
-          }
         }
+
         const csrfToken = getCookie('csrf_token');
         fetch('/beach-admin/update-reservation-status', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-Token': csrfToken // EKLENEN SATIR
-        },
-        body: JSON.stringify(payload)
+            'X-CSRF-Token': csrfToken
+          },
+          body: JSON.stringify(payload)
         })
-          .then(response => response.json())
-          .then(data => {
-            if (data.success) {
-              if (!isBatchOperation) {
-                Swal.fire('Başarılı!', data.message, 'success');
-              }
-              updateCellUI(cellElement, data);
-              resolve({ success: true, message: data.message, cellElement });
-            
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            if (!isBatchOperation) {
+              Swal.fire('Başarılı!', data.message, 'success');
+            }
+            updateCellUI(cellElement, data);
+            resolve({ success: true, message: data.message, cellElement });
           } else {
-            // Sunucudan {success: false} yanıtı geldiğinde çalışacak bölüm (DEĞİŞMEDİ)
             if (!isBatchOperation) {
               Swal.fire('Hata!', data.message || 'Durum güncellenemedi.', 'error');
             }
@@ -560,7 +552,6 @@ beach.name }}{% endblock %} {% block content %}
           }
         })
         .catch(error => {
-          // Ağ hatası veya sunucu tamamen çöktüğünde çalışacak bölüm (DEĞİŞMEDİ)
           console.error('Fetch Hatası:', error);
           if (!isBatchOperation) {
             Swal.fire('Sunucu Hatası!', 'Bir hata oluştu, lütfen tekrar deneyin.', 'error');
@@ -569,6 +560,7 @@ beach.name }}{% endblock %} {% block content %}
         });
       });
     }
+
     function updateCellUI(cellElement, data) {
         // Gelen veriye göre hücrenin arayüzünü güncelleyen merkezi fonksiyon
         const newStatus = data.new_status;
