@@ -66,7 +66,9 @@ def index():
         latest_beaches=latest_beaches
     )
 
-
+@public_bp.route("/test-quick")
+def test_quick():
+    return "✅ SocketIO, login ve session düzgün çalışıyor."
 
 @public_bp.route('/about')
 def about():
