@@ -10,7 +10,7 @@ from flask_login import current_user
 from flask_mail import Message
 from app.extensions import mail
 from app.models import BeachComment, db
-from transformers import pipeline
+# from transformers import pipeline
 import os
 import requests
 from dotenv import load_dotenv
