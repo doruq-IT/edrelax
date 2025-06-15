@@ -118,7 +118,7 @@ class WaitingList(db.Model):
     beach_id = db.Column(db.Integer, db.ForeignKey('beaches.id'), nullable=False)
     bed_number = db.Column(db.Integer, nullable=False)
     date = db.Column(db.Date, nullable=False)
-    time_slot = db.Column(db.Time, nullable=False)
+    time_slot = db.Column(db.String(20), nullable=False)
     notified = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
