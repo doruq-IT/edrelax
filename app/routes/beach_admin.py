@@ -404,7 +404,15 @@ def update_reservation_status():
                 db.session.commit()
 
                 # 📣 Yeni eklenen satırlar (bildirim sistemi tetikleniyor)
-                time_slot = f"{deleted_info['start_time']}-{deleted_info['end_time']}"
+                from pytz import timezone, utc
+                local_tz = timezone('Europe/Istanbul')
+
+                # UTC datetime -> local datetime
+                utc_start = utc.localize(datetime.combine(reservation.date, reservation.start_time))
+                utc_end = utc.localize(datetime.combine(reservation.date, reservation.end_time))
+                local_start = utc_start.astimezone(local_tz)
+                local_end = utc_end.astimezone(local_tz)
+                time_slot = f"{local_start.strftime('%H:%M')}-{local_end.strftime('%H:%M')}"
                 kontrol_et_ve_bildirim_listesi(
                     beach_id=deleted_info['beach_id'],
                     bed_number=deleted_info['bed_number'],
