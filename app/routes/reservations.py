@@ -399,6 +399,7 @@ def notify_when_free():
 def kontrol_et_ve_bildirim_listesi(beach_id, bed_number, date, time_slot):
     print("📥 Bildirim kontrolü başlatıldı", file=sys.stderr)
     print("WaitingList tablosu içeriği:", WaitingList.query.all(), file=sys.stderr)
+    print(f"[DEBUG] Aranan şezlong: bed_number={bed_number}, date={date}, time_slot={time_slot}", file=sys.stderr)
 
     # Gelen time_slot değerini normalize et (örneğin: "09:00 - 13:00", "09:00–13:00")
     normalized_time_slot = time_slot.replace("–", "-").replace(" ", "").strip()
