@@ -325,13 +325,15 @@ def get_user_info(reservation_id):
         "email": user.email
     })
 
+
+
 @reservations_bp.route('/notify-when-free', methods=['POST'])
 def notify_when_free():
-    print("[DEBUG] notify_when_free route triggered.")
+    print("[DEBUG] notify_when_free route triggered", file=sys.stderr)
 
     try:
         data = request.get_json()
-        print("[DEBUG] Gelen veri:", data)
+        print("[DEBUG] Gelen veri:", data, file=sys.stderr)
 
         beach_id = data.get("beach_id")
         bed_number = data.get("bed_number")
@@ -339,13 +341,14 @@ def notify_when_free():
         time_slot = data.get("time_slot")
 
         if not all([beach_id, bed_number, date, time_slot]):
+            print("[ERROR] Eksik alanlar var", file=sys.stderr)
             return jsonify({"success": False, "message": "Eksik veri."}), 400
 
         from app.models import WaitingList
         from datetime import datetime
         from app.extensions import db
 
-        test_user_id = 1  # Giriş yapmış kullanıcı yerine şimdilik sabit
+        test_user_id = 1
 
         existing = WaitingList.query.filter_by(
             user_id=test_user_id,
@@ -357,7 +360,7 @@ def notify_when_free():
         ).first()
 
         if existing:
-            print("[DEBUG] Zaten kayıt var.")
+            print("[DEBUG] Zaten kayıt var", file=sys.stderr)
             return jsonify({"success": False, "message": "Zaten bildirim isteğiniz var."}), 200
 
         yeni_kayit = WaitingList(
@@ -373,11 +376,12 @@ def notify_when_free():
         db.session.add(yeni_kayit)
         db.session.commit()
 
-        print("[DEBUG] Yeni kayıt oluşturuldu.")
-        return jsonify({"success": True, "message": "Bildirim talebiniz alındı. Şezlong boşalınca size haber vereceğiz."})
+        print("[DEBUG] Yeni kayıt oluşturuldu", file=sys.stderr)
+        return jsonify({"success": True, "message": "Bildirim alındı."})
 
     except Exception as e:
-        print("[ERROR] Hata oluştu:", e)
+        print("[ERROR] Sunucu hatası:", e, file=sys.stderr)
         return jsonify({"success": False, "message": "Sunucu hatası oluştu."}), 500
+
 
 
