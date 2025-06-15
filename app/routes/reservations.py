@@ -471,8 +471,14 @@ def send_notification_email(to_email, beach_name, bed_number, date, time_slot):
             f"Sevgiler,\nEdrelax Ekibi"
         )
 
-        msg = Message(subject=subject, recipients=[to_email], body=body)
-        mail.send(msg)
+        # msg = Message(subject=subject, recipients=[to_email], body=body)
+        # mail.send(msg)
+        try:
+            msg = Message(subject=subject, recipients=[to_email], body=body)
+            mail.send(msg)
+            print(f"[MAIL] E-posta gönderildi: {to_email}", file=sys.stderr)
+        except Exception as e:
+            print(f"[MAIL ERROR] Gönderilemedi: {e}", file=sys.stderr)
 
         print(f"[MAIL] E-posta gönderildi: {to_email}", file=sys.stderr)
         return True
