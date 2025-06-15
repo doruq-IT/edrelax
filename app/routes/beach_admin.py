@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, session, redirect, url_for, request, flash, jsonify, current_app
 from app.models import User, Beach, Reservation
+from app.routes.reservations import kontrol_et_ve_bildirim_listesi
 from datetime import datetime, timedelta, date
 from app.extensions import db
 from functools import wraps
@@ -391,24 +392,31 @@ def update_reservation_status():
                 return jsonify({"success": False, "message": "Bu işlem için yetkiniz yok."}), 403
 
             if new_status == 'free':
-                # Yayını yapabilmek için bilgileri silmeden önce saklayalım
                 deleted_info = {
                     "beach_id": reservation.beach_id,
                     "bed_number": reservation.bed_number,
-                    "start_time": reservation.start_time.strftime('%H:%M'), # <-- İsim değişikliği ve netlik
-                    "end_time": reservation.end_time.strftime('%H:%M'),   # <-- EKLENEN SATIR
+                    "start_time": reservation.start_time.strftime('%H:%M'),
+                    "end_time": reservation.end_time.strftime('%H:%M'),
                     "date": reservation.date.strftime('%Y-%m-%d')
                 }
 
                 db.session.delete(reservation)
                 db.session.commit()
-                
-                # Değişikliği herkese yayınla
+
+                # 📣 Yeni eklenen satırlar (bildirim sistemi tetikleniyor)
+                time_slot = f"{deleted_info['start_time']}-{deleted_info['end_time']}"
+                kontrol_et_ve_bildirim_listesi(
+                    beach_id=deleted_info['beach_id'],
+                    bed_number=deleted_info['bed_number'],
+                    date=datetime.strptime(deleted_info['date'], "%Y-%m-%d").date(),
+                    time_slot=time_slot
+                )
+
                 socketio.emit('status_updated', {
                     'beach_id': deleted_info['beach_id'],
                     'bed_number': deleted_info['bed_number'],
-                    'time_slot': deleted_info['start_time'], # <-- Artık start_time olarak daha net
-                    'end_time': deleted_info['end_time'],     # <-- BİTİŞ SAATİNİ DE GÖNDERİYORUZ
+                    'time_slot': deleted_info['start_time'],
+                    'end_time': deleted_info['end_time'],
                     'date': deleted_info['date'],
                     'new_status': 'free',
                     'reservation_id': None,
@@ -416,7 +424,7 @@ def update_reservation_status():
                 }, broadcast=True)
 
                 flash_message = f"Rezervasyon (ID: {reservation_id}) silindi ve slot boş olarak işaretlendi."
-                
+
                 return jsonify({
                     "success": True,
                     "message": flash_message,
