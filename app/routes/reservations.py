@@ -327,13 +327,15 @@ def get_user_info(reservation_id):
 
 @reservations_bp.route('/notify-when-free', methods=['POST'])
 def notify_when_free():
-    print("🟡 [DEBUG] notify_when_free tetiklendi", file=sys.stderr)
-    try:
-        data = request.get_json(force=True)
-        print("[DEBUG] JSON alındı:", data)
-    except Exception as e:
-        print("[ERROR] JSON parsing hatası:", e)
-        return jsonify({"success": False, "message": "Geçersiz JSON"}), 400
+    print("[DEBUG] notify_when_free route triggered.")
 
-    return jsonify({"success": True, "message": "Test başarılı, JSON ulaştı."})
+    try:
+        data = request.get_json()
+        print("[DEBUG] Gelen veri:", data)
+
+        return jsonify({"success": True, "message": "Veri alındı. (Test modu)"})
+    except Exception as e:
+        print("[ERROR]", e)
+        return jsonify({"success": False, "message": "Sunucu hatası oluştu."}), 500
+
 
