@@ -301,11 +301,19 @@ def cancel_reservation(res_id):
 
     # İYİLEŞTİRME 3: Veriyi silmek yerine durumunu güncelle (Soft Delete)
     reservation.status = 'cancelled'
-
     db.session.commit()
-    
+
+    # 🧠 Ekstra: Şezlong boşaldı, bekleyen kullanıcı varsa onları kontrol et
+    kontrol_et_ve_bildirim_listesi(
+        beach_id=reservation.beach_id,
+        bed_number=reservation.bed_number,
+        date=reservation.date,
+        time_slot=reservation.time_slot
+    )
+
     flash("Rezervasyonunuz başarıyla iptal edildi.", "success")
     return redirect(url_for('reservations.my_reservations'))
+
 
 @reservations_bp.route("/get-user-info/<int:reservation_id>")
 @login_required
@@ -412,7 +420,7 @@ def kontrol_et_ve_bildirim_listesi(beach_id, bed_number, date, time_slot):
 
 
 def kontrol_et_ve_bildirim_listesi(beach_id, bed_number, date, time_slot):
-    print("📥 Bildirim kontrolü başlatıldı", file=sys.stderr)
+    print("📥 Bildirim kontrolü başlatıldı")
 
     bekleyenler = WaitingList.query.filter_by(
         beach_id=beach_id,
@@ -423,32 +431,33 @@ def kontrol_et_ve_bildirim_listesi(beach_id, bed_number, date, time_slot):
     ).all()
 
     if not bekleyenler:
-        print("🚫 Bekleyen kullanıcı yok.", file=sys.stderr)
+        print("ℹ️ Bildirim bekleyen kullanıcı yok.")
         return
 
-    print(f"✅ {len(bekleyenler)} kullanıcı bekliyor:", file=sys.stderr)
+    print(f"✅ {len(bekleyenler)} kullanıcı bekliyor:")
+    
+    for entry in bekleyenler:
+        user = User.query.get(entry.user_id)
+        beach = Beach.query.get(beach_id)
 
-    for kayit in bekleyenler:
-        user = User.query.get(kayit.user_id)
-        if not user:
-            print(f"[WARN] user_id {kayit.user_id} bulunamadı", file=sys.stderr)
-            continue
+        if user and user.email:
+            success = send_notification_email(
+                to_email=user.email,
+                beach_name=beach.name if beach else "Plaj",
+                bed_number=bed_number,
+                date=date,
+                time_slot=time_slot
+            )
 
-        # 📨 E-posta gönder
-        success = send_notification_email(
-            to_email=user.email,
-            beach_name=kayit.beach.name,
-            bed_number=kayit.bed_number,
-            date=kayit.date.strftime("%Y-%m-%d"),
-            time_slot=kayit.time_slot
-        )
+            if success:
+                entry.notified = True
+                entry.notified_at = datetime.utcnow()
+                print(f"📬 {user.email} adresine bildirim gönderildi.")
+            else:
+                print(f"❌ {user.email} için gönderim başarısız.")
 
-        if success:
-            kayit.notified = True
-            db.session.commit()
-            print(f"✅ Bildirim gönderildi ve notified=True yapıldı → {user.email}", file=sys.stderr)
-        else:
-            print(f"[ERROR] E-posta gönderilemedi → {user.email}", file=sys.stderr)
+    db.session.commit()
+    print("✅ Bildirim kontrolü tamamlandı.")
 
 
 def send_notification_email(to_email, beach_name, bed_number, date, time_slot):
