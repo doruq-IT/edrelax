@@ -333,9 +333,51 @@ def notify_when_free():
         data = request.get_json()
         print("[DEBUG] Gelen veri:", data)
 
-        return jsonify({"success": True, "message": "Veri alındı. (Test modu)"})
+        beach_id = data.get("beach_id")
+        bed_number = data.get("bed_number")
+        date = data.get("date")
+        time_slot = data.get("time_slot")
+
+        if not all([beach_id, bed_number, date, time_slot]):
+            return jsonify({"success": False, "message": "Eksik veri."}), 400
+
+        from app.models import WaitingList
+        from datetime import datetime
+        from app.extensions import db
+
+        test_user_id = 1  # Giriş yapmış kullanıcı yerine şimdilik sabit
+
+        existing = WaitingList.query.filter_by(
+            user_id=test_user_id,
+            beach_id=beach_id,
+            bed_number=bed_number,
+            date=date,
+            time_slot=time_slot,
+            notified=False
+        ).first()
+
+        if existing:
+            print("[DEBUG] Zaten kayıt var.")
+            return jsonify({"success": False, "message": "Zaten bildirim isteğiniz var."}), 200
+
+        yeni_kayit = WaitingList(
+            user_id=test_user_id,
+            beach_id=beach_id,
+            bed_number=bed_number,
+            date=date,
+            time_slot=time_slot,
+            notified=False,
+            created_at=datetime.utcnow()
+        )
+
+        db.session.add(yeni_kayit)
+        db.session.commit()
+
+        print("[DEBUG] Yeni kayıt oluşturuldu.")
+        return jsonify({"success": True, "message": "Bildirim talebiniz alındı. Şezlong boşalınca size haber vereceğiz."})
+
     except Exception as e:
-        print("[ERROR]", e)
+        print("[ERROR] Hata oluştu:", e)
         return jsonify({"success": False, "message": "Sunucu hatası oluştu."}), 500
 
 
