@@ -399,21 +399,30 @@ def notify_when_free():
 def kontrol_et_ve_bildirim_listesi(beach_id, bed_number, date, time_slot):
     print("📥 Bildirim kontrolü başlatıldı", file=sys.stderr)
 
+    # Gelen time_slot değerini normalize et (örneğin: "09:00 - 13:00", "09:00–13:00")
+    normalized_time_slot = time_slot.replace("–", "-").replace(" ", "").strip()
+
+    # İlgili şezlong için tüm bekleyenleri çek (time_slot'ları sonra kontrol edeceğiz)
     bekleyenler = WaitingList.query.filter_by(
         beach_id=beach_id,
         bed_number=bed_number,
         date=date,
-        time_slot=time_slot,
         notified=False
     ).all()
 
-    if not bekleyenler:
+    # Uygun time_slot ile eşleşen kullanıcıları bul
+    eslesenler = [
+        entry for entry in bekleyenler
+        if entry.time_slot.replace("–", "-").replace(" ", "").strip() == normalized_time_slot
+    ]
+
+    if not eslesenler:
         print("🚫 Bekleyen kullanıcı yok.", file=sys.stderr)
         return
 
-    print(f"✅ {len(bekleyenler)} kullanıcı bekliyor:", file=sys.stderr)
+    print(f"✅ {len(eslesenler)} kullanıcı bekliyor:", file=sys.stderr)
 
-    for entry in bekleyenler:
+    for entry in eslesenler:
         user = User.query.get(entry.user_id)
         beach = Beach.query.get(beach_id)
 
@@ -425,7 +434,7 @@ def kontrol_et_ve_bildirim_listesi(beach_id, bed_number, date, time_slot):
                 beach_name=beach.name if beach else "Plaj",
                 bed_number=bed_number,
                 date=date,
-                time_slot=time_slot
+                time_slot=time_slot  # orijinal gösterimle gönderiyoruz
             )
 
             if success:
@@ -437,6 +446,7 @@ def kontrol_et_ve_bildirim_listesi(beach_id, bed_number, date, time_slot):
 
     db.session.commit()
     print("📬 Tüm bildirimler işlendi.\n", file=sys.stderr)
+
 
 
 def send_notification_email(to_email, beach_name, bed_number, date, time_slot):
