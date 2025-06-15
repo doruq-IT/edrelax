@@ -393,9 +393,6 @@ def notify_when_free():
         print("[ERROR] Sunucu hatası:", e, file=sys.stderr)
         return jsonify({"success": False, "message": "Sunucu hatası oluştu."}), 500
 
-
-
-
 def kontrol_et_ve_bildirim_listesi(beach_id, bed_number, date, time_slot):
     print("📥 Bildirim kontrolü başlatıldı", file=sys.stderr)
     print("WaitingList tablosu içeriği:", WaitingList.query.all(), file=sys.stderr)
@@ -470,3 +467,4 @@ def send_notification_email(to_email, beach_name, bed_number, date, time_slot):
     except Exception as e:
         print(f"[MAIL ERROR] Gönderilemedi: {to_email} - Hata: {e}", file=sys.stderr)
         return False
+
