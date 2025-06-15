@@ -325,7 +325,7 @@ def get_user_info(reservation_id):
     })
 
 @reservations_bp.route('/notify-when-free', methods=['POST'])
-@login_required
+# @login_required
 def notify_when_free():
     print("[DEBUG] notify_when_free route triggered.")
     data = request.get_json()
