@@ -325,11 +325,11 @@ def get_user_info(reservation_id):
     })
 
 @reservations_bp.route('/notify-when-free', methods=['POST'])
-# @login_required
+# @login_required  # Test sırasında kapalı
 def notify_when_free():
     print("[DEBUG] notify_when_free route triggered.")
     data = request.get_json()
-    print("[DEBUG] notify_when_free route triggered.")
+
     beach_id = data.get("beach_id")
     bed_number = data.get("bed_number")
     date = data.get("date")
@@ -338,10 +338,14 @@ def notify_when_free():
     if not all([beach_id, bed_number, date, time_slot]):
         return jsonify({"success": False, "message": "Eksik veri gönderildi."}), 400
 
-    # Aynı kullanıcı, aynı yatak için daha önce kayıt açmış mı kontrol et
-    from app.models import WaitingList  # gerekiyorsa yukarıya taşı
+    from app.models import WaitingList
+    from datetime import datetime
+
+    # 🧪 TEST: current_user yerine sabit kullanıcı ID kullan
+    test_user_id = 1  # Veritabanında gerçekten olan bir user ID yaz
+
     existing = WaitingList.query.filter_by(
-        user_id=current_user.id,
+        user_id=test_user_id,
         beach_id=beach_id,
         bed_number=bed_number,
         date=date,
@@ -352,9 +356,8 @@ def notify_when_free():
     if existing:
         return jsonify({"success": False, "message": "Bu şezlong için zaten bildirim isteğiniz mevcut."}), 200
 
-    # Yeni kayıt oluştur
     new_entry = WaitingList(
-        user_id=current_user.id,
+        user_id=test_user_id,
         beach_id=beach_id,
         bed_number=bed_number,
         date=date,
