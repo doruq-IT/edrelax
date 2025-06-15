@@ -258,12 +258,20 @@ checkoutBtn.addEventListener("click", () => {
 
 document.addEventListener("click", async (event) => {
   const button = event.target.closest(".btn-notify");
-  if (!button) return; // Tıklanan şey bir "boşalınca haber ver" butonu değilse çık
+  if (!button) return;
 
   const beachId = button.dataset.beachId;
   const bedNumber = button.dataset.bedNumber;
   const date = button.dataset.date;
   const timeSlot = button.dataset.timeSlot;
+
+  if (!beachId || !bedNumber || !date || !timeSlot) {
+    console.warn("Eksik veri: Buton dataset'inde eksik bilgi var", {
+      beachId, bedNumber, date, timeSlot
+    });
+    Swal.fire("Hata", "Şezlong bilgisi eksik olduğu için işlem yapılamadı.", "error");
+    return;
+  }
 
   const confirm = await Swal.fire({
     title: "Bu şezlong dolu!",
@@ -274,36 +282,42 @@ document.addEventListener("click", async (event) => {
     cancelButtonText: "Hayır"
   });
 
-  if (confirm.isConfirmed) {
+  if (!confirm.isConfirmed) return;
+
+  try {
+    // 🔐 CSRF token varsa meta'dan al
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+    const res = await fetch("/notify-when-free", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(csrfToken && { "X-CSRFToken": csrfToken })  // Token varsa header'a ekle
+      },
+      body: JSON.stringify({
+        beach_id: beachId,
+        bed_number: bedNumber,
+        date: date,
+        time_slot: timeSlot
+      })
+    });
+
+    let result = {};
     try {
-      // 🔐 CSRF token'ı meta tag'den al
-      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-
-      const res = await fetch("/notify-when-free", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-CSRFToken": csrfToken // 💡 CSRF token header'a eklendi
-        },
-        body: JSON.stringify({
-          beach_id: beachId,
-          bed_number: bedNumber,
-          date: date,
-          time_slot: timeSlot
-        })
-      });
-
-      const result = await res.json();
-
-      if (res.ok) {
-        Swal.fire("Tamamdır!", result.message, "success");
-      } else {
-        Swal.fire("Hata", result.message || "Bir hata oluştu", "error");
-      }
-    } catch (error) {
-      console.error("Hata:", error);
-      Swal.fire("Sunucu Hatası", "Sunucuya ulaşılamadı.", "error");
+      result = await res.json();  // JSON bozuksa hata fırlatmasın
+    } catch (e) {
+      console.error("JSON ayrıştırma hatası:", e);
     }
+
+    if (res.ok) {
+      Swal.fire("Tamamdır!", result.message || "Bildirim kaydınız alındı.", "success");
+    } else {
+      Swal.fire("Hata", result.message || "Bir hata oluştu", "error");
+    }
+
+  } catch (error) {
+    console.error("Fetch hatası:", error);
+    Swal.fire("Sunucu Hatası", "Sunucuya ulaşılamadı.", "error");
   }
 });
 
