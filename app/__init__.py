@@ -4,6 +4,7 @@ from flask import Flask, render_template, redirect, url_for, flash, request, cur
 from app.extensions import db, login_manager, limiter
 from app.routes import auth_bp, admin_bp, public_bp, reservations_bp
 from .routes.auth import load_user  # Kullanıcı yükleme fonksiyonu
+from app.routes.reservations import reservations_bp
 from datetime import datetime
 from app.routes.beach_admin import beach_admin_bp
 from .extensions import oauth
