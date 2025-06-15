@@ -356,14 +356,12 @@ def notify_when_free():
             print("[ERROR] Eksik alanlar var", file=sys.stderr)
             return jsonify({"success": False, "message": "Eksik veri."}), 400
 
-        from app.models import WaitingList
-        from datetime import datetime
-        from app.extensions import db
+        
 
-        test_user_id = 1
+        user_id = current_user.id
 
         existing = WaitingList.query.filter_by(
-            user_id=test_user_id,
+            user_id=user_id,
             beach_id=beach_id,
             bed_number=bed_number,
             date=date,
@@ -376,7 +374,7 @@ def notify_when_free():
             return jsonify({"success": False, "message": "Zaten bildirim isteğiniz var."}), 200
 
         yeni_kayit = WaitingList(
-            user_id=test_user_id,
+            user_id=user_id,
             beach_id=beach_id,
             bed_number=bed_number,
             date=date,
@@ -399,7 +397,6 @@ def notify_when_free():
 
 
 def kontrol_et_ve_bildirim_listesi(beach_id, bed_number, date, time_slot):
-    import sys
     print("📥 Bildirim kontrolü başlatıldı", file=sys.stderr)
 
     bekleyenler = WaitingList.query.filter_by(
@@ -415,32 +412,14 @@ def kontrol_et_ve_bildirim_listesi(beach_id, bed_number, date, time_slot):
         return
 
     print(f"✅ {len(bekleyenler)} kullanıcı bekliyor:", file=sys.stderr)
-    for kayit in bekleyenler:
-        print(f" - user_id: {kayit.user_id}", file=sys.stderr)
 
-
-def kontrol_et_ve_bildirim_listesi(beach_id, bed_number, date, time_slot):
-    print("📥 Bildirim kontrolü başlatıldı")
-
-    bekleyenler = WaitingList.query.filter_by(
-        beach_id=beach_id,
-        bed_number=bed_number,
-        date=date,
-        time_slot=time_slot,
-        notified=False
-    ).all()
-
-    if not bekleyenler:
-        print("ℹ️ Bildirim bekleyen kullanıcı yok.")
-        return
-
-    print(f"✅ {len(bekleyenler)} kullanıcı bekliyor:")
-    
     for entry in bekleyenler:
         user = User.query.get(entry.user_id)
         beach = Beach.query.get(beach_id)
 
         if user and user.email:
+            print(f"📨 E-posta gönderiliyor: {user.email}", file=sys.stderr)
+
             success = send_notification_email(
                 to_email=user.email,
                 beach_name=beach.name if beach else "Plaj",
@@ -452,12 +431,12 @@ def kontrol_et_ve_bildirim_listesi(beach_id, bed_number, date, time_slot):
             if success:
                 entry.notified = True
                 entry.notified_at = datetime.utcnow()
-                print(f"📬 {user.email} adresine bildirim gönderildi.")
+                print(f"✅ Gönderildi: {user.email}", file=sys.stderr)
             else:
-                print(f"❌ {user.email} için gönderim başarısız.")
+                print(f"❌ Gönderim başarısız: {user.email}", file=sys.stderr)
 
     db.session.commit()
-    print("✅ Bildirim kontrolü tamamlandı.")
+    print("📬 Tüm bildirimler işlendi.\n", file=sys.stderr)
 
 
 def send_notification_email(to_email, beach_name, bed_number, date, time_slot):
