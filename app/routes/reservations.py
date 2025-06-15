@@ -328,7 +328,13 @@ def get_user_info(reservation_id):
 # @login_required  # Test sırasında kapalı
 def notify_when_free():
     print("[DEBUG] notify_when_free route triggered.")
-    data = request.get_json()
+
+    try:
+        data = request.get_json(force=True)
+        print("[DEBUG] JSON alındı:", data)
+    except Exception as e:
+        print("[ERROR] JSON parsing hatası:", e)
+        return jsonify({"success": False, "message": "Geçersiz JSON"}), 400
 
     beach_id = data.get("beach_id")
     bed_number = data.get("bed_number")
@@ -336,6 +342,7 @@ def notify_when_free():
     time_slot = data.get("time_slot")
 
     if not all([beach_id, bed_number, date, time_slot]):
+        print("[ERROR] Eksik alan var")
         return jsonify({"success": False, "message": "Eksik veri gönderildi."}), 400
 
     from app.models import WaitingList
@@ -344,29 +351,36 @@ def notify_when_free():
     # 🧪 TEST: current_user yerine sabit kullanıcı ID kullan
     test_user_id = 1  # Veritabanında gerçekten olan bir user ID yaz
 
-    existing = WaitingList.query.filter_by(
-        user_id=test_user_id,
-        beach_id=beach_id,
-        bed_number=bed_number,
-        date=date,
-        time_slot=time_slot,
-        notified=False
-    ).first()
+    try:
+        existing = WaitingList.query.filter_by(
+            user_id=test_user_id,
+            beach_id=beach_id,
+            bed_number=bed_number,
+            date=date,
+            time_slot=time_slot,
+            notified=False
+        ).first()
 
-    if existing:
-        return jsonify({"success": False, "message": "Bu şezlong için zaten bildirim isteğiniz mevcut."}), 200
+        if existing:
+            print("[DEBUG] Zaten kayıtlı istek bulundu.")
+            return jsonify({"success": False, "message": "Bu şezlong için zaten bildirim isteğiniz mevcut."}), 200
 
-    new_entry = WaitingList(
-        user_id=test_user_id,
-        beach_id=beach_id,
-        bed_number=bed_number,
-        date=date,
-        time_slot=time_slot,
-        notified=False,
-        created_at=datetime.utcnow()
-    )
+        new_entry = WaitingList(
+            user_id=test_user_id,
+            beach_id=beach_id,
+            bed_number=bed_number,
+            date=date,
+            time_slot=time_slot,
+            notified=False,
+            created_at=datetime.utcnow()
+        )
 
-    db.session.add(new_entry)
-    db.session.commit()
+        db.session.add(new_entry)
+        db.session.commit()
 
-    return jsonify({"success": True, "message": "Bildirim talebiniz alındı. Şezlong boşalınca size haber vereceğiz."})
+        print("[DEBUG] Yeni kayıt oluşturuldu.")
+        return jsonify({"success": True, "message": "Bildirim talebiniz alındı. Şezlong boşalınca size haber vereceğiz."})
+
+    except Exception as e:
+        print(f"[ERROR] DB işlemi sırasında hata: {e}")
+        return jsonify({"success": False, "message": "Sunucu hatası oluştu."}), 500
