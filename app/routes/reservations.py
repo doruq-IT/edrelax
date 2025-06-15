@@ -13,6 +13,9 @@ from app.models import WaitingList
 import pytz
 import sys
 from collections import defaultdict
+from flask_mail import Message
+from app.extensions import mail
+
 
 reservations_bp = Blueprint('reservations', __name__)
 
@@ -407,12 +410,63 @@ def kontrol_et_ve_bildirim_listesi(beach_id, bed_number, date, time_slot):
     for kayit in bekleyenler:
         print(f" - user_id: {kayit.user_id}", file=sys.stderr)
 
-@reservations_bp.route('/test-check-waiting')
-def test_check_waiting():
-    kontrol_et_ve_bildirim_listesi(
-        beach_id=10,
-        bed_number=6,
-        date="2025-06-15",
-        time_slot="09:00-13:00"
-    )
-    return "Kontrol tamam"
+
+def kontrol_et_ve_bildirim_listesi(beach_id, bed_number, date, time_slot):
+    print("📥 Bildirim kontrolü başlatıldı", file=sys.stderr)
+
+    bekleyenler = WaitingList.query.filter_by(
+        beach_id=beach_id,
+        bed_number=bed_number,
+        date=date,
+        time_slot=time_slot,
+        notified=False
+    ).all()
+
+    if not bekleyenler:
+        print("🚫 Bekleyen kullanıcı yok.", file=sys.stderr)
+        return
+
+    print(f"✅ {len(bekleyenler)} kullanıcı bekliyor:", file=sys.stderr)
+
+    for kayit in bekleyenler:
+        user = User.query.get(kayit.user_id)
+        if not user:
+            print(f"[WARN] user_id {kayit.user_id} bulunamadı", file=sys.stderr)
+            continue
+
+        # 📨 E-posta gönder
+        success = send_notification_email(
+            to_email=user.email,
+            beach_name=kayit.beach.name,
+            bed_number=kayit.bed_number,
+            date=kayit.date.strftime("%Y-%m-%d"),
+            time_slot=kayit.time_slot
+        )
+
+        if success:
+            kayit.notified = True
+            db.session.commit()
+            print(f"✅ Bildirim gönderildi ve notified=True yapıldı → {user.email}", file=sys.stderr)
+        else:
+            print(f"[ERROR] E-posta gönderilemedi → {user.email}", file=sys.stderr)
+
+
+def send_notification_email(to_email, beach_name, bed_number, date, time_slot):
+    try:
+        subject = "Şezlong Boşaldı 🎉"
+        body = (
+            f"Merhaba!\n\n"
+            f"{date} tarihinde {beach_name} plajındaki {bed_number} numaralı şezlong artık boşta!\n"
+            f"{time_slot} zaman aralığında rezervasyon yapabilirsiniz.\n\n"
+            f"👉 Hemen kontrol et: https://edrelaxbeach.com/\n\n"
+            f"Sevgiler,\nEdrelax Ekibi"
+        )
+
+        msg = Message(subject=subject, recipients=[to_email], body=body)
+        mail.send(msg)
+
+        print(f"[MAIL] E-posta gönderildi: {to_email}", file=sys.stderr)
+        return True
+    except Exception as e:
+        print(f"[ERROR] E-posta gönderilemedi: {e}", file=sys.stderr)
+        return False
