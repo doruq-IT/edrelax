@@ -10,6 +10,7 @@ from app.models import Beach, Reservation
 from app.extensions import socketio
 from datetime import datetime, timedelta
 import pytz
+import sys
 from collections import defaultdict
 
 reservations_bp = Blueprint('reservations', __name__)
@@ -326,7 +327,7 @@ def get_user_info(reservation_id):
 
 @reservations_bp.route('/notify-when-free', methods=['POST'])
 def notify_when_free():
-    print("[DEBUG] notify_when_free route triggered.")
+    print("🟡 [DEBUG] notify_when_free tetiklendi", file=sys.stderr)
     try:
         data = request.get_json(force=True)
         print("[DEBUG] JSON alındı:", data)

@@ -7,6 +7,7 @@ from app import socket_events  # unutma
 
 app = create_app()
 
+
 if __name__ == '__main__':
     # Bu blok, doğrudan 'python run.py' komutuyla çalıştırıldığında kullanılır.
     # Gunicorn ile çalışırken bu kısım Gunicorn tarafından yönetilir.
