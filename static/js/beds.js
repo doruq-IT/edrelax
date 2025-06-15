@@ -258,7 +258,7 @@ checkoutBtn.addEventListener("click", () => {
 
 document.addEventListener("click", async (event) => {
   const button = event.target.closest(".btn-notify");
-  if (!button) return; // tıklanan şey bir notify butonu değilse çık
+  if (!button) return; // Tıklanan şey bir "boşalınca haber ver" butonu değilse çık
 
   const beachId = button.dataset.beachId;
   const bedNumber = button.dataset.bedNumber;
@@ -276,10 +276,14 @@ document.addEventListener("click", async (event) => {
 
   if (confirm.isConfirmed) {
     try {
+      // 🔐 CSRF token'ı meta tag'den al
+      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
       const res = await fetch("/notify-when-free", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          "X-CSRFToken": csrfToken // 💡 CSRF token header'a eklendi
         },
         body: JSON.stringify({
           beach_id: beachId,
@@ -298,8 +302,9 @@ document.addEventListener("click", async (event) => {
       }
     } catch (error) {
       console.error("Hata:", error);
-      Swal.fire("Hata", "Sunucuya ulaşılamadı.", "error");
+      Swal.fire("Sunucu Hatası", "Sunucuya ulaşılamadı.", "error");
     }
   }
 });
+
 
