@@ -9,6 +9,7 @@ from app.extensions import db, csrf
 from app.models import Beach, Reservation
 from app.extensions import socketio
 from datetime import datetime, timedelta
+from app.models import WaitingList
 import pytz
 import sys
 from collections import defaultdict
@@ -385,3 +386,33 @@ def notify_when_free():
 
 
 
+
+def kontrol_et_ve_bildirim_listesi(beach_id, bed_number, date, time_slot):
+    import sys
+    print("📥 Bildirim kontrolü başlatıldı", file=sys.stderr)
+
+    bekleyenler = WaitingList.query.filter_by(
+        beach_id=beach_id,
+        bed_number=bed_number,
+        date=date,
+        time_slot=time_slot,
+        notified=False
+    ).all()
+
+    if not bekleyenler:
+        print("🚫 Bekleyen kullanıcı yok.", file=sys.stderr)
+        return
+
+    print(f"✅ {len(bekleyenler)} kullanıcı bekliyor:", file=sys.stderr)
+    for kayit in bekleyenler:
+        print(f" - user_id: {kayit.user_id}", file=sys.stderr)
+
+@reservations_bp.route('/test-check-waiting')
+def test_check_waiting():
+    kontrol_et_ve_bildirim_listesi(
+        beach_id=10,
+        bed_number=6,
+        date="2025-06-15",
+        time_slot="09:00-13:00"
+    )
+    return "Kontrol tamam"
