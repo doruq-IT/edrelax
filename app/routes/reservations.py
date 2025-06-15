@@ -302,7 +302,7 @@ def cancel_reservation(res_id):
     # İYİLEŞTİRME 3: Veriyi silmek yerine durumunu güncelle (Soft Delete)
     reservation.status = 'cancelled'
     db.session.commit()
-
+    time_slot = f"{reservation.start_time.strftime('%H:%M')}-{reservation.end_time.strftime('%H:%M')}"
     # 🧠 Ekstra: Şezlong boşaldı, bekleyen kullanıcı varsa onları kontrol et
     kontrol_et_ve_bildirim_listesi(
         beach_id=reservation.beach_id,
@@ -450,17 +450,11 @@ def send_notification_email(to_email, beach_name, bed_number, date, time_slot):
             f"Sevgiler,\nEdrelax Ekibi"
         )
 
-        # msg = Message(subject=subject, recipients=[to_email], body=body)
-        # mail.send(msg)
-        try:
-            msg = Message(subject=subject, recipients=[to_email], body=body)
-            mail.send(msg)
-            print(f"[MAIL] E-posta gönderildi: {to_email}", file=sys.stderr)
-        except Exception as e:
-            print(f"[MAIL ERROR] Gönderilemedi: {e}", file=sys.stderr)
-
+        msg = Message(subject=subject, recipients=[to_email], body=body)
+        mail.send(msg)
         print(f"[MAIL] E-posta gönderildi: {to_email}", file=sys.stderr)
         return True
+
     except Exception as e:
-        print(f"[ERROR] E-posta gönderilemedi: {e}", file=sys.stderr)
+        print(f"[MAIL ERROR] Gönderilemedi: {to_email} - Hata: {e}", file=sys.stderr)
         return False
