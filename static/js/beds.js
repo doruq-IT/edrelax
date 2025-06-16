@@ -24,60 +24,68 @@ for (let i = 0; i < totalBeds; i++) {
   const rowCode = String.fromCharCode(65 + row); // A, B, C, ...
   const bedCode = `${rowCode}-${col + 1}`;
 
+  // Ana şezlong div'ini oluştur
   const bedDiv = document.createElement("div");
   bedDiv.classList.add("bed");
   bedDiv.dataset.id = i + 1;
   bedDiv.dataset.code = bedCode;
-  bedDiv.title = `Şezlong ${bedCode}`;
 
   const isBooked = bookedBeds.includes(i + 1);
 
+  // Şezlong Kodunu (A-1) gösteren elementi oluştur
+  const bedCodeDiv = document.createElement("div");
+  bedCodeDiv.classList.add("bed-code");
+  bedCodeDiv.textContent = bedCode;
+  
   if (isBooked) {
     bedDiv.classList.add("booked");
-    bedDiv.title += " (DOLU)";
+    bedDiv.title = `Bu şezlong dolu. Bildirim için tıklayın.`;
 
-    // 🔔 "Boşalınca haber ver" butonunu HTML'e ekle
+    // Yeni "Boşalınca Haber Ver" katmanını oluştur
+    const notifyWrapper = document.createElement("div");
+    notifyWrapper.classList.add("notify-wrapper");
+
+    // Gerekli verileri bu yeni katmana ekle
     const date = document.getElementById("selected-date")?.value;
     const start = document.getElementById("selected-start")?.value;
     const end = document.getElementById("selected-end")?.value;
-    const timeSlot = `${start}-${end}`;
-    const beachId = document.getElementById("reservation-wrapper")?.dataset.beachId;
-
-    bedDiv.innerHTML = `
-      <span>${bedCode}</span>
-      <button class="btn-notify" 
-              data-beach-id="${beachId}" 
-              data-bed-number="${i + 1}" 
-              data-date="${date}" 
-              data-time-slot="${timeSlot}">
-        🔔 Boşalınca haber ver
-      </button>
+    notifyWrapper.dataset.beachId = document.getElementById("reservation-wrapper")?.dataset.beachId;
+    notifyWrapper.dataset.bedNumber = i + 1;
+    notifyWrapper.dataset.date = date;
+    notifyWrapper.dataset.timeSlot = `${start}-${end}`;
+    
+    // Katmanın içeriğini (ikon ve yazı) oluştur
+    notifyWrapper.innerHTML = `
+      <i class="fas fa-bell"></i> 
+      <span class="tooltip-text">Boşalınca<br>Haber Ver</span>
     `;
+
+    // Yeni katmanı ve şezlong kodunu ana div'e ekle
+    bedDiv.appendChild(notifyWrapper);
+    bedDiv.appendChild(bedCodeDiv);
+    
   } else {
-    // Dolu değilse tıklanabilir yap
+    // Boş şezlonglar için başlık ve tıklama olayı
+    bedDiv.title = `Şezlong ${bedCode}`;
     bedDiv.addEventListener("click", () => {
+      // Limit kontrolü ve seçim mantığı (değişmedi)
       const suAnSeciliOlanlarUI = document.querySelectorAll(".bed.selected").length;
       const buSezlongSeciliMi = bedDiv.classList.contains("selected");
 
-      if (
-        !buSezlongSeciliMi &&
-        kullanicininOncedenRezerveEttigiSayi + suAnSeciliOlanlarUI + 1 >
-          GUNLUK_MAKSIMUM_SEZLONG
-      ) {
+      if (!buSezlongSeciliMi && (kullanicininOncedenRezerveEttigiSayi + suAnSeciliOlanlarUI + 1) > GUNLUK_MAKSIMUM_SEZLONG) {
         Swal.fire({
           icon: "warning",
           title: "Limit Aşıldı",
-          text:
-            "Bir günde en fazla " +
-            GUNLUK_MAKSIMUM_SEZLONG +
-            " adet şezlong seçebilirsiniz. Daha fazlası için lütfen iletişime geçin.",
+          text: `Bir günde en fazla ${GUNLUK_MAKSIMUM_SEZLONG} adet şezlong seçebilirsiniz.`,
         });
         return;
       }
-
       bedDiv.classList.toggle("selected");
       updatePrice();
     });
+    
+    // Sadece şezlong kodunu ekle
+    bedDiv.appendChild(bedCodeDiv);
   }
 
   bedsContainer.appendChild(bedDiv);

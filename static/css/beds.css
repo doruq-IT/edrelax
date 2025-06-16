@@ -56,69 +56,89 @@ body.beds-page {
   background-image: url('/static/images/edrelax.png');
   background-size: cover;
   border: 2px solid transparent;
-  border-radius: 6px;
+  border-radius: 50%; /* Daha modern bir görünüm için tam yuvarlak */
   cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+  transition: all 0.2s ease; /* Tüm geçişleri daha pürüzsüz yap */
   position: relative;
+  overflow: hidden; /* İçerideki overlay'in taşmasını engelle */
 }
 
 .bed:hover {
   transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
+/* Dolu Şezlong Stili */
 .bed.booked {
-  opacity: 0.4;
-  filter: grayscale(100%);
-  cursor: default; /* tıklanamaz gibi durmasın ama yasak da göstermesin */
-  pointer-events: auto; /* butonlar tıklanabilsin */
-  position: relative;
+  filter: grayscale(80%); /* Rengi tamamen öldürme, hafif soluk yap */
+  opacity: 0.7;
+  cursor: pointer; /* Tıklanabilir olduğunu belirt */
 }
 
-.bed.booked .btn-notify {
-  position: absolute;
-  bottom: 4px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 10px;
-  padding: 2px 6px;
-  background-color: #ffe07a;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  z-index: 1;
+.bed.booked:hover {
+  filter: grayscale(0%); /* Üzerine gelince canlandır */
   opacity: 1;
-  transition: background-color 0.2s ease;
 }
 
-.bed.booked .btn-notify:hover {
-  background-color: #ffca28;
-}
-.bed.free {
-  background-color: #b6fcb6;
+/* YENİ: Bildirim Alanı (Overlay) */
+.notify-wrapper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5); /* Yarı şeffaf siyah katman */
+  color: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  opacity: 0; /* Normalde görünmez */
+  transition: opacity 0.2s ease-in-out;
+  pointer-events: none; /* Normalde tıklanamaz */
 }
 
+/* Sadece dolu şezlongun üzerine gelince overlay'i göster */
+.bed.booked:hover .notify-wrapper {
+  opacity: 1;
+  pointer-events: auto; /* Tıklanabilir yap */
+}
+
+.notify-wrapper i {
+  font-size: 1.2rem; /* Çan ikonunun boyutu */
+}
+
+.notify-wrapper .tooltip-text {
+  font-size: 0.6rem;
+  font-weight: bold;
+  margin-top: 4px;
+  line-height: 1;
+}
+
+/* Seçili Şezlong Stili */
 .bed.selected {
   border: 3px solid #009688;
-  background-color: #e0f7f5;
   box-shadow: 0 0 12px #009688;
+  /* Not: .bed'den gelen border-radius: 50% burada da geçerli olacak */
 }
 
-/* ✅ Şezlong etiketi: A-1, B-2... */
-.bed::after {
-  content: attr(data-code);
+/* Şezlong Kodu Stili (A-1 gibi) - Gelecekteki JS değişikliği için hazır */
+.bed-code {
   position: absolute;
   bottom: 2px;
-  right: 2px;
+  left: 50%;
+  transform: translateX(-50%);
   background: rgba(255, 255, 255, 0.8);
   color: #333;
   font-size: 10px;
   font-weight: bold;
-  padding: 2px 4px;
+  padding: 1px 5px;
   border-radius: 4px;
   pointer-events: none;
 }
 
-/* ✅ Seçilen şezlong numaraları için */
+/* ✅ Seçilen şezlong numaraları için (Dokunulmadı) */
 #selected-beds-info {
   display: inline-block;
   margin-top: 10px;
