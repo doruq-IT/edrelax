@@ -95,35 +95,30 @@ def make_reservation():
     if not (beach_id and bed_ids and date_str and start_str and end_str):
         return jsonify({"success": False, "message": "Eksik bilgi var."}), 400
 
-    # --- YENİ: SAAT DİLİMİ YÖNETİMİ BAŞLANGIÇ ---
+    # --- Saat Dilimi Yönetimi (Dokunulmadı) ---
     try:
-        # Saat dilimini tanımla (sizin ve kullanıcılarınızın bulunduğu bölge)
         local_tz = pytz.timezone('Europe/Istanbul')
-        
-        # Kullanıcıdan gelen "saf" tarih ve saatleri birleştirip yerel saat dilimini ata
         local_start_dt = local_tz.localize(datetime.strptime(f"{date_str} {start_str}", "%Y-%m-%d %H:%M"))
         local_end_dt = local_tz.localize(datetime.strptime(f"{date_str} {end_str}", "%Y-%m-%d %H:%M"))
-        
-        # Bu yerel saati evrensel saate (UTC) çevir. Tüm karşılaştırmalar ve kayıtlar UTC üzerinden yapılacak.
         utc_start_dt = local_start_dt.astimezone(pytz.utc)
         utc_end_dt = local_end_dt.astimezone(pytz.utc)
         
         if utc_end_dt <= utc_start_dt:
             return jsonify({"success": False, "message": "Bitiş saati, başlangıç saatinden sonra olmalı."}), 400
 
-        # Veritabanı işlemleri için UTC tarih ve saatlerini ayrı değişkenlere ata
         parsed_date_utc = utc_start_dt.date()
         parsed_start_utc = utc_start_dt.time()
         parsed_end_utc = utc_end_dt.time()
 
     except (ValueError, pytz.exceptions.InvalidTimeError):
         return jsonify({"success": False, "message": "Tarih veya saat biçimi hatalı."}), 400
-    # --- SAAT DİLİMİ YÖNETİMİ BİTİŞ ---
+    # --- Saat Dilimi Yönetimi Bitiş ---
 
     beach = Beach.query.get(beach_id)
     if not beach:
         return jsonify({"success": False, "message": "Plaj bulunamadı."}), 404
 
+    # --- Diğer Kontroller (Dokunulmadı) ---
     if beach.bed_count < 1:
         return jsonify({"success": False, "message": "Plajda şezlong tanımı yapılmamış. İletişim bölümünden lütfen bize iletiniz."}), 400
 
@@ -134,10 +129,8 @@ def make_reservation():
         except (ValueError, TypeError):
             return jsonify({"success": False, "message": f"Geçersiz şezlong ID formatı: {bed_id}"}), 400
 
-    # --- İYİLEŞTİRME: Günlük limit sorgusu düzeltildi ---
     GUNLUK_MAKSIMUM_SEZLONG = 10
     user_id = current_user.id
-    # Kullanıcının limiti, kendi yerel gününe göre hesaplanır ve 'cancelled' olanlar sayılmaz
     reservations_today_count = Reservation.query.filter(
         Reservation.user_id == user_id, 
         Reservation.date == local_start_dt.date(),
@@ -147,7 +140,6 @@ def make_reservation():
     if (reservations_today_count + len(bed_ids)) > GUNLUK_MAKSIMUM_SEZLONG:
         return jsonify({"success": False, "message": f"Bir günde en fazla {GUNLUK_MAKSIMUM_SEZLONG} şezlong rezerve edebilirsiniz."}), 400
 
-    # Çifte rezervasyon kontrolü artık UTC zamanına göre yapılır
     existing_reservation = Reservation.query.filter(
         Reservation.beach_id == beach_id,
         Reservation.bed_number.in_(bed_ids),
@@ -159,36 +151,53 @@ def make_reservation():
 
     if existing_reservation:
         return jsonify({"success": False, "message": "Seçtiğiniz şezlonglardan biri veya birkaçı bu saat aralığında başkası tarafından rezerve edilmiş."}), 409
+    # --- Kontroller Bitiş ---
 
     try:
-        # Rezervasyonları veritabanına UTC zamanı ile kaydet
+        # ---- GÜNCELLENEN BÖLÜM BAŞLANGICI ----
+
+        # 1. Rezervasyon objelerini oluştur ve geçici bir listede tut
+        newly_created_reservations = []
         for bed_id in bed_ids:
             new_reservation = Reservation(
                 beach_id=beach_id,
                 user_id=user_id,
                 bed_number=int(bed_id),
-                date=parsed_date_utc,        # Veritabanına UTC tarihi kaydet
-                start_time=parsed_start_utc, # Veritabanına UTC başlangıç saati kaydet
-                end_time=parsed_end_utc,     # Veritabanına UTC bitiş saati kaydet
+                date=parsed_date_utc,
+                start_time=parsed_start_utc,
+                end_time=parsed_end_utc,
                 status='reserved'
             )
             db.session.add(new_reservation)
+            newly_created_reservations.append(new_reservation)
 
+        # 2. Veritabanına kaydet. Bu işlem sonrası objeler ID değerlerini alır.
         db.session.commit()
 
-        # WebSocket mesajları için orijinal "saf" tarih/saatleri kullanabiliriz
-        # eğer istemci tarafı UTC'den haberdar değilse bu daha kolay bir yöntemdir.
-        print("📡 WebSocket için tek bir birleştirilmiş olay ('bulk_status_updated') gönderiliyor...")
+        # 3. WebSocket mesajı için verileri hazırla
+        reservations_data_for_socket = []
+        for res in newly_created_reservations:
+            reservations_data_for_socket.append({
+                'bed_number': res.bed_number,
+                'reservation_id': res.id  # Her şezlongun yeni ve özel ID'si
+            })
+        
+        user_info_for_socket = f"{current_user.first_name} {current_user.last_name}"
+
+        # 4. Zenginleştirilmiş veriyle WebSocket mesajını gönder
         socketio.emit("bulk_status_updated", {
             "beach_id": beach_id,
-            "bed_ids": bed_ids,       # Örnek: ['1', '2'] gibi bir liste
             "date": date_str,
-            "start_time": start_str,  # Örnek: "10:00"
-            "end_time": end_str,      # Örnek: "13:00"
-            "new_status": "reserved"
+            "start_time": start_str,
+            "end_time": end_str,
+            "new_status": "reserved",
+            "user_info": user_info_for_socket,           # YENİ: Kullanıcı bilgisi
+            "reservations": reservations_data_for_socket # YENİ: ID'leri içeren liste
         }, broadcast=True)
 
-        # Başarılı HTTP yanıtını rezervasyonu yapan kullanıcıya döndür
+        # ---- GÜNCELLENEN BÖLÜM SONU ----
+
+        # Başarılı HTTP yanıtını döndür (Bu kısım değişmedi)
         return jsonify({
             "success": True,
             "message": "Rezervasyon başarıyla oluşturuldu.",
@@ -201,16 +210,14 @@ def make_reservation():
             }
         })
 
-    except IntegrityError: # Veritabanı "bu kayıt zaten var" hatası verirse
-        db.session.rollback() # İşlemi geri al
+    except IntegrityError:
+        db.session.rollback()
         return jsonify({"success": False, "message": "Üzgünüz, siz işlemi tamamlarken seçtiğiniz şezlonglardan biri rezerve edildi. Lütfen sayfayı yenileyip tekrar deneyin."}), 409
     
-    except Exception as e: # Diğer tüm beklenmedik hatalar için
-        db.session.rollback() # İşlemi geri al
-        # Geliştirme ortamında hatayı loglamak faydalı olabilir:
+    except Exception as e:
+        db.session.rollback()
         print(f"AN UNEXPECTED ERROR OCCURRED: {e}")
         return jsonify({"success": False, "message": "Beklenmedik bir sunucu hatası oluştu. Lütfen daha sonra tekrar deneyin."}), 500
-
 
 @reservations_bp.route("/my-reservations")
 @login_required
