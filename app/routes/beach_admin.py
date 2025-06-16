@@ -26,6 +26,7 @@ def send_confirmation_email(user_email, beach_name, bed_number, date, time_slot)
         end_time = datetime.strptime(end_utc_str.strip(), "%H:%M").time()
 
         # UTC datetime objeleri
+        # Bu satırların çalışması için dosyanın başında 'from pytz import utc' olmalı
         start_utc_dt = utc.localize(datetime.combine(dt_date, start_time))
         end_utc_dt = utc.localize(datetime.combine(dt_date, end_time))
 
@@ -36,6 +37,9 @@ def send_confirmation_email(user_email, beach_name, bed_number, date, time_slot)
         time_slot_local = f"{start_local_str} - {end_local_str}"
 
     except Exception as e:
+        # GÜNCELLEME: Hata oluşursa bunu loglayalım.
+        # Böylece bir sorun olduğunda terminalde veya log dosyanızda görürsünüz.
+        current_app.logger.error(f"E-posta için saat dönüşümü başarısız oldu: {e}. Fallback olarak UTC kullanılıyor.")
         time_slot_local = time_slot  # fallback (UTC olarak kalır)
 
     subject = "Rezervasyon Onaylandı ✅"

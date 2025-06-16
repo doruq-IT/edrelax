@@ -281,34 +281,36 @@ def cancel_reservation(res_id):
         flash("Bu rezervasyonu iptal etmeye yetkiniz yok.", "danger")
         return redirect(url_for('reservations.my_reservations'))
 
-    # İptal etmeye çalıştığı rezervasyonun durumu zaten 'cancelled' ise işlem yapma
     if reservation.status == 'cancelled':
         flash("Bu rezervasyon zaten daha önce iptal edilmiş.", "info")
         return redirect(url_for('reservations.my_reservations'))
 
+    # Not: Veritabanındaki saatlerin UTC olduğunu varsayıyoruz, bu yüzden UTC now ile karşılaştırmak en doğrusu.
+    # Ancak sunucunuz ve veritabanınız aynı saat dilimindeyse mevcut kodunuz da çalışır.
+    # Daha sağlam bir yapı için: start_datetime = utc.localize(datetime.combine(...)) ve now = datetime.now(utc)
     start_datetime = datetime.combine(reservation.date, reservation.start_time)
     now = datetime.now()
 
-    # İYİLEŞTİRME 1: Geçmiş rezervasyonlar için farklı mesaj
     if start_datetime < now:
         flash("Başlangıç saati geçmiş bir rezervasyon iptal edilemez.", "danger")
         return redirect(url_for('reservations.my_reservations'))
 
-    # İYİLEŞTİRME 2: İptal süresi kontrolü (örneğin 1 saat)
     if start_datetime - now < timedelta(hours=1):
         flash("Rezervasyonun başlamasına 1 saatten az kaldığı için iptal edilemez.", "warning")
         return redirect(url_for('reservations.my_reservations'))
 
-    # İYİLEŞTİRME 3: Veriyi silmek yerine durumunu güncelle (Soft Delete)
     reservation.status = 'cancelled'
     db.session.commit()
+    
+    # Doğru time_slot değişkeni burada oluşturuluyor
     time_slot = f"{reservation.start_time.strftime('%H:%M')}-{reservation.end_time.strftime('%H:%M')}"
-    # 🧠 Ekstra: Şezlong boşaldı, bekleyen kullanıcı varsa onları kontrol et
+    
+    # 🧠 Şezlong boşaldı, bekleyen kullanıcı varsa onları kontrol et
     kontrol_et_ve_bildirim_listesi(
         beach_id=reservation.beach_id,
         bed_number=reservation.bed_number,
         date=reservation.date,
-        time_slot=reservation.time_slot
+        time_slot=time_slot  # GÜNCELLENDİ: 'reservation.time_slot' yerine üstte oluşturulan değişken kullanılıyor
     )
 
     flash("Rezervasyonunuz başarıyla iptal edildi.", "success")
@@ -340,6 +342,7 @@ def get_user_info(reservation_id):
 
 
 @reservations_bp.route('/notify-when-free', methods=['POST'])
+@login_required
 def notify_when_free():
     print("[DEBUG] notify_when_free route triggered", file=sys.stderr)
 
@@ -349,14 +352,19 @@ def notify_when_free():
 
         beach_id = data.get("beach_id")
         bed_number = data.get("bed_number")
-        date = data.get("date")
+        date_str = data.get("date") # Değişken adını date_str olarak değiştirdik
         time_slot = data.get("time_slot")
 
-        if not all([beach_id, bed_number, date, time_slot]):
+        if not all([beach_id, bed_number, date_str, time_slot]):
             print("[ERROR] Eksik alanlar var", file=sys.stderr)
             return jsonify({"success": False, "message": "Eksik veri."}), 400
 
-        
+        # YENİ: Gelen metin formatındaki tarihi date objesine çeviriyoruz
+        try:
+            parsed_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except (ValueError, TypeError):
+            print(f"[ERROR] Geçersiz tarih formatı: {date_str}", file=sys.stderr)
+            return jsonify({"success": False, "message": "Geçersiz tarih formatı."}), 400
 
         user_id = current_user.id
 
@@ -364,20 +372,20 @@ def notify_when_free():
             user_id=user_id,
             beach_id=beach_id,
             bed_number=bed_number,
-            date=date,
+            date=parsed_date,         # GÜNCELLENDİ: Artık date objesi kullanılıyor
             time_slot=time_slot,
             notified=False
         ).first()
 
         if existing:
             print("[DEBUG] Zaten kayıt var", file=sys.stderr)
-            return jsonify({"success": False, "message": "Zaten bildirim isteğiniz var."}), 200
+            return jsonify({"success": True, "message": "Bu şezlong için zaten bir bildirim talebiniz mevcut."}), 200
 
         yeni_kayit = WaitingList(
             user_id=user_id,
             beach_id=beach_id,
             bed_number=bed_number,
-            date=date,
+            date=parsed_date,         # GÜNCELLENDİ: Artık date objesi kullanılıyor
             time_slot=time_slot,
             notified=False,
             created_at=datetime.utcnow()
@@ -387,11 +395,13 @@ def notify_when_free():
         db.session.commit()
 
         print("[DEBUG] Yeni kayıt oluşturuldu", file=sys.stderr)
-        return jsonify({"success": True, "message": "Bildirim alındı."})
+        return jsonify({"success": True, "message": "Bildirim talebiniz başarıyla alındı. Şezlong boşaldığında size haber vereceğiz."})
 
     except Exception as e:
+        db.session.rollback() # Hata durumunda işlemi geri al
         print("[ERROR] Sunucu hatası:", e, file=sys.stderr)
-        return jsonify({"success": False, "message": "Sunucu hatası oluştu."}), 500
+        return jsonify({"success": False, "message": "Beklenmedik bir sunucu hatası oluştu."}), 500
+
 
 def kontrol_et_ve_bildirim_listesi(beach_id, bed_number, date, time_slot):
     print("📥 Bildirim kontrolü başlatıldı", file=sys.stderr)
