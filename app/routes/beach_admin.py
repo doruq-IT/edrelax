@@ -424,22 +424,46 @@ def update_reservation_status():
                 return jsonify({"success": False, "message": "Yetkiniz yok."}), 403
 
             if new_status == 'free':
+                # Önce silinecek rezervasyonun bilgilerini alalım
                 deleted_info = {
                     "beach_id": reservation.beach_id,
                     "bed_number": reservation.bed_number,
-                    "start_time": reservation.start_time.strftime('%H:%M'),
-                    "end_time": reservation.end_time.strftime('%H:%M'),
-                    "date": reservation.date.strftime('%Y-%m-%d')
+                    "utc_start_time_str": reservation.start_time.strftime('%H:%M'),
+                    "utc_end_time_str": reservation.end_time.strftime('%H:%M'),
+                    "utc_date_str": reservation.date.strftime('%Y-%m-%d')
                 }
-
+                
+                # Rezervasyonu sil ve veritabanına işle
                 db.session.delete(reservation)
                 db.session.commit()
 
+                # --- YENİ: ZAMAN DİLİMİ DÖNÜŞÜMÜ ---
+                local_tz = pytz.timezone('Europe/Istanbul')
+                utc_tz = pytz.utc
+
+                # UTC stringlerini tekrar zaman nesnelerine çevir
+                start_utc_time_obj = datetime.strptime(deleted_info['utc_start_time_str'], '%H:%M').time()
+                end_utc_time_obj = datetime.strptime(deleted_info['utc_end_time_str'], '%H:%M').time()
+                utc_date_obj = datetime.strptime(deleted_info['utc_date_str'], '%Y-%m-%d').date()
+
+                # Zaman dilimi farkında (aware) UTC nesneleri oluştur
+                start_utc_dt = utc_tz.localize(datetime.combine(utc_date_obj, start_utc_time_obj))
+                end_utc_dt = utc_tz.localize(datetime.combine(utc_date_obj, end_utc_time_obj))
+                
+                # Türkiye saatine çevir
+                start_local_dt = start_utc_dt.astimezone(local_tz)
+                end_local_dt = end_utc_dt.astimezone(local_tz)
+                
+                # Yerel saatlerden arama için parametreleri oluştur
+                local_date_for_check = start_local_dt.date()
+                local_time_slot_for_check = f"{start_local_dt.strftime('%H:%M')}-{end_local_dt.astimezone(local_tz).strftime('%H:%M')}"
+
+                # Bildirim kontrol fonksiyonunu YEREL saatlerle çağır
                 kontrol_et_ve_bildirim_listesi(
                     beach_id=deleted_info['beach_id'],
                     bed_number=deleted_info['bed_number'],
-                    date=datetime.strptime(deleted_info['date'], "%Y-%m-%d").date(),
-                    time_slot=f"{deleted_info['start_time']}-{deleted_info['end_time']}"
+                    date=local_date_for_check,
+                    time_slot=local_time_slot_for_check
                 )
 
                 socketio.emit('status_updated', {
