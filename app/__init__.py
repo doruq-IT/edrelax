@@ -51,6 +51,16 @@ def create_app():
     csrf.init_app(app)
     mail.init_app(app)
     oauth.init_app(app)
+    
+    oauth.register(
+        name='google',
+        client_id=app.config.get('GOOGLE_CLIENT_ID'),
+        client_secret=app.config.get('GOOGLE_CLIENT_SECRET'),
+        server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+        client_kwargs={
+            'scope': 'openid email profile'
+        }
+    )
 
     db.init_app(app)
     login_manager.init_app(app)

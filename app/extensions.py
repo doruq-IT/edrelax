@@ -1,3 +1,5 @@
+# app/extensions.py
+
 # Üçüncü parti eklentiler
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, current_user
@@ -9,7 +11,6 @@ import os
 from flask import abort
 from functools import wraps
 from flask_mail import Mail
-from flask_dance.contrib.google import make_google_blueprint
 from authlib.integrations.flask_client import OAuth
 
 
@@ -33,14 +34,3 @@ def admin_required(f):
             abort(403)
         return f(*args, **kwargs)
     return decorated_function
-
-google_bp = make_google_blueprint(
-    client_id=os.getenv("GOOGLE_CLIENT_ID"),
-    client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
-    scope=[
-        "openid",
-        "https://www.googleapis.com/auth/userinfo.profile",
-        "https://www.googleapis.com/auth/userinfo.email"
-    ],
-    redirect_url="http://localhost:5000/login/google/authorized"
-)
