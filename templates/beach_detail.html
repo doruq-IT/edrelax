@@ -229,6 +229,8 @@
       time_24hr: true,
       defaultDate: "09:00",
       minuteIncrement: 60,
+      allowInput: true,
+      disableMobile: true,
       onChange: function (selectedDates, dateStr) {
         if (endPicker) endPicker.destroy();
 
@@ -248,9 +250,11 @@
           noCalendar: true,
           dateFormat: "H:i",
           time_24hr: true,
-          minuteIncrement: 15,
-          minTime: minTimeStr,
+          minuteIncrement: 60,
           defaultDate: minTimeStr,
+          minTime: minTimeStr,
+          allowInput: true,
+          disableMobile: true,
         });
       },
     });
@@ -262,6 +266,8 @@
       time_24hr: true,
       defaultDate: "18:00",
       minuteIncrement: 60,
+      allowInput: true,
+      disableMobile: true,
     });
 
     // 🧠 CSRF token'ı cookie'den çek
