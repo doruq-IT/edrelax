@@ -555,43 +555,54 @@ def update_reservation_status():
         return jsonify({"success": False, "message": f"Sunucu hatası: {str(e)}"}), 500
 
 
+# beach_admin.py dosyanızdaki mevcut fonksiyonu bununla değiştirin
+
 def delayed_confirmation_check(app, reservation_id):
-    time.sleep(5)
+    # E-postanın anında gitmemesi için küçük bir bekleme süresi hala mantıklı
+    time.sleep(2) 
     print(f"[DEBUG] Mail trigger geldi: res_id={reservation_id}")
 
-
     with app.app_context():
-        current_res = Reservation.query.get(reservation_id)
-
-        if not current_res:
-            return
-
-        # Aynı kullanıcı, plaj, yatak, tarih, status için kontrol
-        same_slots = Reservation.query.filter_by(
-            user_id=current_res.user_id,
-            beach_id=current_res.beach_id,
-            bed_number=current_res.bed_number,
-            date=current_res.date,
-            status='used'
-        ).all()
-
-        # Zaten onaylanmış varsa, bir daha mail gönderme
-        if any(res.confirmation_sent for res in same_slots):
-            return
-
         try:
-            send_confirmation_email(
-                user_email=current_res.user.email,
-                beach_name=current_res.beach.name if current_res.beach else "Bilinmeyen Plaj",
-                bed_number=current_res.bed_number,
-                date=str(current_res.date),
-                time_slot=f"{current_res.start_time} - {current_res.end_time}"
-            )
+            # --- YENİ ATOMİK GÜNCELLEME MANTIĞI ---
+            # Tek bir işlemde, sadece confirmation_sent=False olan kaydı güncellemeye çalışıyoruz.
+            # .update() metodu, kaç adet satırın güncellendiğini sayı olarak döndürür.
+            updated_rows = db.session.query(Reservation).filter(
+                Reservation.id == reservation_id,
+                Reservation.confirmation_sent == False
+            ).update({"confirmation_sent": True}, synchronize_session=False)
 
-            current_res.confirmation_sent = True
             db.session.commit()
+            # -----------------------------------------
+
+            # EĞER updated_rows 1 ise, bu işlemi ilk kez bizim yaptığımız anlamına gelir.
+            # Yani yarışı biz kazandık ve e-postayı göndermeliyiz.
+            if updated_rows > 0:
+                print(f"[SUCCESS] Mail gönderme yarışı kazanıldı: res_id={reservation_id}. E-posta gönderiliyor.")
+                
+                # E-postayı göndermek için rezervasyon bilgilerini tekrar alalım
+                current_res = Reservation.query.get(reservation_id)
+                if not current_res:
+                    return # Rezervasyon bir şekilde silindiyse devam etme
+
+                # E-posta gönderme fonksiyonunu çağır
+                send_confirmation_email(
+                    user_email=current_res.user.email,
+                    beach_name=current_res.beach.name if current_res.beach else "Bilinmeyen Plaj",
+                    bed_number=current_res.bed_number,
+                    date=str(current_res.date),
+                    # ÖNEMLİ DÜZELTME: time_slot'u doğru formatta gönderdiğinizden emin olalım
+                    time_slot=f"{current_res.start_time.strftime('%H:%M')}-{current_res.end_time.strftime('%H:%M')}"
+                )
+
+            # EĞER updated_rows 0 ise, bizden önce başka bir thread bu kaydı zaten güncellemiş demektir.
+            # Bu yüzden hiçbir şey yapmamalıyız.
+            else:
+                print(f"[INFO] Mail gönderme yarışı kaybedildi: res_id={reservation_id}. E-posta gönderilmeyecek.")
+
         except Exception as e:
-            app.logger.warning(f"❌ Mail gönderim hatası: {e}")
+            db.session.rollback()
+            app.logger.error(f"❌ delayed_confirmation_check içinde hata oluştu: {e}")
 
 
 
