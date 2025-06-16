@@ -369,164 +369,132 @@ def bed_schedule(beach_id):
 @login_required
 def update_reservation_status():
     data = request.get_json()
-
     reservation_id = data.get('reservation_id')
     new_status = data.get('new_status')
-    bed_number = data.get('bed_number')
-    beach_id = data.get('beach_id')
-    date_str = data.get('date')
-    time_slot = data.get('time_slot')
 
+    # --- Yetkilendirme ve geçerlilik kontrolleri ---
     allowed_statuses = ['reserved', 'used', 'cancelled', 'free']
     if not new_status or new_status not in allowed_statuses:
         return jsonify({"success": False, "message": "Geçersiz durum bilgisi."}), 400
 
     try:
+        # =================================================================
+        #  SENARYO 1: MEVCUT BİR REZERVASYONU GÜNCELLEME VEYA SİLME
+        #  (reservation_id payload içinde gönderildiğinde bu blok çalışır)
+        # =================================================================
         if reservation_id:
             reservation = Reservation.query.get(reservation_id)
             if not reservation:
                 return jsonify({"success": False, "message": "Rezervasyon bulunamadı."}), 404
 
-            beach_of_reservation = Beach.query.get(reservation.beach_id)
-            if not beach_of_reservation or beach_of_reservation.manager_id != current_user.id:
+            # Yöneticinin bu plaja yetkisi var mı kontrol et
+            if reservation.beach.manager_id != current_user.id:
                 return jsonify({"success": False, "message": "Bu işlem için yetkiniz yok."}), 403
 
+            # --- Durum 'free' ise, rezervasyonu SİL ---
             if new_status == 'free':
                 deleted_info = {
                     "beach_id": reservation.beach_id,
                     "bed_number": reservation.bed_number,
-                    "start_time": reservation.start_time.strftime('%H:%M'),
-                    "end_time": reservation.end_time.strftime('%H:%M'),
-                    "date": reservation.date.strftime('%Y-%m-%d')
+                    "date_obj": reservation.date, # Bildirim için tarih nesnesi
+                    "start_time_obj": reservation.start_time, # Bildirim için saat nesnesi
+                    "end_time_obj": reservation.end_time
                 }
-
+                
                 db.session.delete(reservation)
                 db.session.commit()
 
-                # 📣 Yeni eklenen satırlar (bildirim sistemi tetikleniyor)
+                # Bildirim sistemi için saatleri yerel saate çevir
                 from pytz import timezone, utc
                 local_tz = timezone('Europe/Istanbul')
-
-                # UTC datetime -> local datetime
-                utc_start = utc.localize(datetime.combine(reservation.date, reservation.start_time))
-                utc_end = utc.localize(datetime.combine(reservation.date, reservation.end_time))
+                utc_start = utc.localize(datetime.combine(deleted_info['date_obj'], deleted_info['start_time_obj']))
+                utc_end = utc.localize(datetime.combine(deleted_info['date_obj'], deleted_info['end_time_obj']))
                 local_start = utc_start.astimezone(local_tz)
                 local_end = utc_end.astimezone(local_tz)
-                time_slot = f"{local_start.strftime('%H:%M')}-{local_end.strftime('%H:%M')}"
+                time_slot_for_notification = f"{local_start.strftime('%H:%M')}-{local_end.strftime('%H:%M')}"
+
+                # Bekleme listesini kontrol et
                 kontrol_et_ve_bildirim_listesi(
                     beach_id=deleted_info['beach_id'],
                     bed_number=deleted_info['bed_number'],
-                    date=datetime.strptime(deleted_info['date'], "%Y-%m-%d").date(),
-                    time_slot=time_slot
+                    date=local_start.date(),
+                    time_slot=time_slot_for_notification
                 )
 
-                socketio.emit('status_updated', {
-                    'beach_id': deleted_info['beach_id'],
-                    'bed_number': deleted_info['bed_number'],
-                    'time_slot': deleted_info['start_time'],
-                    'end_time': deleted_info['end_time'],
-                    'date': deleted_info['date'],
-                    'new_status': 'free',
-                    'reservation_id': None,
-                    'user_info': None
-                }, broadcast=True)
+                # Arayüzü anlık güncelle (bu kısım korunuyor)
+                socketio.emit('status_updated', { 'new_status': 'free', 'reservation_id': None, 'user_info': None, 'beach_id': deleted_info['beach_id'], 'bed_number': deleted_info['bed_number'], 'date': local_start.strftime('%Y-%m-%d'), 'time_slot': local_start.strftime('%H:%M') }, broadcast=True)
 
-                flash_message = f"Rezervasyon (ID: {reservation_id}) silindi ve slot boş olarak işaretlendi."
+                return jsonify({"success": True, "message": f"Rezervasyon (ID: {reservation_id}) silindi."})
 
-                return jsonify({
-                    "success": True,
-                    "message": flash_message,
-                    "new_status": "free",
-                    "reservation_id": None
-                })
+            # --- Diğer durum güncellemeleri ('used', 'cancelled') ---
             else:
                 reservation.status = new_status
 
-                if new_status == 'used':
-                    if data.get('mail_trigger') == True:
-                        app_ctx = current_app._get_current_object()
-                        Thread(target=delayed_confirmation_check, args=(app_ctx, reservation.id)).start()
+                # 'used' olarak işaretlenirse e-posta gönderme mekanizmasını tetikle (bu kısım korunuyor)
+                if new_status == 'used' and data.get('mail_trigger') == True:
+                    app_ctx = current_app._get_current_object()
+                    Thread(target=delayed_confirmation_check, args=(app_ctx, reservation.id)).start()
 
                 db.session.commit()
 
-                socketio.emit('status_updated', {
-                    'beach_id': reservation.beach_id,
-                    'bed_number': reservation.bed_number,
-                    'time_slot': reservation.start_time.strftime('%H:%M'),
-                    'date': reservation.date.strftime('%Y-%m-%d'),
-                    'new_status': reservation.status,
-                    'reservation_id': reservation.id,
-                    'user_info': f"{reservation.user.first_name} {reservation.user.last_name}" if reservation.user else "Bilinmiyor"
-                }, broadcast=True)
+                # Arayüzü anlık güncelle (bu kısım korunuyor)
+                socketio.emit('status_updated', { 'new_status': reservation.status, 'reservation_id': reservation.id, 'user_info': f"{reservation.user.first_name} {reservation.user.last_name}" if reservation.user else "Bilinmiyor", 'beach_id': reservation.beach_id, 'bed_number': reservation.bed_number, 'date': reservation.date.strftime('%Y-%m-%d'), 'time_slot': reservation.start_time.strftime('%H:%M') }, broadcast=True)
+                
+                return jsonify({"success": True, "message": f"Rezervasyon durumu '{new_status}' olarak güncellendi."})
 
-                flash_message = f"Rezervasyon (ID: {reservation_id}) durumu '{new_status}' olarak güncellendi."
-                return jsonify({
-                    "success": True,
-                    "message": flash_message,
-                    "new_status": reservation.status
-                })
+        # =================================================================
+        #  SENARYO 2: BOŞ BİR SLOTA YENİ REZERVASYON OLUŞTURMA
+        #  (reservation_id gönderilmediğinde bu blok çalışır)
+        # =================================================================
+        else:
+            bed_number = data.get('bed_number')
+            beach_id = data.get('beach_id')
+            date_str = data.get('date')
+            time_slot = data.get('time_slot')
 
-
-        elif new_status != 'free' and bed_number and beach_id and date_str and time_slot:
-            target_beach = Beach.query.get(beach_id)
-            if not target_beach or target_beach.manager_id != current_user.id:
+            if not all([bed_number, beach_id, date_str, time_slot]):
+                 return jsonify({"success": False, "message": "Yeni rezervasyon oluşturmak için eksik parametreler."}), 400
+            
+            # Yetki kontrolü
+            target_beach = Beach.query.get_or_404(beach_id)
+            if target_beach.manager_id != current_user.id:
                 return jsonify({"success": False, "message": "Bu plaj için işlem yapma yetkiniz yok."}), 403
 
-            try:
-                selected_date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
-                start_time_obj = datetime.strptime(time_slot, '%H:%M').time()
-                end_time_obj = (datetime.combine(selected_date_obj, start_time_obj) + timedelta(hours=1)).time()
-            except ValueError:
-                return jsonify({"success": False, "message": "Geçersiz tarih veya saat formatı."}), 400
+            # Çakışma kontrolü (eski kodunuzdaki gibi)
+            selected_date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
+            start_time_obj = datetime.strptime(time_slot, '%H:%M').time()
+            end_time_obj = (datetime.combine(selected_date_obj, start_time_obj) + timedelta(hours=1)).time()
 
             existing_reservation = Reservation.query.filter(
                 Reservation.beach_id == beach_id,
                 Reservation.bed_number == bed_number,
                 Reservation.date == selected_date_obj,
                 Reservation.start_time < end_time_obj,
-                Reservation.end_time > start_time_obj
+                Reservation.end_time > start_time_obj,
+                Reservation.status.in_(['reserved', 'used'])
             ).first()
 
             if existing_reservation:
-                return jsonify({"success": False, "message": "Bu zaman dilimi için zaten bir rezervasyon mevcut."}), 409
+                return jsonify({"success": False, "message": "Bu zaman dilimi zaten dolu, yeni rezervasyon oluşturulamaz."}), 409
 
-            admin_user_id = current_user.id
+            # Çakışma yoksa, yönetici adına yeni rezervasyon oluştur
             new_reservation = Reservation(
-                beach_id=beach_id,
-                user_id=admin_user_id,
-                bed_number=bed_number,
-                date=selected_date_obj,
-                start_time=start_time_obj,
-                end_time=end_time_obj,
+                beach_id=beach_id, user_id=current_user.id, bed_number=bed_number,
+                date=selected_date_obj, start_time=start_time_obj, end_time=end_time_obj,
                 status=new_status
             )
             db.session.add(new_reservation)
             db.session.commit()
-            # Değişikliği herkese yayınla
-            socketio.emit('status_updated', {
-                'beach_id': new_reservation.beach_id,
-                'bed_number': new_reservation.bed_number,
-                'time_slot': new_reservation.start_time.strftime('%H:%M'),
-                'date': new_reservation.date.strftime('%Y-%m-%d'),
-                'new_status': new_reservation.status,
-                'reservation_id': new_reservation.id,
-                'user_info': f"{new_reservation.user.first_name} {new_reservation.user.last_name}" if new_reservation.user else "Bilinmiyor"
-            }, broadcast=True)
-            
-            return jsonify({
-                "success": True,
-                "message": f"Şezlong #{bed_number} için '{new_status}' durumunda yeni rezervasyon oluşturuldu.",
-                "new_status": new_reservation.status,
-                "reservation_id": new_reservation.id
-            })
 
-        else:
-            return jsonify({"success": False, "message": "Eksik veya geçersiz parametreler."}), 400
+            # Arayüzü anlık güncelle
+            socketio.emit('status_updated', { 'new_status': new_reservation.status, 'reservation_id': new_reservation.id, 'user_info': f"{new_reservation.user.first_name} {new_reservation.user.last_name}", 'beach_id': new_reservation.beach_id, 'bed_number': new_reservation.bed_number, 'date': new_reservation.date.strftime('%Y-%m-%d'), 'time_slot': new_reservation.start_time.strftime('%H:%M') }, broadcast=True)
+            
+            return jsonify({"success": True, "message": f"Yeni rezervasyon '{new_status}' durumuyla oluşturuldu."})
 
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Rezervasyon durumu güncellenirken hata: {e}")
-        return jsonify({"success": False, "message": f"Bir hata oluştu: {str(e)}"}), 500
+        return jsonify({"success": False, "message": f"Beklenmedik bir sunucu hatası oluştu: {str(e)}"}), 500
 
 
 def delayed_confirmation_check(app, reservation_id):
