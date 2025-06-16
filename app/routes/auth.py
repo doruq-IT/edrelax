@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session, current_app
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, current_app, make_response
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import login_user, logout_user, login_required, current_user
 from itsdangerous import URLSafeTimedSerializer
@@ -175,17 +175,32 @@ def login():
 @auth_bp.route("/logout")
 @login_required
 def logout():
-    # İlk olarak, Flask-Login'in standart çıkış işlemini yapıyoruz.
-    # Bu, '_user_id' gibi bilgileri session'dan temizler.
-    logout_user()
+    # Uygulama yapılandırmasından oturum çerezinin adını ve domain'ini alalım.
+    # Bu, kodu daha esnek hale getirir ve localhost/canlı ortam farkını ortadan kaldırır.
+    cookie_name = current_app.config['SESSION_COOKIE_NAME']
+    cookie_domain = current_app.config.get('SESSION_COOKIE_DOMAIN')
 
-    # Ardından, session'daki diğer her şeyi siliyoruz.
-    # Google (OAuth) token'ı da bu komutla tamamen silinir.
+    # Önce standart çıkış işlemlerini yapıyoruz
+    logout_user()
     session.clear()
 
-    # Kullanıcıya bilgi verip ana sayfaya yönlendiriyoruz.
+    # Flash mesajını hazırlıyoruz
     flash("Başarıyla çıkış yaptınız.", "info")
-    return redirect(url_for("public.index"))
+
+    # Yönlendirme için bir response nesnesi oluşturuyoruz
+    response = make_response(redirect(url_for("public.index")))
+    
+    # Tarayıcıya bu çerezi SİLME talimatını AÇIKÇA gönderiyoruz.
+    # Flask'in bunu otomatik yapmasını beklemek yerine işi garantiye alıyoruz.
+    # Path ve domain belirterek tarayıcının doğru çerezi bulmasını sağlıyoruz.
+    response.delete_cookie(key=cookie_name, path='/', domain=cookie_domain)
+    
+    # Cache'i temizlemek için başlıklar eklemek de iyi bir pratiktir.
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+
+    return response
 
 @auth_bp.route('/forgot-password', methods=["GET", "POST"])
 def forgot_password():
