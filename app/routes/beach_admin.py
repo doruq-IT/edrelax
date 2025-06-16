@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, session, redirect, url_for, reques
 from app.models import User, Beach, Reservation
 from app.routes.reservations import kontrol_et_ve_bildirim_listesi
 from datetime import datetime, timedelta, date
+from pytz import timezone, utc
 from app.extensions import db
 from functools import wraps
 from flask_login import login_required, current_user
@@ -14,6 +15,23 @@ import time
 import pytz
 
 def send_confirmation_email(user_email, beach_name, bed_number, date, time_slot):
+    local_tz = timezone("Europe/Istanbul")
+
+    # UTC gelen time_slot string'ini parçala ve lokal saatlere dönüştür
+    try:
+        start_utc_str, end_utc_str = time_slot.split("-")
+        dt_date = datetime.strptime(date, "%Y-%m-%d").date()
+
+        start_utc_dt = utc.localize(datetime.combine(dt_date, datetime.strptime(start_utc_str, "%H:%M").time()))
+        end_utc_dt = utc.localize(datetime.combine(dt_date, datetime.strptime(end_utc_str, "%H:%M").time()))
+
+        start_local = start_utc_dt.astimezone(local_tz).strftime("%H:%M")
+        end_local = end_utc_dt.astimezone(local_tz).strftime("%H:%M")
+        time_slot_local = f"{start_local}-{end_local}"
+    except Exception as e:
+        # Her ihtimale karşı, hata durumunda gelen slot'u aynen kullan
+        time_slot_local = time_slot
+
     subject = "Rezervasyon Onaylandı ✅"
     body = f"""Merhaba,
 
@@ -22,7 +40,7 @@ Rezervasyonunuz işletme tarafından onaylandı.
 📍 Plaj: {beach_name}
 🪑 Şezlong: {bed_number}
 📅 Tarih: {date}
-🕒 Saat: {time_slot}
+🕒 Saat: {time_slot_local}
 
 İyi tatiller dileriz!
 """

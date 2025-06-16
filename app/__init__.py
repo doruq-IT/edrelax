@@ -2,6 +2,7 @@ import os
 from flask import Flask, render_template, redirect, url_for, flash, request, current_app, session
 from app.extensions import db, login_manager, limiter, csrf, mail, oauth, socketio
 from app.routes import auth_bp, admin_bp, public_bp, reservations_bp, beach_admin_bp
+from pytz import timezone, utc
 from .routes.auth import load_user
 from datetime import datetime
 from app.util import to_alphanumeric_bed_id
@@ -105,5 +106,18 @@ def create_app():
         GOOGLE_CLIENT_SECRET: {app.config.get("GOOGLE_CLIENT_SECRET")}
         </pre>
         """
+        
+    def utc_to_local_time_str(utc_hour_str):
+        if not utc_hour_str:
+            return "?"
+        try:
+            dt_utc = datetime.strptime(utc_hour_str, "%H:%M")
+            utc_dt = utc.localize(datetime.combine(datetime.today(), dt_utc.time()))
+            local_dt = utc_dt.astimezone(timezone("Europe/Istanbul"))
+            return local_dt.strftime("%H:%M")
+        except Exception as e:
+            return utc_hour_str
+
+    app.jinja_env.filters['to_local_time'] = utc_to_local_time_str
 
     return app
