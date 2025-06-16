@@ -375,8 +375,8 @@ def update_reservation_status():
     bed_number = data.get('bed_number')
     beach_id = data.get('beach_id')
     date_str = data.get('date')
-    time_slot = data.get('time_slot')  # start_time
-    end_time_str = data.get('end_time')  # <-- YENİ EKLENDİ
+    time_slot = data.get('time_slot')
+    end_time_str = data.get('end_time')
 
     allowed_statuses = ['reserved', 'used', 'cancelled', 'free']
     if not new_status or new_status not in allowed_statuses:
@@ -393,7 +393,6 @@ def update_reservation_status():
                 return jsonify({"success": False, "message": "Bu işlem için yetkiniz yok."}), 403
 
             if new_status == 'free':
-                # 🧹 Silme işlemi
                 deleted_info = {
                     "beach_id": reservation.beach_id,
                     "bed_number": reservation.bed_number,
@@ -404,11 +403,6 @@ def update_reservation_status():
 
                 db.session.delete(reservation)
                 db.session.commit()
-
-                from pytz import timezone, utc
-                local_tz = timezone('Europe/Istanbul')
-                utc_start = utc.localize(datetime.combine(reservation.date, reservation.start_time))
-                local_start = utc_start.astimezone(local_tz)
 
                 kontrol_et_ve_bildirim_listesi(
                     beach_id=deleted_info['beach_id'],
@@ -462,10 +456,7 @@ def update_reservation_status():
                 })
 
         # ✅ 2. Yeni rezervasyon oluşturulacaksa
-        elif new_status != 'free' and bed_number and beach_id and date_str and time_slot:
-            if not end_time_str:
-                return jsonify({"success": False, "message": "Bitiş saati (end_time) eksik."}), 400
-
+        elif new_status != 'free' and bed_number and beach_id and date_str and time_slot and end_time_str:
             beach = Beach.query.get(beach_id)
             if not beach or beach.manager_id != current_user.id:
                 return jsonify({"success": False, "message": "Yetkiniz yok."}), 403
@@ -474,9 +465,8 @@ def update_reservation_status():
             start_time = datetime.strptime(time_slot, '%H:%M').time()
             end_time = datetime.strptime(end_time_str, '%H:%M').time()
 
-            # 🛡 start < end kontrolü
             if datetime.combine(selected_date, end_time) <= datetime.combine(selected_date, start_time):
-                return jsonify({"success": False, "message": "Bitiş saati, başlangıç saatinden önce olamaz."}), 400
+                return jsonify({"success": False, "message": "Bitiş saati başlangıç saatinden önce olamaz."}), 400
 
             conflict = Reservation.query.filter(
                 Reservation.beach_id == beach_id,
@@ -525,6 +515,7 @@ def update_reservation_status():
         db.session.rollback()
         current_app.logger.error(f"update_reservation_status hatası: {e}")
         return jsonify({"success": False, "message": f"Sunucu hatası: {str(e)}"}), 500
+
 
 
 
