@@ -175,27 +175,17 @@ def login():
 @auth_bp.route("/logout")
 @login_required
 def logout():
-    session_cookie_name = current_app.config['SESSION_COOKIE_NAME']
-    
+    # İlk olarak, Flask-Login'in standart çıkış işlemini yapıyoruz.
+    # Bu, '_user_id' gibi bilgileri session'dan temizler.
     logout_user()
+
+    # Ardından, session'daki diğer her şeyi siliyoruz.
+    # Google (OAuth) token'ı da bu komutla tamamen silinir.
     session.clear()
 
-    flash("Çıkış yapıldı.", "info")
-    response = make_response(redirect(url_for("public.index")))
-    
-    # Cache engelleme başlıkları
-    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
-    response.headers["Pragma"] = "no-cache"
-    response.headers["Expires"] = "0"
-
-    response.delete_cookie(session_cookie_name, domain="www.edrelaxbeach.com")
-    
-    # 2. Garanti olsun diye diğer tüm varyasyonları da denemeye devam edelim.
-    response.delete_cookie(session_cookie_name, domain=".edrelaxbeach.com")
-    response.delete_cookie(session_cookie_name, domain="edrelaxbeach.com")
-    response.delete_cookie(session_cookie_name)
-    
-    return response
+    # Kullanıcıya bilgi verip ana sayfaya yönlendiriyoruz.
+    flash("Başarıyla çıkış yaptınız.", "info")
+    return redirect(url_for("public.index"))
 
 @auth_bp.route('/forgot-password', methods=["GET", "POST"])
 def forgot_password():
