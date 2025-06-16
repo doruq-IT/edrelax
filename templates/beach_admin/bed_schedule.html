@@ -338,6 +338,9 @@ beach.name }}{% endblock %} {% block content %}
               .then(response => {
                 // Başarılı olursa kullanıcıya bilgi ver. Arayüz zaten socket ile güncellendi.
                 Swal.fire('Başarılı!', response.message || 'Rezervasyon iptal edildi.', 'success');
+                .then(() => {
+                      location.reload(); // <-- BU SATIRI EKLEYİN
+                  });
               })
               .catch(error => {
                 // Bu tek istekte bir hata olursa kullanıcıya göster.
@@ -376,6 +379,9 @@ beach.name }}{% endblock %} {% block content %}
                   Swal.fire('Başarılı!', `${currentlySelectedSlots.length} saat diliminin durumu güncellendi.`, 'success');
                 } else {
                   Swal.fire('Kısmi Başarı!', 'Bazı saat dilimleri güncellenirken sorun oluştu. Lütfen kontrol edin.', 'warning');
+                  .then(() => {
+                        location.reload(); // <-- BU SATIRI DA EKLEYİN
+                    });
                 }
               })
               .catch(error => {
