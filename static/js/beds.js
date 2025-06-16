@@ -256,110 +256,123 @@ checkoutBtn.addEventListener("click", () => {
 
 let currentlyTouchedBed = null;
 
-// Tüm belgeye tıklama olayını ata (tüm tıklamaları buradan yöneteceğiz)
-document.addEventListener("click", async (event) => {
+// Tüm tıklama olaylarını merkezi olarak yöneten ana fonksiyon
+bedsContainer.addEventListener("click", async (event) => {
   const clickedElement = event.target;
 
   // 1. "Boşalınca Haber Ver" katmanına mı tıklandı?
   const notifyWrapper = clickedElement.closest(".notify-wrapper");
   if (notifyWrapper) {
-    // Önceki 'is-touched' durumunu temizle
+    // Bu tıklamanın, arkasındaki şezlonga tekrar gitmesini engelle
+    event.stopPropagation();
+
+    // Aktif dokunma durumunu temizle
     if (currentlyTouchedBed) {
       currentlyTouchedBed.classList.remove("is-touched");
       currentlyTouchedBed = null;
     }
     
-    // Olayın daha fazla yayılmasını engelle
-    event.stopPropagation();
-    
-    // Verileri al ve popup'ı göster (bu mantık değişmedi)
-    const beachId = notifyWrapper.dataset.beachId;
-    const bedNumber = notifyWrapper.dataset.bedNumber;
-    const date = notifyWrapper.dataset.date;
-    const timeSlot = notifyWrapper.dataset.timeSlot;
-
-    if (!beachId || !bedNumber || !date || !timeSlot) {
-      Swal.fire("Hata", "Şezlong bilgisi eksik.", "error");
-      return;
-    }
-
-    const confirm = await Swal.fire({
-      title: "Bu şezlong dolu!",
-      text: "Boşalınca size haber verelim mi?",
-      icon: "info",
-      showCancelButton: true,
-      confirmButtonText: "Evet, haber ver",
-      cancelButtonText: "Hayır",
-    });
-
-    if (!confirm.isConfirmed) return;
-
-    // Sunucuya istek gönderme (bu mantık değişmedi)
-    try {
-      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-      const res = await fetch("/notify-when-free", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...(csrfToken && { "X-CSRFToken": csrfToken }) },
-        body: JSON.stringify({ beach_id: beachId, bed_number: bedNumber, date: date, time_slot: timeSlot }),
-      });
-      const result = await res.json();
-      if (res.ok) {
-        Swal.fire("Tamamdır!", result.message || "Bildirim kaydınız alındı.", "success");
-      } else {
-        Swal.fire("Hata", result.message || "Bir hata oluştu", "error");
-      }
-    } catch (error) {
-      Swal.fire("Sunucu Hatası", "Sunucuya ulaşılamadı.", "error");
-    }
-    return; // İşlemi burada bitir
+    // Popup'ı göster ve sunucuya istek gönder (bu mantık değişmedi)
+    await handleNotifyRequest(notifyWrapper);
+    return; // İşlemi burada sonlandır
   }
 
   // Tıklanan yerin bir şezlong olup olmadığını bul
   const clickedBed = clickedElement.closest(".bed");
-
-  // Eğer dışarıya tıklandıysa ve aktif bir şezlong varsa, onu kapat
-  if (!clickedBed && currentlyTouchedBed) {
-    currentlyTouchedBed.classList.remove("is-touched");
-    currentlyTouchedBed = null;
-    return;
-  }
 
   // Eğer bir şezlonga tıklanmadıysa, hiçbir şey yapma
   if (!clickedBed) return;
 
   // 2. Dolu bir şezlonga mı tıklandı? (Mobil için ilk dokunma)
   if (clickedBed.classList.contains("booked")) {
-    // Başka bir şezlong zaten aktifse onu kapat
+    // Eğer başka bir şezlong zaten "dokunulmuş" durumdaysa, onu kapat
     if (currentlyTouchedBed && currentlyTouchedBed !== clickedBed) {
       currentlyTouchedBed.classList.remove("is-touched");
     }
-    // Tıklanan şezlongun 'is-touched' durumunu değiştir ve takip et
+    // Tıklanan şezlongun 'is-touched' durumunu değiştir (aç/kapat)
     clickedBed.classList.toggle("is-touched");
+    // Takip değişkenini güncelle
     currentlyTouchedBed = clickedBed.classList.contains("is-touched") ? clickedBed : null;
   }
   
   // 3. Boş bir şezlonga mı tıklandı?
   if (!clickedBed.classList.contains("booked")) {
-    // Başka bir şezlong aktifse onu kapat
+    // Eğer başka bir şezlong "dokunulmuş" durumdaysa, onu kapat
     if (currentlyTouchedBed) {
       currentlyTouchedBed.classList.remove("is-touched");
       currentlyTouchedBed = null;
     }
     
     // Boş şezlong seçme mantığı (eski kodunuzdaki mantık buraya taşındı)
-    const suAnSeciliOlanlarUI = document.querySelectorAll(".bed.selected").length;
-    const buSezlongSeciliMi = clickedBed.classList.contains("selected");
-
-    if (!buSezlongSeciliMi && (kullanicininOncedenRezerveEttigiSayi + suAnSeciliOlanlarUI + 1) > GUNLUK_MAKSIMUM_SEZLONG) {
-      Swal.fire({
-        icon: "warning",
-        title: "Limit Aşıldı",
-        text: `Bir günde en fazla ${GUNLUK_MAKSIMUM_SEZLONG} adet şezlong seçebilirsiniz.`,
-      });
-      return;
-    }
-    clickedBed.classList.toggle("selected");
-    updatePrice();
+    handleEmptyBedSelection(clickedBed);
   }
 });
 
+// Sayfanın herhangi bir boş yerine tıklandığında aktif şezlongu kapat
+document.addEventListener('click', function(event) {
+    if (!bedsContainer.contains(event.target) && currentlyTouchedBed) {
+        currentlyTouchedBed.classList.remove('is-touched');
+        currentlyTouchedBed = null;
+    }
+});
+
+
+// === YARDIMCI FONKSİYONLAR (Kodu daha temiz tutmak için) ===
+
+// Boş şezlong seçme mantığını yöneten fonksiyon
+function handleEmptyBedSelection(bedElement) {
+  const suAnSeciliOlanlarUI = document.querySelectorAll(".bed.selected").length;
+  const buSezlongSeciliMi = bedElement.classList.contains("selected");
+
+  if (!buSezlongSeciliMi && (kullanicininOncedenRezerveEttigiSayi + suAnSeciliOlanlarUI + 1) > GUNLUK_MAKSIMUM_SEZLONG) {
+    Swal.fire({
+      icon: "warning",
+      title: "Limit Aşıldı",
+      text: `Bir günde en fazla ${GUNLUK_MAKSIMUM_SEZLONG} adet şezlong seçebilirsiniz.`,
+    });
+    return;
+  }
+  bedElement.classList.toggle("selected");
+  updatePrice();
+}
+
+// "Boşalınca Haber Ver" isteğini yöneten fonksiyon
+async function handleNotifyRequest(notifyWrapper) {
+  const beachId = notifyWrapper.dataset.beachId;
+  const bedNumber = notifyWrapper.dataset.bedNumber;
+  const date = notifyWrapper.dataset.date;
+  const timeSlot = notifyWrapper.dataset.timeSlot;
+
+  if (!beachId || !bedNumber || !date || !timeSlot) {
+    Swal.fire("Hata", "Şezlong bilgisi eksik.", "error");
+    return;
+  }
+
+  const confirm = await Swal.fire({
+    title: "Bu şezlong dolu!",
+    text: "Boşalınca size haber verelim mi?",
+    icon: "info",
+    showCancelButton: true,
+    confirmButtonText: "Evet, haber ver",
+    cancelButtonText: "Hayır",
+  });
+
+  if (!confirm.isConfirmed) return;
+
+  try {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    const res = await fetch("/notify-when-free", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...(csrfToken && { "X-CSRFToken": csrfToken }) },
+      body: JSON.stringify({ beach_id: beachId, bed_number: bedNumber, date: date, time_slot: timeSlot }),
+    });
+    const result = await res.json();
+    if (res.ok) {
+      Swal.fire("Tamamdır!", result.message || "Bildirim kaydınız alındı.", "success");
+    } else {
+      Swal.fire("Hata", result.message || "Bir hata oluştu", "error");
+    }
+  } catch (error) {
+    Swal.fire("Sunucu Hatası", "Sunucuya ulaşılamadı.", "error");
+  }
+}
