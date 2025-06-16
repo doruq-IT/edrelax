@@ -354,17 +354,28 @@ beach.name }}{% endblock %} {% block content %}
 
           } else {
             // DOKUNULMAYAN ORİJİNAL KOD: Durum 'free' DEĞİLSE (örn: 'used'), eski çalışan mantık devreye girer.
+            const sortedSlots = currentlySelectedSlots
+              .slice()
+              .sort((a, b) => a.dataset.timeSlot.localeCompare(b.dataset.timeSlot));
+
+            const startTime = sortedSlots[0].dataset.timeSlot;
+            const endSlot = sortedSlots[sortedSlots.length - 1].dataset.timeSlot;
+
+            const [endHour, endMinute] = endSlot.split(":").map(Number);
+            const endDateObj = new Date(0, 0, 0, endHour + 1, endMinute);
+            const trueEndTime = endDateObj.toTimeString().slice(0, 5); // "HH:MM" formatı
             const updatePromises = currentlySelectedSlots.map((slotEl, index) => {
               const reservationId = slotEl.dataset.reservationId;
               const bedNum = slotEl.dataset.bedNumber;
-              const timeSlot = slotEl.dataset.timeSlot;
+              
 
               return updateStatusOnServer(
                 slotEl,
                 reservationId,
                 newStatusToApply,
                 bedNum,
-                timeSlot,
+                startTime,
+                trueEndTime,
                 dateForUpdate,
                 beachId,
                 true,
@@ -515,7 +526,7 @@ beach.name }}{% endblock %} {% block content %}
       }
       return cookieValue;
   }
-    function updateStatusOnServer(cellElement, reservationId, newStatus, bedNumber, timeSlot, date, beachId, isBatchOperation = false, mailTrigger = false) {
+    function updateStatusOnServer(cellElement, reservationId, newStatus, bedNumber, timeSlot, endTime, date, beachId, isBatchOperation = false, mailTrigger = false) {
       return new Promise((resolve, reject) => {
         const payload = { 
           new_status: newStatus,
@@ -525,6 +536,9 @@ beach.name }}{% endblock %} {% block content %}
           time_slot: timeSlot
         };
 
+        if (endTime) {
+          payload.end_time = endTime;
+        }
         if (newStatus === 'used') {
           payload.mail_trigger = true;
         }
