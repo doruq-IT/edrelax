@@ -17,20 +17,26 @@ import pytz
 def send_confirmation_email(user_email, beach_name, bed_number, date, time_slot):
     local_tz = timezone("Europe/Istanbul")
 
-    # UTC gelen time_slot string'ini parçala ve lokal saatlere dönüştür
     try:
+        # Örn: "06:00-15:00"
         start_utc_str, end_utc_str = time_slot.split("-")
-        dt_date = datetime.strptime(date, "%Y-%m-%d").date()
+        dt_date = datetime.strptime(date.strip(), "%Y-%m-%d").date()
 
-        start_utc_dt = utc.localize(datetime.combine(dt_date, datetime.strptime(start_utc_str, "%H:%M").time()))
-        end_utc_dt = utc.localize(datetime.combine(dt_date, datetime.strptime(end_utc_str, "%H:%M").time()))
+        start_time = datetime.strptime(start_utc_str.strip(), "%H:%M").time()
+        end_time = datetime.strptime(end_utc_str.strip(), "%H:%M").time()
 
-        start_local = start_utc_dt.astimezone(local_tz).strftime("%H:%M")
-        end_local = end_utc_dt.astimezone(local_tz).strftime("%H:%M")
-        time_slot_local = f"{start_local}-{end_local}"
+        # UTC datetime objeleri
+        start_utc_dt = utc.localize(datetime.combine(dt_date, start_time))
+        end_utc_dt = utc.localize(datetime.combine(dt_date, end_time))
+
+        # Yerel saate dönüştür
+        start_local_str = start_utc_dt.astimezone(local_tz).strftime("%H:%M")
+        end_local_str = end_utc_dt.astimezone(local_tz).strftime("%H:%M")
+
+        time_slot_local = f"{start_local_str} - {end_local_str}"
+
     except Exception as e:
-        # Her ihtimale karşı, hata durumunda gelen slot'u aynen kullan
-        time_slot_local = time_slot
+        time_slot_local = time_slot  # fallback (UTC olarak kalır)
 
     subject = "Rezervasyon Onaylandı ✅"
     body = f"""Merhaba,

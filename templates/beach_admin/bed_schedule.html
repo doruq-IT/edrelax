@@ -102,7 +102,7 @@ beach.name }}{% endblock %} {% block content %}
         <tr>
           <th>Şezlong</th>
           {% for hour in hours %}
-          <th>{{ hour | to_local_time }}</th>
+          <th>{{ hour }}</th>
           {% endfor %}
         </tr>
       </thead>
