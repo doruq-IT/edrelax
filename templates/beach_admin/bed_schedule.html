@@ -169,43 +169,41 @@ beach.name }}{% endblock %} {% block content %}
 
         // YENİ EKLENEN KOD: Sunucudan gelen yeni toplu güncelleme mesajını dinle
         socket.on('bulk_status_updated', function(data) {
-            console.log('--- Yeni Toplu Güncelleme Alındı ---');
-            console.log('Gelen Veri:', data);
+          console.log('--- Yeni Toplu Güncelleme Alındı ---', data);
 
-            const currentPageBeachId = document.getElementById('bedScheduleContainer').dataset.beachId;
-            const currentPageDate = document.getElementById('scheduleDate').value;
+          const currentPageBeachId = document.getElementById('bedScheduleContainer').dataset.beachId;
+          const currentPageDate = document.getElementById('scheduleDate').value;
 
-            // Güncellemenin bu sayfa için olup olmadığını kontrol et
-            if (data.beach_id.toString() !== currentPageBeachId || data.date !== currentPageDate) {
-                console.log('Bu güncelleme bu sayfa için değil, işlem yapılmıyor.');
-                return; // Fonksiyondan çık
-            }
+          if (data.beach_id.toString() !== currentPageBeachId || data.date !== currentPageDate) {
+              console.log('Bu güncelleme bu sayfa için değil, işlem yapılmıyor.');
+              return;
+          }
 
-            // Gelen başlangıç ve bitiş saatlerini sayıya çevir (örn: "10:00" -> 10)
-            const startHour = parseInt(data.start_time.split(':')[0]);
-            const endHour = parseInt(data.end_time.split(':')[0]);
+          const startHour = parseInt(data.start_time.split(':')[0]);
+          const endHour = parseInt(data.end_time.split(':')[0]);
+          const userInfo = data.user_info; // Gelen kullanıcı bilgisini al
 
-            // Gelen her bir şezlong ID'si için döngü başlat
-            data.bed_ids.forEach(bed_number => {
-                
-                // Başlangıç ve bitiş saatleri arasındaki her bir saat dilimi için döngü başlat
-                for (let h = startHour; h < endHour; h++) {
-                    const time_slot = h.toString().padStart(2, '0') + ':00';
-                    const selector = `.bed-slot[data-bed-number="${bed_number}"][data-time-slot="${time_slot}"]`;
-                    const cellToUpdate = document.querySelector(selector);
+          // Gelen 'reservations' listesindeki her bir rezervasyon için döngü başlat
+          data.reservations.forEach(res_data => {
+              const bed_number = res_data.bed_number;
+              const reservation_id = res_data.reservation_id; // Her şezlonga özel ID'yi al
 
-                    if (cellToUpdate) {
-                        console.log(`Hücre güncelleniyor: Şezlong #${bed_number}, Saat: ${time_slot}`);
-                        
-                        // Dosyanızda zaten var olan merkezi arayüz güncelleme fonksiyonunu çağırıyoruz
-                        updateCellUI(cellToUpdate, {
-                            new_status: data.new_status
-                        });
-                    } else {
-                        console.error(`Hücre bulunamadı: ${selector}`);
-                    }
-                }
-            });
+              // Başlangıç ve bitiş saatleri arasındaki her bir saat dilimi için döngüye gir
+              for (let h = startHour; h < endHour; h++) {
+                  const time_slot = h.toString().padStart(2, '0') + ':00';
+                  const selector = `.bed-slot[data-bed-number="${bed_number}"][data-time-slot="${time_slot}"]`;
+                  const cellToUpdate = document.querySelector(selector);
+
+                  if (cellToUpdate) {
+                      // Hücre güncelleme fonksiyonunu TÜM yeni verilerle çağır
+                      updateCellUI(cellToUpdate, {
+                          new_status: data.new_status,
+                          user_info: userInfo,
+                          reservation_id: reservation_id
+                      });
+                  }
+              }
+          });
 
             // İşlem sonunda kullanıcıya bir bildirim göster
             Toast.fire({
