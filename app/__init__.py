@@ -1,29 +1,21 @@
 import os
-# import pymysql
 from flask import Flask, render_template, redirect, url_for, flash, request, current_app, session
-from app.extensions import db, login_manager, limiter
-from app.routes import auth_bp, admin_bp, public_bp, reservations_bp
-from .routes.auth import load_user  # Kullanıcı yükleme fonksiyonu
-from app.routes.reservations import reservations_bp
+from app.extensions import db, login_manager, limiter, csrf, mail, oauth, socketio
+from app.routes import auth_bp, admin_bp, public_bp, reservations_bp, beach_admin_bp
+from .routes.auth import load_user
 from datetime import datetime
-from app.routes.beach_admin import beach_admin_bp
-from .extensions import oauth
-from flask_wtf.csrf import generate_csrf
 from app.util import to_alphanumeric_bed_id
 from app import socket_events
 from config import Config
-from app.extensions import csrf, mail, limiter, google_bp
-from app.extensions import socketio
 from dotenv import load_dotenv
-from .extensions import csrf
 import hashlib
 
 load_dotenv()
-os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+# Geliştirme ortamında HTTP üzerinden OAuth testi için gereklidir. Canlıda kaldırılabilir.
+os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1' 
 
 
 def create_app():
-    # pymysql.install_as_MySQLdb()
     from werkzeug.middleware.proxy_fix import ProxyFix
     app = Flask(
         __name__,
@@ -48,10 +40,16 @@ def create_app():
             return hasher.hexdigest()[:10]
         return dict(cache_buster=cache_buster)
 
+    # Eklentileri başlat
     csrf.init_app(app)
     mail.init_app(app)
-    oauth.init_app(app)
+    db.init_app(app)
+    login_manager.init_app(app)
+    limiter.init_app(app)
+    socketio.init_app(app, async_mode='gevent')
     
+    # OAuth'u başlat ve Google istemcisini kaydet
+    oauth.init_app(app)
     oauth.register(
         name='google',
         client_id=app.config.get('GOOGLE_CLIENT_ID'),
@@ -62,15 +60,14 @@ def create_app():
         }
     )
 
-    db.init_app(app)
-    login_manager.init_app(app)
+    # Diğer ayarlar
     login_manager.login_view = 'auth.login'
     login_manager.user_loader(load_user)
-    limiter.init_app(app)
-    socketio.init_app(app, async_mode='gevent')
 
+    # Jinja filtresi
     app.jinja_env.filters['to_alphanumeric_bed_id'] = to_alphanumeric_bed_id
-    app.register_blueprint(google_bp, url_prefix="/login")
+
+    # Blueprint'leri kaydet
     app.register_blueprint(auth_bp)
     app.register_blueprint(admin_bp)
     app.register_blueprint(public_bp)
@@ -85,12 +82,18 @@ def create_app():
     def inject_admin_emails():
         return dict(admin_emails=current_app.config.get('ADMIN_EMAILS', []))
 
+    # Not: CSRF token'ı enjekte eden context_processor ve after_request
+    # hook'ları Flask-WTF tarafından zaten yönetildiği için genellikle
+    # manuel olarak eklenmesine gerek yoktur, ancak özel bir kullanımınız
+    # varsa kalabilirler. Şimdilik koruyoruz.
     @app.context_processor
     def inject_csrf():
+        from flask_wtf.csrf import generate_csrf
         return dict(csrf_token=generate_csrf())
 
     @app.after_request
     def inject_csrf_token(response):
+        from flask_wtf.csrf import generate_csrf
         response.set_cookie('csrf_token', generate_csrf())
         return response
 
