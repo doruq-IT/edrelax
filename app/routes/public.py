@@ -163,6 +163,7 @@ def advanced_search():
             'slug': b.slug,
             'latitude': b.latitude,
             'longitude': b.longitude,
+            'url': url_for('public.beach_detail', slug=b.slug),
             'has_booking': b.has_booking,
             'has_food': b.has_food,
             'has_parking': b.has_parking,

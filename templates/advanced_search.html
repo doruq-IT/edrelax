@@ -168,8 +168,8 @@ setTimeout(() => {
 
   beaches.forEach(beach => {
     const marker = L.marker([beach.latitude, beach.longitude], { icon: defaultIcon })
-      .bindPopup(`<strong>${beach.name}</strong><br>${beach.location}<br><a href="{{ url_for('public.beach_detail', slug='__SLUG__') }}".replace('__SLUG__', beach.slug)>View</a>`)
-      .addTo(map);
+        .bindPopup(`<strong>${beach.name}</strong><br>${beach.location}<br><a href="${beach.url}">Detayları Gör</a>`)
+        .addTo(map);
     marker.feature = beach;
     markers.push(marker);
   });
