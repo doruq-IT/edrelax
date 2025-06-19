@@ -2,7 +2,7 @@
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, current_app, jsonify
 from app.extensions import db
-from app.models import Beach, User
+from app.models import Beach, User, RentableItem
 from functools import wraps
 import os
 import time
@@ -386,3 +386,10 @@ def delete_user(user_id):
         flash(f'Kullanıcı silinirken bir hata oluştu: {str(e)}', 'danger')
 
     return redirect(url_for('admin.manage_users'))
+
+@admin_bp.route('/beach/<int:beach_id>/items', methods=['GET'])
+@admin_required
+def manage_beach_items(beach_id):
+    beach = Beach.query.get_or_404(beach_id)
+    # 'items' listesi, modeldeki ilişki sayesinde 'beach.rentable_items' olarak zaten mevcut.
+    return render_template('admin/manage_items.html', beach=beach)
