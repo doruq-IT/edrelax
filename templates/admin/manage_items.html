@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Eşyaları Yönet - {{ beach.name }}{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-0">Eşyaları Yönet: <span class="text-primary">{{ beach.name }}</span></h2>
+            <a href="{{ url_for('admin.beaches') }}" class="btn btn-sm btn-outline-secondary mt-1">
+                <i class="fas fa-arrow-left"></i> Tüm Plajlara Geri Dön
+            </a>
+        </div>
+        <div>
+            <button class="btn btn-success" disabled><i class="fas fa-plus"></i> Yeni Eşya Ekle</button>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <h5 class="card-title">Mevcut Eşyalar ({{ beach.rentable_items|length }} adet)</h5>
+            {% if beach.rentable_items %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="thead-light">
+                        <tr>
+                            <th>ID</th>
+                            <th>Eşya Türü</th>
+                            <th>Numara</th>
+                            <th>Fiyat (TL)</th>
+                            <th>Aktif mi?</th>
+                            <th style="width: 150px;">İşlemler</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in beach.rentable_items %}
+                        <tr>
+                            <td><span class="badge bg-secondary">#{{ item.id }}</span></td>
+                            <td>{{ item.item_type | replace('_', ' ') | title }}</td>
+                            <td>#{{ item.item_number }}</td>
+                            <td class="text-success fw-bold">{{ "%.2f"|format(item.price) }}</td>
+                            <td>
+                                {% if item.is_active %}
+                                    <span class="badge bg-success">Evet</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Hayır</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <button class="btn btn-warning btn-sm" disabled>Düzenle</button>
+                                <button class="btn btn-danger btn-sm" disabled>Sil</button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted mt-3">Bu plaja henüz kiralanabilir eşya eklenmemiş. Başlamak için "Yeni Eşya Ekle" butonunu kullanın.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
