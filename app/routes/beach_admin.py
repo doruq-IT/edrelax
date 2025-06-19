@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, session, redirect, url_for, request, flash, jsonify, current_app
-from app.models import User, Beach, Reservation
+from app.models import User, Beach, Reservation, RentableItem
 from app.routes.reservations import kontrol_et_ve_bildirim_listesi
 from datetime import datetime, timedelta, date
 from pytz import timezone, utc
@@ -11,6 +11,7 @@ from flask_mail import Message
 from ..extensions import mail
 from app.extensions import csrf
 from threading import Thread
+from collections import defaultdict
 import time
 import pytz
 
@@ -203,62 +204,106 @@ def reservations():
     return render_template('beach_admin/beach_admin_reservations.html',
                            reservations=reservations)
 
-@beach_admin_bp.route('/beds', methods=["GET", "POST"])
-@beach_admin_required # Kullandığınız decorator
-def manage_beds():
-    user_id = current_user.id
-    # Yöneticiye ait ham plaj nesnelerini al
-    beaches_query_result = Beach.query.filter_by(manager_id=user_id).all()
+@beach_admin_bp.route('/manage-items')
+@beach_admin_required
+def manage_items():
+    """
+    Yöneticinin seçili plajına ait tüm kiralanabilir eşyaları listeler.
+    """
+    # Session'dan aktif plajın ID'sini al
+    beach_id = session.get('beach_id')
+    if not beach_id:
+        flash("Lütfen önce bir plaj seçin.", "warning")
+        return redirect(url_for('beach_admin.dashboard'))
 
-    if request.method == "POST":
-        for beach_instance in beaches_query_result: # beaches_query_result üzerinden dönerek doğrudan güncelleme
-            new_count_str = request.form.get(f"bed_count_{beach_instance.id}")
-            if new_count_str and new_count_str.isdigit():
-                new_count = int(new_count_str)
-                # Opsiyonel: Eğer yeni sayı, o gün için aktif rezervasyonlardan azsa bir uyarı verebilirsiniz
-                # (Bu daha karmaşık bir kontrol olurdu, şimdilik eklemiyorum)
-                beach_instance.bed_count = new_count
-            # 2️⃣ Yeni fiyatı al
-            new_price_str = request.form.get(f"bed_price_{beach_instance.id}")
-            if new_price_str:
-                try:
-                    new_price = float(new_price_str)
-                    if beach_instance.price != new_price:
-                        beach_instance.price = new_price
-                except ValueError:
-                    flash(f"{beach_instance.name} için geçersiz fiyat girdiniz.", "danger")
-        db.session.commit()
-        flash("Şezlong sayıları başarıyla güncellendi.", "success")
-        return redirect(url_for('beach_admin.manage_beds'))
+    # İlgili plajı ve tüm eşyalarını veritabanından çek
+    beach = Beach.query.get_or_404(beach_id)
+    items = db.session.query(RentableItem).filter_by(beach_id=beach.id).order_by(RentableItem.item_number).all()
 
-    # GET isteği için plaj verilerini işle ve şablona gönder
-    processed_beaches_data = []
-    today = date.today()
+    # Eşyaları şablonda kolayca göstermek için türlerine göre grupla
+    items_by_type = defaultdict(list)
+    for item in items:
+        # Örn: 'standart_sezlong' -> 'Standart Sezlong'
+        type_display_name = item.item_type.replace('_', ' ').title()
+        items_by_type[type_display_name].append(item)
 
-    for beach_obj in beaches_query_result:
-        # Bugün için 'reserved' veya 'used' durumundaki aktif rezervasyonları say
-        active_reservations_today = Reservation.query.filter(
-            Reservation.beach_id == beach_obj.id,
-            Reservation.date == today,
-            Reservation.status.in_(['reserved', 'used']) # Sadece aktif kabul edilen durumlar
-        ).count()
-        
-        occupancy_rate_today = 0
-        if beach_obj.bed_count and beach_obj.bed_count > 0:
-            occupancy_rate_today = round((active_reservations_today / beach_obj.bed_count) * 100)
-        else:
-            occupancy_rate_today = 0 # Şezlong sayısı 0 ise doluluk da 0'dır
-        
-        processed_beaches_data.append({
-            'id': beach_obj.id,
-            'name': beach_obj.name,
-            'bed_count': beach_obj.bed_count,
-            'price': beach_obj.price,
-            'active_reservations_today': active_reservations_today,
-            'occupancy_rate_today': occupancy_rate_today
-        })
+    # Yeni bir HTML şablonu kullanacağız
+    return render_template(
+        'beach_admin/manage_items.html',
+        beach=beach,
+        # items_by_type'ı alfabetik olarak sıralayarak gönderiyoruz
+        items_by_type=dict(sorted(items_by_type.items()))
+    )
 
-    return render_template('beach_admin/manage_beds.html', beaches=processed_beaches_data)
+# 2. Yeni Eşya Ekleme Fonksiyonu
+@beach_admin_bp.route('/item/add', methods=['POST'])
+@beach_admin_required
+def add_item():
+    """
+    Seçili plaja yeni bir kiralanabilir eşya ekler.
+    """
+    beach_id = session.get('beach_id')
+    if not beach_id:
+        flash("İşlem yapılamadı, lütfen tekrar plaj seçin.", "danger")
+        return redirect(url_for('beach_admin.dashboard'))
+
+    # Formdan gelen verileri al
+    item_type = request.form.get('item_type')
+    item_number_str = request.form.get('item_number')
+    price_str = request.form.get('price')
+
+    # Doğrulama
+    if not all([item_type, item_number_str, price_str]):
+        flash('Eşya Türü, Numara ve Fiyat alanları zorunludur.', 'danger')
+        return redirect(url_for('beach_admin.manage_items'))
+
+    try:
+        item_number = int(item_number_str)
+        price = float(price_str)
+    except (ValueError, TypeError):
+        flash('Eşya Numarası ve Fiyat geçerli sayılar olmalıdır.', 'danger')
+        return redirect(url_for('beach_admin.manage_items'))
+
+    # Bu plajda bu numaraya sahip başka bir eşya var mı?
+    existing_item = RentableItem.query.filter_by(beach_id=beach_id, item_number=item_number).first()
+    if existing_item:
+        flash(f'#{item_number} numaralı eşya bu plajda zaten mevcut.', 'warning')
+        return redirect(url_for('beach_admin.manage_items'))
+
+    # Yeni eşyayı oluştur ve kaydet
+    new_item = RentableItem(
+        beach_id=beach_id,
+        item_type=item_type.strip().lower().replace(" ", "_"),
+        item_number=item_number,
+        price=price
+    )
+    db.session.add(new_item)
+    db.session.commit()
+
+    flash(f'{item_type.title()} (#{item_number}) başarıyla eklendi.', 'success')
+    return redirect(url_for('beach_admin.manage_items'))
+
+
+# 3. Eşya Silme Fonksiyonu
+@beach_admin_bp.route('/item/<int:item_id>/delete', methods=['POST'])
+@beach_admin_required
+def delete_item(item_id):
+    """
+    Belirli bir kiralanabilir eşyayı siler.
+    """
+    item_to_delete = RentableItem.query.get_or_404(item_id)
+
+    # GÜVENLİK KONTROLÜ: Bu eşyayı silmeye çalışanın, o eşyanın bulunduğu plajın yöneticisi olduğundan emin ol.
+    if item_to_delete.beach.manager_id != current_user.id:
+        flash("Bu işlemi yapmaya yetkiniz yok.", "danger")
+        # abort(403) # Alternatif olarak erişim engellendi hatası verilebilir
+        return redirect(url_for('beach_admin.dashboard'))
+
+    db.session.delete(item_to_delete)
+    db.session.commit()
+
+    flash(f"#{item_to_delete.item_number} numaralı eşya başarıyla silindi.", "success")
+    return redirect(url_for('beach_admin.manage_items'))
 
 @beach_admin_bp.route('/occupancy')
 @beach_admin_required # Kullandığınız decorator
