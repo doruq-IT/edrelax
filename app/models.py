@@ -49,12 +49,6 @@ class Beach(db.Model):
     long_description = db.Column(db.Text)
     image_url = db.Column(db.String(200))
     slug = db.Column(db.String(100), unique=True)
-    
-    # --- ESKİYEN SÜTUNLAR ---
-    # Bu sütunlar artık doğrudan kullanılmayacak. Bilgiler RentableItem modelinden gelecek.
-    # price = db.Column(db.Float, nullable=True)
-    # bed_count = db.Column(db.Integer, default=0)
-    # NOT: Bu sütunları veritabanından daha sonra sileceğiz, şimdilik koddan kaldırmak yeterli.
 
     latitude = db.Column(db.Float)
     longitude = db.Column(db.Float)
@@ -86,9 +80,6 @@ class Beach(db.Model):
             'slug': self.slug,
             'latitude': self.latitude,
             'longitude': self.longitude,
-            # Artık bu bilgiler doğrudan plaja ait değil.
-            # 'price': self.price,
-            # 'bed_count': self.bed_count,
             'rentable_items_count': len(self.rentable_items), # Yeni dinamik bilgi
             'has_booking': self.has_booking,
             'has_food': self.has_food,
@@ -98,6 +89,22 @@ class Beach(db.Model):
             'has_water_sports': self.has_water_sports,
             'is_disabled_friendly': self.is_disabled_friendly
         }
+    
+    @property
+    def item_summary(self):
+        """
+        Plaja ait kiralanabilir eşyaları türlerine göre gruplayıp sayar.
+        Örnek Çıktı: {'loca': 2, 'standart_sezlong': 5, 'bungalow': 1}
+        """
+        from collections import Counter
+        if not self.rentable_items:
+            return {}
+        
+        # Her bir eşya türünün kaç kez geçtiğini sayar
+        type_counts = Counter(item.item_type for item in self.rentable_items)
+        
+        # Alfabetik olarak sıralanmış bir dictionary olarak döndürür (gösterim tutarlılığı için)
+        return dict(sorted(type_counts.items()))
 
 # --- GÜNCELLENEN MODEL: RESERVATION ---
 class Reservation(db.Model):

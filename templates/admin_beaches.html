@@ -124,14 +124,17 @@
         <td>{{ beach.name }}</td>
         <td>{{ beach.location }}</td>
         <td>
-          {% if beach.rentable_items %}
+          {# beach.item_summary'nin dolu olup olmadığını kontrol ediyoruz #}
+          {% if beach.item_summary %}
+            {# Toplam eşya sayısını yine gösterelim #}
             <span class="badge bg-primary rounded-pill mb-2">{{ beach.rentable_items | length }} adet</span>
             <ul class="list-unstyled mb-0 small">
-            {% for item in beach.rentable_items %}
+            {# YENİ ÖZET DÖNGÜSÜ: Modeldeki item_summary sözlüğü üzerinden dönüyoruz #}
+            {% for item_type, count in beach.item_summary.items() %}
               <li>
-                <i class="fas fa-couch text-muted"></i> <strong>{{ item.item_type | replace('_', ' ') | title }}:</strong>
-                #{{ item.item_number }}
-                <span class="text-success">({{ "%.2f"|format(item.price) }} TL)</span>
+                <i class="fas fa-couch text-muted"></i>
+                <strong>{{ item_type.replace('_', ' ') | title }}:</strong>
+                <span class="text-success fw-bold">{{ count }} adet</span>
               </li>
             {% endfor %}
             </ul>
