@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">Eşya Doluluk Durumu: <span class="text-primary">{{ beach.name }}</span></h2>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" action="{{ url_for('beach_admin.item_occupancy') }}">
+                <div class="row align-items-end">
+                    <div class="col-md-4">
+                        <label for="date" class="form-label">Tarih Seçin</label>
+                        <input type="date" class="form-control" id="date" name="date" value="{{ selected_date_str }}">
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary w-100">Göster</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if occupancy_data %}
+        {% for type_name, items_data in occupancy_data.items() %}
+            <h4 class="mt-4 border-bottom pb-2">{{ type_name }}</h4>
+            <div class="d-flex flex-wrap gap-2 mt-3">
+                {% for data in items_data %}
+                    <div class="card text-center {% if data.is_booked %}border-danger text-bg-danger{% else %}border-success text-bg-success{% endif %}" style="width: 120px;">
+                        <div class="card-header" style="font-size: 0.8rem;">
+                            #{{ data.item.item_number }}
+                        </div>
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                {% if data.is_booked %}
+                                    Dolu
+                                {% else %}
+                                    Boş
+                                {% endif %}
+                            </h5>
+                        </div>
+                        <div class="card-footer" style="font-size: 0.75rem;">
+                           {{ "%.2f"|format(data.item.price) }} ₺
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endfor %}
+    {% else %}
+        <div class="alert alert-info">
+            Bu plajda yönetilecek bir eşya bulunamadı.
+        </div>
+    {% endif %}
+
+</div>
+{% endblock %}

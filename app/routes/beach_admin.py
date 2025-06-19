@@ -305,47 +305,60 @@ def delete_item(item_id):
     flash(f"#{item_to_delete.item_number} numaralı eşya başarıyla silindi.", "success")
     return redirect(url_for('beach_admin.manage_items'))
 
-@beach_admin_bp.route('/occupancy')
-@beach_admin_required # Kullandığınız decorator
-def bed_occupancy():
-    user_id = current_user.id
-    beaches_query_result = Beach.query.filter_by(manager_id=user_id).all()
+@beach_admin_bp.route('/item-occupancy')
+@beach_admin_required
+def item_occupancy():
+    beach_id = session.get('beach_id')
+    if not beach_id:
+        flash("Lütfen önce bir plaj seçin.", "warning")
+        return redirect(url_for('beach_admin.dashboard'))
 
-    labels = []
-    data = [] # Yüzdelik doluluk oranları
-    detailed_data = [] # Daha detaylı bilgi için (isteğe bağlı, şablonda kullanılabilir)
+    beach = Beach.query.get_or_404(beach_id)
 
-    today = date.today()
+    # 1. Kullanıcının seçtiği tarihi al, eğer tarih seçilmemişse bugünü varsay
+    # URL'den ?date=YYYY-MM-DD şeklinde tarih alınacak
+    selected_date_str = request.args.get('date', date.today().isoformat())
+    try:
+        selected_date = datetime.strptime(selected_date_str, '%Y-%m-%d').date()
+    except ValueError:
+        flash("Geçersiz tarih formatı. Lütfen YYYY-MM-DD formatını kullanın.", "danger")
+        return redirect(url_for('beach_admin.item_occupancy'))
 
-    for beach_obj in beaches_query_result:
-        total_beds = beach_obj.bed_count or 0 # Şezlong sayısı 0 veya None ise 0 kabul et
+    # 2. O plaja ait tüm kiralanabilir eşyaları çek
+    all_items = RentableItem.query.filter_by(beach_id=beach.id).order_by(RentableItem.item_type, RentableItem.item_number).all()
+
+    # 3. Seçilen tarihteki tüm aktif rezervasyonları TEK BİR SORGUDAYLA çek
+    reservations_on_date = Reservation.query.filter(
+        Reservation.beach_id == beach.id,
+        Reservation.date == selected_date,
+        Reservation.status.in_(['reserved', 'used'])
+    ).all()
+
+    # 4. Hızlı arama için rezervasyonları bir sözlüğe (dictionary) map'le
+    # Anahtar: item_id, Değer: Reservation nesnesi
+    reservation_map = {reservation.item_id: reservation for reservation in reservations_on_date}
+
+    # 5. Şablona göndermek üzere veriyi işle ve türlerine göre grupla
+    from collections import defaultdict
+    occupancy_by_type = defaultdict(list)
+
+    for item in all_items:
+        # Bu eşyanın rezervasyon map'inde olup olmadığını kontrol et
+        reservation_info = reservation_map.get(item.id)
         
-        # Bugün için 'reserved' veya 'used' durumundaki aktif rezervasyonları say
-        active_reservations_today = Reservation.query.filter(
-            Reservation.beach_id == beach_obj.id,
-            Reservation.date == today,
-            Reservation.status.in_(['reserved', 'used']) # Sadece aktif kabul edilen durumlar
-        ).count()
-
-        percent_occupancy = 0
-        if total_beds > 0:
-            percent_occupancy = round((active_reservations_today / total_beds) * 100, 2)
-        
-        labels.append(beach_obj.name)
-        data.append(percent_occupancy)
-        detailed_data.append({ # Şablonda daha fazla detay göstermek isterseniz
-            "name": beach_obj.name,
-            "total_beds": total_beds,
-            "active_reservations": active_reservations_today,
-            "occupancy_rate": percent_occupancy
+        type_display_name = item.item_type.replace('_', ' ').title()
+        occupancy_by_type[type_display_name].append({
+            'item': item,
+            'is_booked': reservation_info is not None,
+            'reservation': reservation_info  # Şablonda daha fazla detay için (örn: kim rezerve etmiş)
         })
 
+    # Yeni bir şablon dosyası kullanacağız
     return render_template(
-        'beach_admin/bed_occupancy.html',
-        # beaches=beaches_query_result, # Eğer şablonda ham beach nesnelerine ihtiyaç yoksa kaldırılabilir
-        labels=labels,
-        data=data,
-        detailed_beach_data=detailed_data # Şablona yeni detaylı veri gönderiyoruz
+        'beach_admin/item_occupancy.html',
+        beach=beach,
+        selected_date_str=selected_date_str,
+        occupancy_data=dict(sorted(occupancy_by_type.items()))
     )
 
 @beach_admin_bp.route('/beach/<int:beach_id>/bed-schedule', methods=['GET'])
