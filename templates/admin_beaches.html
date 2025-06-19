@@ -152,16 +152,19 @@
           {% endif %}
         </td>
         <td>
-          <button type="button" class="btn btn-warning btn-sm mb-1" onclick="editBeach(this)">
-            <i class="fas fa-edit"></i>
-          </button>
-          <form method="POST" action="{{ url_for('admin.delete_beach', beach_id=beach.id) }}" style="display: inline-block"
+            <a href="{{ url_for('admin.manage_beach_items', beach_id=beach.id) }}" class="btn btn-info btn-sm mb-1" title="Eşyaları Yönet">
+                <i class="fas fa-couch"></i>
+            </a>
+            <button type="button" class="btn btn-warning btn-sm mb-1" title="Plajı Düzenle" onclick="editBeach(this)">
+                <i class="fas fa-edit"></i>
+            </button>
+            <form method="POST" action="{{ url_for('admin.delete_beach', beach_id=beach.id) }}" style="display: inline-block"
             onsubmit="return confirm('Bu plajı silmek istediğinizden emin misiniz?');">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-            <button type="submit" class="btn btn-danger btn-sm">
-              <i class="fas fa-trash-alt"></i>
+            <button type="submit" class="btn btn-danger btn-sm" title="Plajı Sil">
+                <i class="fas fa-trash-alt"></i>
             </button>
-          </form>
+            </form>
         </td>
       </tr>
       {% endfor %}
