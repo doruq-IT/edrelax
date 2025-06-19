@@ -55,8 +55,7 @@ def beaches():
         slug = request.form.get('slug')
         latitude = request.form.get('latitude', type=float)
         longitude = request.form.get('longitude', type=float)
-        price = request.form.get('price', type=float) or 0.0
-        bed_count = request.form.get('bed_count', type=int) or 0
+        
 
         if Beach.query.filter_by(slug=slug).first():
             flash("This slug is already in use.", "warning")
@@ -101,8 +100,6 @@ def beaches():
             slug=slug,
             latitude=latitude,
             longitude=longitude,
-            price=price,
-            bed_count=bed_count,
             has_booking=bool(request.form.get('has_booking')),
             has_food=bool(request.form.get('has_food')),
             has_parking=bool(request.form.get('has_parking')),
@@ -151,8 +148,6 @@ def update_beach(beach_id):
     beach.description = request.form.get('description')
     beach.long_description = request.form.get('long_description')
     beach.slug = new_slug
-    beach.price = request.form.get('price', type=float)
-    beach.bed_count = request.form.get('bed_count', type=int)
     beach.latitude = request.form.get('latitude', type=float)
     beach.longitude = request.form.get('longitude', type=float)
 
