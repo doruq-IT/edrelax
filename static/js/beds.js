@@ -1,3 +1,16 @@
+/**
+ * 'standart_sezlong' gibi bir string'i 'Standart Sezlong' haline getirir.
+ * Bu, .title() fonksiyonunun JavaScript'teki karşılığıdır.
+ * @param {string} str - Dönüştürülecek string.
+ * @returns {string} - Baş harfleri büyütülmüş string.
+ */
+function toTitleCase(str) {
+    if (!str) return '';
+    return str.replace(/_/g, ' ').replace(/\w\S*/g, function(txt) {
+        return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
+    });
+}
+
 const bedsContainer = document.getElementById("beds-container");
 const checkoutBtn = document.getElementById("checkout-btn");
 const totalPriceEl = document.getElementById("total-price");
@@ -75,33 +88,12 @@ function renderItems() {
                 `;
                 itemDiv.appendChild(notifyWrapper);
             } else {
-                 itemDiv.title = `${type.replace('_',' ').title()} No: ${item.item_number}`;
+                 itemDiv.title = `${toTitleCase(type)} No: ${item.item_number}`;
             }
 
             container.appendChild(itemDiv);
         });
     }
-}
-
-/**
- * Seçilen eşyalara göre toplam fiyatı ve bilgi metnini günceller.
- * Bu, eski updatePrice fonksiyonunun yerini alır.
- */
-function updateCheckoutInfo() {
-  const selectedItems = document.querySelectorAll(".item.selected");
-  let currentTotalPrice = 0;
-  let selectedInfoText = [];
-
-  selectedItems.forEach(item => {
-    // Her eşyanın kendi fiyatını data attribute'undan oku
-    currentTotalPrice += parseFloat(item.dataset.itemPrice);
-    
-    const typeName = item.dataset.itemType.replace('_', ' ').title();
-    selectedInfoText.push(`${typeName} #${item.dataset.itemNumber}`);
-  });
-
-  totalPriceEl.textContent = currentTotalPrice.toFixed(2);
-  selectedInfoEl.textContent = selectedInfoText.length > 0 ? selectedInfoText.join(", ") : "Yok";
 }
 
 function updateCheckoutInfo() {
@@ -114,7 +106,7 @@ function updateCheckoutInfo() {
     currentTotalPrice += parseFloat(item.dataset.itemPrice);
     
     // Bilgi metnini oluştur (örn: "Loca #1", "Standart Sezlong #5")
-    const typeName = item.dataset.itemType.replace('_', ' ').title();
+    const typeName = toTitleCase(item.dataset.itemType);
     selectedInfoText.push(`${typeName} #${item.dataset.itemNumber}`);
   });
 
@@ -154,7 +146,7 @@ const countdownInterval = setInterval(() => {
 
 // 🚀 Check Out ve Rezervasyon Kaydı
 checkoutBtn.addEventListener("click", () => {
-  // DEĞİŞİKLİK: Artık ".item.selected" sınıfına sahip eşyaları seçiyoruz.
+  // Seçili eşyaları al
   const selectedItems = document.querySelectorAll(".item.selected");
   if (selectedItems.length === 0) {
     Swal.fire({
@@ -165,22 +157,23 @@ checkoutBtn.addEventListener("click", () => {
     return;
   }
 
-  // DEĞİŞİKLİK: Limit kontrolü artık DAILY_MAX_ITEMS kullanıyor.
+  // Limit kontrolü
   if ((previouslyReservedCount + selectedItems.length) > DAILY_MAX_ITEMS) {
     Swal.fire({
       icon: "error",
       title: "Limit Aşıldı!",
-      text: "Günlük maksimum eşya limitini (" + DAILY_MAX_ITEMS + ") aştınız.",
+      text: `Günlük maksimum eşya limitini (${DAILY_MAX_ITEMS}) aştınız.`,
       confirmButtonText: "Anladım"
     });
     return;
   }
   
-  // Bu kısımlar aynı kalıyor...
+  // Gerekli verileri al
   const date = document.getElementById("selected-date")?.value;
   const start = document.getElementById("selected-start")?.value;
   const end = document.getElementById("selected-end")?.value;
-  const beachId = reservationWrapper.dataset.beachId;
+  const reservationWrapper = document.getElementById("reservation-wrapper");
+  const beachId = reservationWrapper?.dataset.beachId;
 
   if (!date || !start || !end || !beachId) {
     Swal.fire({ icon: "error", title: "Eksik bilgi", text: "Rezervasyon verileri eksik."});
@@ -191,21 +184,20 @@ checkoutBtn.addEventListener("click", () => {
   checkoutBtn.innerText = "Gönderiliyor...";
   clearInterval(countdownInterval);
 
-  // KRİTİK DEĞİŞİKLİK: Sunucuya gönderilecek payload'ı hazırlıyoruz.
-  // Her seçili eşyanın 'data-item-id' özelliğini okuyarak bir liste oluşturuyoruz.
+  // Sunucuya gönderilecek payload'ı hazırla
   const itemIds = Array.from(selectedItems).map(item => parseInt(item.dataset.itemId));
 
   const payload = {
     beach_id: parseInt(beachId),
-    item_ids: itemIds, // ESKİ: bed_ids, YENİ: item_ids
+    item_ids: itemIds,
     date: date,
     start_time: start,
     end_time: end
   };
-
+  
   const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
-  // fetch isteği aynı kalıyor...
+  // fetch isteği BURADA, addEventListener'ın İÇİNDE yapılmalı
   fetch("/make-reservation", {
     method: "POST",
     headers: {
@@ -217,88 +209,20 @@ checkoutBtn.addEventListener("click", () => {
     .then(res => res.json())
     .then(data => {
       if (data.success) {
+        // Başarı mesajını sadeleştiriyoruz
         Swal.fire({
           icon: "success",
           title: "Rezervasyon Tamamlandı!",
-          text: "Ödemeyi plajda yapabilirsiniz. Rezervasyon detaylarınızı 'Rezervasyonlarım' sayfasından görebilirsiniz.",
+          text: "Ödemeyi plajda yapabilirsiniz. Detayları 'Rezervasyonlarım' sayfasından görebilirsiniz.",
           confirmButtonText: "Harika!"
         }).then(() => {
-          location.reload();
-        });
-      } else {
-        Swal.fire({
-          icon: "error",
-          title: "Hata",
-          text: data.message || "Rezervasyon oluşturulamadı."
-        });
-        checkoutBtn.disabled = false;
-        checkoutBtn.innerText = "Ödemeye Geç";
-      }
-    })
-    .catch(err => {
-      console.error("Hata:", err);
-      Swal.fire({
-        icon: "error",
-        title: "Sunucu hatası",
-        text: "Bir hata oluştu. Lütfen tekrar deneyin."
-      });
-      checkoutBtn.disabled = false;
-      checkoutBtn.innerText = "Ödemeye Geç";
-    });
-});
-  const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-
-  fetch("/make-reservation", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRFToken": csrfToken
-    },
-    body: JSON.stringify(payload)
-  })
-    .then(res => res.json())
-    .then(data => {
-      if (data.success) {
-        const selectedCodes = Array.from(selectedBeds)
-          .map(b => b.dataset.code)
-          .join(', ');
-        Swal.fire({
-          icon: "success",
-          title: "Rezervasyon Tamamlandı!",
-          html: `
-            <p>📅 <strong>${date}</strong></p>
-            <p>⏰ <strong>${start} - ${end}</strong></p>
-            <p>🪑 <strong>${bedIds.length}</strong> adet şezlong</p>
-            <p>🔖 <strong>${selectedCodes}</strong></p>
-            <p>💸 <strong>${totalPrice} TL</strong></p>
-            <hr>
-
-            <p style="
-                color: #B85C00; 
-                font-weight: bold; 
-                font-size: 1.1em; 
-                margin-top: 15px; 
-                background-color: #FFF3E0; 
-                padding: 10px; 
-                border-radius: 5px;
-                border-left: 5px solid #FF9800;">
-                Ödeme plajda alınacaktır.
-            </p>
-          `,
-          confirmButtonText: "Tamam",
-          customClass: {
-            popup: 'swal-wide'
-          }
-        }).then(() => {
-          // ESKİ KOD: location.reload();
-          
-          // YENİ KOD: URL'yi her zaman benzersiz kılmak için zaman damgası ekle.
-          // Bu, sunucu veya tarayıcı önbelleğine takılmayı engeller.
+          // Sayfayı önbelleğe takılmadan yenile
           const currentUrl = new URL(window.location.href);
-          currentUrl.searchParams.set('_v', new Date().getTime()); // _v = version
+          currentUrl.searchParams.set('_v', new Date().getTime());
           window.location.href = currentUrl.toString();
         });
       } else {
+        // Hata durumunda butonu tekrar aktif et
         Swal.fire({
           icon: "error",
           title: "Hata",
@@ -309,7 +233,7 @@ checkoutBtn.addEventListener("click", () => {
       }
     })
     .catch(err => {
-      console.error("Hata:", err);
+      console.error("Fetch Hatası:", err);
       Swal.fire({
         icon: "error",
         title: "Sunucu hatası",
@@ -318,6 +242,7 @@ checkoutBtn.addEventListener("click", () => {
       checkoutBtn.disabled = false;
       checkoutBtn.innerText = "Ödemeye Geç";
     });
+}); // checkoutBtn.addEventListener fonksiyonunun kapanış parantezi
 
 let currentlyTouchedItem = null; // DEĞİŞİKLİK: Değişken adı daha genel hale getirildi.
 
