@@ -10,9 +10,12 @@
                 <i class="fas fa-arrow-left"></i> Tüm Plajlara Geri Dön
             </a>
         </div>
-        <div>
-            <button type="button" class="btn btn-success" data-toggle="modal" data-target="#addItemModal">
+        <div class="btn-group">
+            <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#addItemModal">
                 <i class="fas fa-plus"></i> Yeni Eşya Ekle
+            </button>
+            <button type="button" class="btn btn-success" data-toggle="modal" data-target="#addItemsBulkModal">
+                <i class="fas fa-cubes"></i> Toplu Eşya Ekle
             </button>
         </div>
     </div>
@@ -34,7 +37,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% for item in beach.rentable_items %}
+                        {% for item in beach.rentable_items | sort(attribute='item_number') %}
                         <tr>
                             <td><span class="badge bg-secondary">#{{ item.id }}</span></td>
                             <td>{{ item.item_type | replace('_', ' ') | title }}</td>
@@ -57,7 +60,7 @@
                 </table>
             </div>
             {% else %}
-            <p class="text-muted mt-3">Bu plaja henüz kiralanabilir eşya eklenmemiş. Başlamak için "Yeni Eşya Ekle" butonunu kullanın.</p>
+            <p class="text-muted mt-3">Bu plaja henüz kiralanabilir eşya eklenmemiş. Başlamak için "Yeni Eşya Ekle" veya "Toplu Eşya Ekle" butonlarını kullanın.</p>
             {% endif %}
         </div>
     </div>
@@ -73,11 +76,16 @@
         </button>
       </div>
       <form action="{{ url_for('admin.add_item_to_beach', beach_id=beach.id) }}" method="POST">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="modal-body">
           <div class="mb-3">
             <label for="item_type" class="form-label">Eşya Türü</label>
-            <input type="text" class="form-control" id="item_type" name="item_type" placeholder="Örn: standart_sezlong, loca, bungalow" required>
+            <select class="form-control" id="item_type" name="item_type" required>
+              <option value="" disabled selected>Lütfen bir tür seçin...</option>
+              {% for type in item_types %}
+                <option value="{{ type }}">{{ type.replace('_', ' ') | title }}</option>
+              {% endfor %}
+            </select>
           </div>
           <div class="mb-3">
             <label for="item_number" class="form-label">Eşya Numarası</label>
@@ -92,6 +100,51 @@
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-dismiss="modal">Kapat</button>
           <button type="submit" class="btn btn-primary">Eşyayı Kaydet</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="addItemsBulkModal" tabindex="-1" aria-labelledby="addItemsBulkModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="addItemsBulkModalLabel">Toplu Eşya Ekle: {{ beach.name }}</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <form action="{{ url_for('admin.add_items_in_bulk', beach_id=beach.id) }}" method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="bulk_item_type" class="form-label">Eşya Türü</label>
+            <select class="form-control" id="bulk_item_type" name="bulk_item_type" required>
+              <option value="" disabled selected>Lütfen bir tür seçin...</option>
+              {% for type in item_types %}
+                <option value="{{ type }}">{{ type.replace('_', ' ') | title }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label for="bulk_quantity" class="form-label">Adet</label>
+              <input type="number" class="form-control" id="bulk_quantity" name="bulk_quantity" min="1" placeholder="Örn: 60" required>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="bulk_start_number" class="form-label">Başlangıç Numarası</label>
+              <input type="number" class="form-control" id="bulk_start_number" name="bulk_start_number" min="1" placeholder="Örn: 10" required>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label for="bulk_price" class="form-label">Tüm Eşyalar İçin Ortak Fiyat (TL)</label>
+            <input type="number" class="form-control" id="bulk_price" name="bulk_price" min="0" step="0.01" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Kapat</button>
+          <button type="submit" class="btn btn-success">Toplu Ekle</button>
         </div>
       </form>
     </div>

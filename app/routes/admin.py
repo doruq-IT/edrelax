@@ -386,10 +386,9 @@ def delete_user(user_id):
 @admin_required
 def manage_beach_items(beach_id):
     beach = Beach.query.get_or_404(beach_id)
-    # 'items' listesi, modeldeki ilişki sayesinde 'beach.rentable_items' olarak zaten mevcut.
-    return render_template('admin/manage_items.html', beach=beach)
+    item_types = ['standart_sezlong', 'loca', 'bungalow', 'vip_sezlong']
+    return render_template('admin/manage_items.html', beach=beach, item_types=item_types)
 
-# admin.py dosyasının sonuna eklenecek yeni fonksiyon
 
 @admin_bp.route('/beach/<int:beach_id>/add_item', methods=['POST'])
 @admin_required
@@ -433,4 +432,52 @@ def add_item_to_beach(beach_id):
     db.session.commit()
 
     flash(f'{item_type} (#{item_number}) başarıyla eklendi.', 'success')
+    return redirect(url_for('admin.manage_beach_items', beach_id=beach_id))
+
+@admin_bp.route('/beach/<int:beach_id>/add_items_bulk', methods=['POST'])
+@admin_required
+def add_items_in_bulk(beach_id):
+    beach = Beach.query.get_or_404(beach_id)
+    
+    item_type = request.form.get('bulk_item_type')
+    quantity_str = request.form.get('bulk_quantity')
+    start_number_str = request.form.get('bulk_start_number')
+    price_str = request.form.get('bulk_price')
+
+    if not all([item_type, quantity_str, start_number_str, price_str]):
+        flash('Toplu ekleme için tüm alanlar zorunludur.', 'danger')
+        return redirect(url_for('admin.manage_beach_items', beach_id=beach_id))
+
+    try:
+        quantity = int(quantity_str)
+        start_number = int(start_number_str)
+        price = float(price_str)
+        if quantity <= 0 or start_number <= 0:
+            raise ValueError()
+    except (ValueError, TypeError):
+        flash('Adet, Başlangıç Numarası ve Fiyat geçerli pozitif sayılar olmalıdır.', 'danger')
+        return redirect(url_for('admin.manage_beach_items', beach_id=beach_id))
+
+    numbers_to_add = range(start_number, start_number + quantity)
+    conflicting_items = RentableItem.query.filter(
+        RentableItem.beach_id == beach_id,
+        RentableItem.item_number.in_(numbers_to_add)
+    ).all()
+
+    if conflicting_items:
+        conflicting_numbers = [str(item.item_number) for item in conflicting_items]
+        flash(f'Ekleme başarısız! Şu numaralar bu plajda zaten mevcut: {", ".join(conflicting_numbers)}', 'danger')
+        return redirect(url_for('admin.manage_beach_items', beach_id=beach_id))
+    
+    for number in numbers_to_add:
+        new_item = RentableItem(
+            beach_id=beach.id,
+            item_type=item_type,
+            item_number=number,
+            price=price
+        )
+        db.session.add(new_item)
+    
+    db.session.commit()
+    flash(f'{quantity} adet {item_type.replace("_", " ").title()} başarıyla eklendi.', 'success')
     return redirect(url_for('admin.manage_beach_items', beach_id=beach_id))
