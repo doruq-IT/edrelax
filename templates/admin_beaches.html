@@ -121,38 +121,53 @@
 
   {% if beaches %}
   <div class="table-responsive">
-    <table class="table table-hover table-bordered">
-      <thead class="thead-light">
-        <tr>
-          <th>Ad</th>
-          <th>Konum</th>
-          <th>Slug</th>
-          <th style="width: 140px">İşlemler</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for beach in beaches %}
-        <tr data-beach='{{ beach.to_dict() | tojson | safe }}'>
-          <td>{{ beach.name }}</td>
-          <td>{{ beach.location }}</td>
-          <td>{{ beach.slug }}</td>
-          <td>
-            <button type="button" class="btn btn-warning btn-sm mb-1" onclick="editBeach(this)">
-              <i class="fas fa-edit"></i>
+  <table class="table table-hover table-bordered align-middle">
+    <thead class="thead-light">
+      <tr>
+        <th style="width: 25%;">Ad</th>
+        <th style="width: 25%;">Konum</th>
+        <th>Kiralanabilir Eşyalar</th>
+        <th style="width: 140px;">İşlemler</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for beach in beaches %}
+      <tr data-beach='{{ beach.to_dict() | tojson | safe }}'>
+        <td>{{ beach.name }}</td>
+        <td>{{ beach.location }}</td>
+        <td>
+          {% if beach.rentable_items %}
+            <span class="badge bg-primary rounded-pill mb-2">{{ beach.rentable_items | length }} adet</span>
+            <ul class="list-unstyled mb-0 small">
+            {% for item in beach.rentable_items %}
+              <li>
+                <i class="fas fa-couch text-muted"></i> <strong>{{ item.item_type | replace('_', ' ') | title }}:</strong>
+                #{{ item.item_number }}
+                <span class="text-success">({{ "%.2f"|format(item.price) }} TL)</span>
+              </li>
+            {% endfor %}
+            </ul>
+          {% else %}
+            <span class="text-muted">Henüz eşya eklenmemiş.</span>
+          {% endif %}
+        </td>
+        <td>
+          <button type="button" class="btn btn-warning btn-sm mb-1" onclick="editBeach(this)">
+            <i class="fas fa-edit"></i>
+          </button>
+          <form method="POST" action="{{ url_for('admin.delete_beach', beach_id=beach.id) }}" style="display: inline-block"
+            onsubmit="return confirm('Bu plajı silmek istediğinizden emin misiniz?');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button type="submit" class="btn btn-danger btn-sm">
+              <i class="fas fa-trash-alt"></i>
             </button>
-            <form method="POST" action="{{ url_for('admin.delete_beach', beach_id=beach.id) }}" style="display: inline-block"
-              onsubmit="return confirm('Bu plajı silmek istediğinizden emin misiniz?');">
-              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-              <button type="submit" class="btn btn-danger btn-sm">
-                <i class="fas fa-trash-alt"></i>
-              </button>
-            </form>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
   {% else %}
   <p>Hiç plaj bulunamadı.</p>
   {% endif %}
