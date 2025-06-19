@@ -388,3 +388,49 @@ def manage_beach_items(beach_id):
     beach = Beach.query.get_or_404(beach_id)
     # 'items' listesi, modeldeki ilişki sayesinde 'beach.rentable_items' olarak zaten mevcut.
     return render_template('admin/manage_items.html', beach=beach)
+
+# admin.py dosyasının sonuna eklenecek yeni fonksiyon
+
+@admin_bp.route('/beach/<int:beach_id>/add_item', methods=['POST'])
+@admin_required
+def add_item_to_beach(beach_id):
+    # Eşyayı eklemeden önce plajın mevcut olduğundan emin olalım.
+    beach = Beach.query.get_or_404(beach_id)
+    
+    # Formdan gelen verileri alıyoruz.
+    item_type = request.form.get('item_type')
+    item_number_str = request.form.get('item_number')
+    price_str = request.form.get('price')
+
+    # Temel doğrulama: Alanların boş olup olmadığını kontrol et.
+    if not all([item_type, item_number_str, price_str]):
+        flash('Eşya Türü, Numara ve Fiyat alanları zorunludur.', 'danger')
+        return redirect(url_for('admin.manage_beach_items', beach_id=beach_id))
+    
+    # Sayısal değerleri güvenli bir şekilde dönüştür.
+    try:
+        item_number = int(item_number_str)
+        price = float(price_str)
+    except (ValueError, TypeError):
+        flash('Eşya Numarası ve Fiyat geçerli sayılar olmalıdır.', 'danger')
+        return redirect(url_for('admin.manage_beach_items', beach_id=beach_id))
+
+    # Veritabanı kontrolü: Bu plajda bu numaraya sahip başka bir eşya var mı?
+    existing_item = RentableItem.query.filter_by(beach_id=beach.id, item_number=item_number).first()
+    if existing_item:
+        flash(f'#{item_number} numaralı eşya bu plajda zaten mevcut. Lütfen farklı bir numara seçin.', 'warning')
+        return redirect(url_for('admin.manage_beach_items', beach_id=beach_id))
+
+    # Yeni eşyayı oluştur ve veritabanına kaydet.
+    # item_type'ı veritabanında tutarlı olması için küçük harfe çevirip boşlukları _ ile değiştiriyoruz.
+    new_item = RentableItem(
+        beach_id=beach.id,
+        item_type=item_type.strip().lower().replace(" ", "_"),
+        item_number=item_number,
+        price=price
+    )
+    db.session.add(new_item)
+    db.session.commit()
+
+    flash(f'{item_type} (#{item_number}) başarıyla eklendi.', 'success')
+    return redirect(url_for('admin.manage_beach_items', beach_id=beach_id))

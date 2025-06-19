@@ -11,7 +11,9 @@
             </a>
         </div>
         <div>
-            <button class="btn btn-success" disabled><i class="fas fa-plus"></i> Yeni Eşya Ekle</button>
+            <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addItemModal">
+                <i class="fas fa-plus"></i> Yeni Eşya Ekle
+            </button>
         </div>
     </div>
 
@@ -59,5 +61,37 @@
             {% endif %}
         </div>
     </div>
+</div>
+<div class="modal fade" id="addItemModal" tabindex="-1" aria-labelledby="addItemModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="addItemModalLabel">Yeni Eşya Ekle: {{ beach.name }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form action="{{ url_for('admin.add_item_to_beach', beach_id=beach.id) }}" method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="item_type" class="form-label">Eşya Türü</label>
+            <input type="text" class="form-control" id="item_type" name="item_type" placeholder="Örn: standart_sezlong, loca, bungalow" required>
+          </div>
+          <div class="mb-3">
+            <label for="item_number" class="form-label">Eşya Numarası</label>
+            <input type="number" class="form-control" id="item_number" name="item_number" required>
+            <small class="form-text text-muted">Bu plaj için benzersiz bir numara olmalıdır.</small>
+          </div>
+          <div class="mb-3">
+            <label for="price" class="form-label">Fiyat (TL)</label>
+            <input type="number" class="form-control" id="price" name="price" min="0" step="0.01" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+          <button type="submit" class="btn btn-primary">Eşyayı Kaydet</button>
+        </div>
+      </form>
+    </div>
+  </div>
 </div>
 {% endblock %}
