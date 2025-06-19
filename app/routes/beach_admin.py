@@ -97,17 +97,18 @@ def dashboard():
         ).count()
 
         # Boş şezlong sayısını hesapla
-        empty_sunbeds = beach.bed_count - active_reservations_count
+        total_items_count = len(beach.rentable_items)
+        empty_items_count = total_items_count - active_reservations_count
         
-        # Doluluk oranını hesapla
         occupancy_rate = 0
-        if beach.bed_count and beach.bed_count > 0:
-            occupancy_rate = round((active_reservations_count / beach.bed_count) * 100)
+        # total_items_count zaten yukarıda hesaplanmıştı.
+        if total_items_count > 0:
+            occupancy_rate = round((active_reservations_count / total_items_count) * 100)
 
         dashboard_data.append({
             'beach': beach,
             'active_reservations_today': active_reservations_count,
-            'empty_sunbeds': empty_sunbeds,
+            'empty_items': empty_items_count,
             'occupancy_rate_today': occupancy_rate
         })
         
