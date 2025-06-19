@@ -43,9 +43,10 @@
 
 /* Eşya kutusu içindeki ikon, numara ve fiyat stilleri */
 .item-icon {
-  font-size: 2rem; /* İkonu büyüttük */
-  margin-bottom: 5px;
-  color: #555;
+  width: 40px;  /* Resmin genişliği sabit olsun */
+  height: 40px; /* Resmin yüksekliği sabit olsun */
+  object-fit: contain; /* Resmin oranını bozmadan kutuya sığdırır */
+  margin-bottom: 5px; /* Altındaki metinle arasına boşluk bırakır */
 }
 
 .item-number {

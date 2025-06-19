@@ -17,11 +17,10 @@ const totalPriceEl = document.getElementById("total-price");
 let selectedBedsInfoEl = document.getElementById("selected-beds-info");
 
 const ICONS = {
-    'standart_sezlong': 'fa-chair',
-    'loca': 'fa-campground',
-    'bungalow': 'fa-home',
-    'vip_sezlong': 'fa-gem',
-    'default': 'fa-umbrella-beach'
+    'standart_sezlong': '/static/images/edrelax.png',
+    'loca': '/static/images/loca.png',
+    'bungalow': '/static/images/bungalow.png',
+    'default': '/static/images/edrelax.png' // Eşleşen tür bulunamazsa gösterilecek varsayılan resim
 };
 
 /**
@@ -56,11 +55,11 @@ function renderItems() {
             itemDiv.dataset.itemPrice = item.price;
             itemDiv.dataset.itemType = type;
 
-            const iconClass = ICONS[type] || ICONS['default'];
+            const iconPath = ICONS[type] || ICONS['default'];
 
-            // Eşyanın temel HTML'ini oluştur
+            // Eşyanın temel HTML'ini, <img> etiketi kullanarak oluştur
             itemDiv.innerHTML = `
-                <i class="fas ${iconClass} item-icon"></i>
+                <img src="${iconPath}" alt="${type}" class="item-icon">
                 <span class="item-number">No: ${item.item_number}</span>
                 <span class="item-price">${item.price.toFixed(2)} TL</span>
             `;
