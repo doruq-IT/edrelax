@@ -56,18 +56,21 @@
         alt="Deniz Kenarı" />
   </div>
 
-  <div id="beds-container"></div>
+  {% for item_type, items in items_by_type.items() %}
+    <div class="item-group">
+      <h2 class="item-group-title">{{ item_type.replace('_', ' ').title() }}</h2>
+      <div class="item-container" id="container-{{ item_type }}"></div>
+    </div>
+  {% endfor %}
 </main>
 
 <script>
-  const bookedBeds = {{ booked_beds | tojson }};
-  const totalBeds = {{ beach.bed_count or 20 }};
-  const bedPrice = {{ beach.price or 10 }};
+  // YORUM: Artık tüm bilgileri bu tek ve zengin nesneden alacağız.
+  const itemsByType = {{ items_by_type | tojson }};
 
-  // YENİ EKLENEN SATIRLAR BAŞLANGIÇ
-  const kullanicininOncedenRezerveEttigiSayi = {{ kullanicinin_o_gun_rezerve_ettigi_sezlong_sayisi | default(0) | tojson }};
-  const GUNLUK_MAKSIMUM_SEZLONG = 10; 
-  // YENİ EKLENEN SATIRLAR BİTİŞ
+  // YORUM: Bu iki değişken aynı kaldı, sadece isimlerini JS içinde daha rahat kullanmak için kısaltıyoruz.
+  const previouslyReservedCount = {{ kullanicinin_o_gun_rezerve_ettigi_sezlong_sayisi | default(0) }};
+  const DAILY_MAX_ITEMS = 10;
 </script>
 <!-- JS logic -->
 <script src="{{ url_for('static', filename='js/beds.js') }}"></script>

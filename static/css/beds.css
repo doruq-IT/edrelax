@@ -1,13 +1,89 @@
-/* Yalnızca select_beds.html sayfası için geçerli olan şezlong stilleri */
-body.beds-page {
-  background: #f5f5f5;
-  padding: 30px;
-  text-align: center;
+/* Her bir eşya grubunu (Localar, Şezlonglar vb.) saran ana div */
+.item-group {
+  margin-bottom: 40px;
 }
 
-#beds-container {
-  grid-template-columns: repeat(auto-fill, 60px);
+/* "Localar", "Standart Şezlong" gibi grup başlıkları */
+.item-group-title {
+  text-align: left;
+  border-bottom: 2px solid #eee;
+  padding-bottom: 10px;
+  margin-bottom: 20px;
+  font-size: 1.5rem;
+  color: #333;
 }
+
+/* Her bir grup içindeki eşyaları (item) içeren konteyner */
+/* Bu, eski #beds-container'ın yeni ve daha esnek hali */
+.item-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  justify-content: flex-start;
+}
+
+/* .bed yerine gelen yeni GENEL eşya kutusu stili */
+.item {
+  width: 80px;  /* Biraz daha geniş */
+  height: 80px; /* Biraz daha geniş */
+  border: 2px solid #ccc;
+  border-radius: 8px; /* Artık yuvarlak değil, kutu şeklinde */
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 5px;
+  box-sizing: border-box; 
+  background-color: #f9f9f9;
+  /* Eski background-image kaldırıldı */
+}
+
+/* Eşya kutusu içindeki ikon, numara ve fiyat stilleri */
+.item-icon {
+  font-size: 2rem; /* İkonu büyüttük */
+  margin-bottom: 5px;
+  color: #555;
+}
+
+.item-number {
+  font-size: 0.7rem;
+  font-weight: bold;
+  color: #666;
+}
+
+.item-price {
+    font-size: 0.8rem;
+    font-weight: bold;
+    color: #00796b; /* Fiyatı belirginleştirdik */
+}
+
+
+/* --- DEĞİŞTİRİLEN STİLLER: .bed yerine .item kullanıldı --- */
+
+.item:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Dolu Eşya Stili */
+.item.booked {
+  background-color: #e0e0e0;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Seçili Eşya Stili */
+.item.selected {
+  border-color: #009688;
+  background-color: #e0f2f1;
+  box-shadow: 0 0 12px rgba(0,0,0,0.1);
+}
+
+/* --- DEĞİŞMEYEN STİLLER: Genel Sayfa Düzeni --- */
+/* Bu stiller projenin genel yapısıyla ilgili olduğu için aynı kalabilir */
 
 .top-panel {
   display: flex;
@@ -40,107 +116,6 @@ body.beds-page {
   border-radius: 30px;
 }
 
-/* 🛏️ Şezlong alanı */
-#beds-container {
-  display: grid;
-  gap: 15px;
-  justify-content: center;
-  margin-bottom: 30px;
-  transition: grid-template-columns 0.3s ease;
-}
-
-/* 🪑 Şezlong kutusu */
-.bed {
-  width: 60px;
-  height: 60px;
-  background-image: url('/static/images/edrelax.png');
-  background-size: cover;
-  border: 2px solid transparent;
-  border-radius: 50%;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  position: relative;
-  overflow: hidden;
-}
-
-.bed:hover {
-  transform: scale(1.1);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-/* Dolu Şezlong Stili */
-.bed.booked {
-  filter: grayscale(80%);
-  opacity: 0.7;
-  cursor: pointer;
-}
-
-/* GÜNCELLEME: Hem fareyle üzerine gelince hem de dokunulunca canlandır */
-.bed.booked:hover,
-.bed.booked.is-touched {
-  filter: grayscale(0%);
-  opacity: 1;
-}
-
-/* Bildirim Alanı (Overlay) */
-.notify-wrapper {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
-  color: white;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  text-align: center;
-  opacity: 0;
-  transition: opacity 0.2s ease-in-out;
-  pointer-events: none;
-}
-
-/* GÜNCELLEME: Hem fareyle üzerine gelince hem de dokunulunca overlay'i göster */
-.bed.booked:hover .notify-wrapper,
-.bed.booked.is-touched .notify-wrapper {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.notify-wrapper i {
-  font-size: 1.2rem;
-}
-
-.notify-wrapper .tooltip-text {
-  font-size: 0.6rem;
-  font-weight: bold;
-  margin-top: 4px;
-  line-height: 1;
-}
-
-/* Seçili Şezlong Stili */
-.bed.selected {
-  border: 3px solid #009688;
-  box-shadow: 0 0 12px #009688;
-}
-
-/* Şezlong Kodu Stili */
-.bed-code {
-  position: absolute;
-  bottom: 2px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(255, 255, 255, 0.8);
-  color: #333;
-  font-size: 10px;
-  font-weight: bold;
-  padding: 1px 5px;
-  border-radius: 4px;
-  pointer-events: none;
-}
-
-/* Seçilen şezlong numaraları için (Dokunulmadı) */
 #selected-beds-info {
   display: inline-block;
   margin-top: 10px;
@@ -148,7 +123,7 @@ body.beds-page {
   color: #009688;
   font-weight: bold;
 }
-/* ⏳ Geri sayım kutusu */
+
 .countdown-wrapper {
   font-size: 1.2rem;
   color: #333;
@@ -173,14 +148,12 @@ body.beds-page {
   z-index: 1;
 }
 
-
-  /* Alt kısmına beyaz geçişli bir efekt ekleyelim */
-  .beach-front-wrapper {
+.beach-front-wrapper {
     position: relative;
     overflow: hidden;
-  }
+}
 
-  .beach-front-wrapper::after {
+.beach-front-wrapper::after {
     content: "";
     position: absolute;
     bottom: 0;
@@ -189,50 +162,15 @@ body.beds-page {
     height: 40px;
     background: linear-gradient(to bottom, rgba(255, 255, 255, 0) 0%, white 100%);
     z-index: 2;
-  }
-/* 📱 Mobil görünüm */
+}
+
+/* Mobil görünüm için küçük bir düzenleme */
 @media (max-width: 600px) {
-  #beds-container {
-    grid-template-columns: repeat(9, 40px);
-    gap: 8px;
-    overflow-x: auto;
-    overflow-y: hidden;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: thin;
-    scrollbar-color: #ccc #f0f0f0;
-    padding-left: 10px;
-    padding-right: 10px;
-    width: 100%;
-    box-sizing: border-box;
-    justify-content: flex-start;
-  }
-
-  .bed {
-    width: 40px;
-    height: 40px;
-  }
-
-  main#reservation-wrapper {
-    overflow-x: hidden;
-  }
-
-
   .top-panel,
   .datetime,
   .checkout-panel {
     flex-direction: column;
     align-items: center;
     text-align: center;
-  }
-
-  .checkout-panel {
-    border-radius: 15px;
-  }
-
-  .bed::after {
-    font-size: 8px;
-    bottom: 1px;
-    right: 1px;
-    padding: 1px 3px;
   }
 }

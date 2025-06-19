@@ -1,9 +1,11 @@
 # app/routes/reservations.py
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify, current_app
 from flask_wtf.csrf import CSRFProtect, CSRFError
 from flask_login import login_required, current_user
 from sqlalchemy.exc import IntegrityError
+from collections import defaultdict
+from app.models import RentableItem
 from app.models import User
 from app.extensions import db, csrf
 from app.models import Beach, Reservation
@@ -32,117 +34,130 @@ def select_beds(slug):
         flash("Lütfen geçerli bir tarih ve saat aralığı seçin.", "warning")
         return redirect(url_for('public.beach_detail', slug=slug))
 
-    # --- YENİ: SAAT DİLİMİ YÖNETİMİ ---
+    # --- SAAT DİLİMİ YÖNETİMİ (Bu kısım aynı kalıyor) ---
     try:
-        # Saat dilimini tanımla (kullanıcılarınızın bulunduğu bölge)
         local_tz = pytz.timezone('Europe/Istanbul')
-        
-        # Kullanıcıdan gelen "saf" tarih ve saatleri birleştirip yerel saat dilimini ata
         local_start_dt = local_tz.localize(datetime.strptime(f"{date_str} {start_str}", "%Y-%m-%d %H:%M"))
-        
-        # Veritabanı sorgusu için bu yerel saati evrensel saate (UTC) çevir
         utc_start_dt = local_start_dt.astimezone(pytz.utc)
-
     except (ValueError, pytz.exceptions.InvalidTimeError):
         flash("Geçersiz tarih veya saat formatı.", "danger")
         return redirect(url_for('public.beach_detail', slug=slug))
-    # --- SAAT DİLİMİ YÖNETİMİ BİTİŞ ---
+ 
+    # 1. Plaja ait tüm aktif kiralanabilir eşyaları çek.
+    all_items = beach.rentable_items
 
-    # Veritabanındaki UTC'ye çevrilmiş saatlerle karşılaştırma yap
+    # 2. Belirtilen tarih/saat aralığında dolu olan EŞYA ID'lerini bul.
     overlapping_reservations = Reservation.query.filter(
         Reservation.beach_id == beach.id,
-        # ÖNEMLİ: Veritabanındaki tarih ve saatlerin de UTC olarak kaydedildiğini varsayıyoruz.
-        # Bir sonraki adımda make_reservation fonksiyonunu da bu şekilde güncelleyeceğiz.
         Reservation.date == utc_start_dt.date(),
         Reservation.start_time < datetime.strptime(end_str, "%H:%M").time(),
         Reservation.end_time > datetime.strptime(start_str, "%H:%M").time(),
         Reservation.status.in_(['reserved', 'used'])
     ).all()
+    booked_item_ids = {r.item_id for r in overlapping_reservations}
 
-    booked_beds = [r.bed_number for r in overlapping_reservations]
+    # 3. Şablona göndereceğimiz zengin veri yapısını hazırla.
+    items_by_type = defaultdict(list)
+    for item in all_items:
+        if not item.is_active:
+            continue
 
-    # Hata ayıklama log'u (isteğe bağlı, sorun çözüldüğünde silebilirsiniz)
-    print(f"DEBUG: User '{current_user.email}' viewing '{slug}'. Booked beds found: {booked_beds}")
-
-    # Kullanıcının günlük limitini kendi yerel gününe göre hesapla
+        status = 'booked' if item.id in booked_item_ids else 'available'
+        
+        items_by_type[item.item_type].append({
+            'id': item.id,
+            'item_number': item.item_number,
+            'price': float(item.price),
+            'status': status
+        })
+    
     user_reservations_today = Reservation.query.filter(
         Reservation.user_id == current_user.id,
         Reservation.date == local_start_dt.date(), # Burada yerel tarih kullanmak daha doğru
         Reservation.status.in_(['reserved', 'used'])
     ).count()
-  
+ 
+    # YORUM: Artık `booked_beds` yerine yeni yapıyı ve orijinal değişken adıyla limit bilgisini şablona gönderiyoruz.
     return render_template(
         'select_beds.html',
         beach=beach,
         date=date_str,
         start_time=start_str,
         end_time=end_str,
-        booked_beds=booked_beds,
-        kullanicinin_o_gun_rezerve_ettigi_sezlong_sayisi=user_reservations_today
+        items_by_type=items_by_type,  # Yeni ve zengin veri yapımız
+        kullanicinin_o_gun_rezerve_ettigi_sezlong_sayisi=user_reservations_today # Orijinal değişken adını koruduk
     )
 
 @reservations_bp.route('/make-reservation', methods=['POST'])
 @login_required
 def make_reservation():
+    """
+    Kullanıcının seçtiği kiralanabilir eşyalar (item) için rezervasyon oluşturur.
+    Yeni sisteme tamamen uyarlanmıştır.
+    """
     data = request.get_json()
 
+    # 1. Gelen veriyi yeni yapıya göre al ('item_ids' olarak)
     beach_id = data.get("beach_id")
-    bed_ids = data.get("bed_ids")
+    item_ids = data.get("item_ids") # ESKİ: bed_ids, YENİ: item_ids
     date_str = data.get("date")
     start_str = data.get("start_time")
     end_str = data.get("end_time")
 
-    if not (beach_id and bed_ids and date_str and start_str and end_str):
-        return jsonify({"success": False, "message": "Eksik bilgi var."}), 400
+    if not all([beach_id, item_ids, date_str, start_str, end_str]):
+        return jsonify({"success": False, "message": "Eksik bilgi gönderildi."}), 400
+    
+    if not isinstance(item_ids, list) or not item_ids:
+        return jsonify({"success": False, "message": "Geçersiz eşya seçimi."}), 400
 
-    # --- Saat Dilimi Yönetimi (Dokunulmadı) ---
+    # --- Saat Dilimi Yönetimi (Bu kısım zaten doğru, aynı kalıyor) ---
     try:
         local_tz = pytz.timezone('Europe/Istanbul')
         local_start_dt = local_tz.localize(datetime.strptime(f"{date_str} {start_str}", "%Y-%m-%d %H:%M"))
         local_end_dt = local_tz.localize(datetime.strptime(f"{date_str} {end_str}", "%Y-%m-%d %H:%M"))
-        utc_start_dt = local_start_dt.astimezone(pytz.utc)
-        utc_end_dt = local_end_dt.astimezone(pytz.utc)
         
-        if utc_end_dt <= utc_start_dt:
+        if local_end_dt <= local_start_dt:
             return jsonify({"success": False, "message": "Bitiş saati, başlangıç saatinden sonra olmalı."}), 400
 
+        # Veritabanı işlemleri için saatleri UTC'ye çevir
+        utc_start_dt = local_start_dt.astimezone(pytz.utc)
+        utc_end_dt = local_end_dt.astimezone(pytz.utc)
         parsed_date_utc = utc_start_dt.date()
         parsed_start_utc = utc_start_dt.time()
         parsed_end_utc = utc_end_dt.time()
-
     except (ValueError, pytz.exceptions.InvalidTimeError):
         return jsonify({"success": False, "message": "Tarih veya saat biçimi hatalı."}), 400
     # --- Saat Dilimi Yönetimi Bitiş ---
 
-    beach = Beach.query.get(beach_id)
-    if not beach:
-        return jsonify({"success": False, "message": "Plaj bulunamadı."}), 404
 
-    # --- Diğer Kontroller (Dokunulmadı) ---
-    if beach.bed_count < 1:
-        return jsonify({"success": False, "message": "Plajda şezlong tanımı yapılmamış. İletişim bölümünden lütfen bize iletiniz."}), 400
+    # --- Yeni ve Gelişmiş Kontroller ---
 
-    for bed_id in bed_ids:
-        try:
-            if int(bed_id) < 1 or int(bed_id) > beach.bed_count:
-                return jsonify({"success": False, "message": f"Geçersiz şezlong numarası: {bed_id}"}), 400
-        except (ValueError, TypeError):
-            return jsonify({"success": False, "message": f"Geçersiz şezlong ID formatı: {bed_id}"}), 400
+    # 2. İstenen eşyaları veritabanından TEK BİR SORGUDAYLA çek ve doğrula
+    requested_items = RentableItem.query.filter(RentableItem.id.in_(item_ids)).all()
 
-    GUNLUK_MAKSIMUM_SEZLONG = 10
+    # Doğrulama: Frontend'den gelen ID sayısı ile veritabanından dönen eşya sayısı aynı mı?
+    if len(requested_items) != len(item_ids):
+        return jsonify({"success": False, "message": "Geçersiz veya bulunamayan bir eşya seçtiniz."}), 400
+
+    # Doğrulama: Tüm eşyalar bu plaja mı ait? Bu, güvenlik için önemlidir.
+    if not all(item.beach_id == beach_id for item in requested_items):
+        return jsonify({"success": False, "message": "Eşyalar farklı plajlara ait olamaz."}), 400
+
+    # 3. Günlük limit kontrolü
+    GUNLUK_MAKSIMUM_ESYA = 10
     user_id = current_user.id
     reservations_today_count = Reservation.query.filter(
         Reservation.user_id == user_id, 
-        Reservation.date == local_start_dt.date(),
+        Reservation.date == local_start_dt.date(), # Limit kontrolü kullanıcının yerel gününe göre yapılır
         Reservation.status.in_(['reserved', 'used'])
     ).count()
 
-    if (reservations_today_count + len(bed_ids)) > GUNLUK_MAKSIMUM_SEZLONG:
-        return jsonify({"success": False, "message": f"Bir günde en fazla {GUNLUK_MAKSIMUM_SEZLONG} şezlong rezerve edebilirsiniz."}), 400
+    if (reservations_today_count + len(item_ids)) > GUNLUK_MAKSIMUM_ESYA:
+        return jsonify({"success": False, "message": f"Bir günde en fazla {GUNLUK_MAKSIMUM_ESYA} eşya rezerve edebilirsiniz."}), 400
 
+    # 4. Çakışma kontrolü: Bu eşyalardan herhangi biri bu saatte başkası tarafından rezerve edilmiş mi?
     existing_reservation = Reservation.query.filter(
-        Reservation.beach_id == beach_id,
-        Reservation.bed_number.in_(bed_ids),
+        Reservation.item_id.in_(item_ids),
         Reservation.date == parsed_date_utc,
         Reservation.start_time < parsed_end_utc,
         Reservation.end_time > parsed_start_utc,
@@ -150,19 +165,24 @@ def make_reservation():
     ).first()
 
     if existing_reservation:
-        return jsonify({"success": False, "message": "Seçtiğiniz şezlonglardan biri veya birkaçı bu saat aralığında başkası tarafından rezerve edilmiş."}), 409
-    # --- Kontroller Bitiş ---
+        booked_item = RentableItem.query.get(existing_reservation.item_id)
+        item_type_tr = booked_item.item_type.replace('_', ' ').title()
+        message = f"Üzgünüz! Siz işlemi tamamlarken seçtiğiniz eşyalardan biri (#{booked_item.item_number} numaralı {item_type_tr}) başkası tarafından rezerve edildi."
+        return jsonify({"success": False, "message": message}), 409 # 409 Conflict
 
+    # --- Rezervasyonları Oluşturma ---
     try:
-        # ---- GÜNCELLENEN BÖLÜM BAŞLANGICI ----
-
-        # 1. Rezervasyon objelerini oluştur ve geçici bir listede tut
+        total_price = 0
         newly_created_reservations = []
-        for bed_id in bed_ids:
+
+        for item in requested_items:
+            # Her eşyanın kendi fiyatını toplama ekle
+            total_price += item.price
+
             new_reservation = Reservation(
                 beach_id=beach_id,
                 user_id=user_id,
-                bed_number=int(bed_id),
+                item_id=item.id, # KRİTİK DEĞİŞİKLİK: Artık item_id'yi kaydediyoruz
                 date=parsed_date_utc,
                 start_time=parsed_start_utc,
                 end_time=parsed_end_utc,
@@ -171,33 +191,29 @@ def make_reservation():
             db.session.add(new_reservation)
             newly_created_reservations.append(new_reservation)
 
-        # 2. Veritabanına kaydet. Bu işlem sonrası objeler ID değerlerini alır.
+        # Tüm yeni rezervasyonları tek seferde veritabanına işle
         db.session.commit()
-
-        # 3. WebSocket mesajı için verileri hazırla
+        
+        # WebSocket için veri hazırlama (Socket.IO kullanıyorsanız)
+        # Bu kısım eski kodunuzdan uyarlandı ve artık item bilgilerini içeriyor
         reservations_data_for_socket = []
         for res in newly_created_reservations:
+            # res.item ilişkisi sayesinde item bilgilerine direkt ulaşabiliriz
             reservations_data_for_socket.append({
-                'bed_number': res.bed_number,
-                'reservation_id': res.id  # Her şezlongun yeni ve özel ID'si
+                'item_id': res.item_id,
+                'item_number': res.item.item_number,
+                'item_type': res.item.item_type,
+                'reservation_id': res.id
             })
         
-        user_info_for_socket = f"{current_user.first_name} {current_user.last_name}"
-
-        # 4. Zenginleştirilmiş veriyle WebSocket mesajını gönder
-        socketio.emit("bulk_status_updated", {
+        socketio.emit("items_reserved", { # Event adı daha genel hale getirildi
             "beach_id": beach_id,
             "date": date_str,
-            "start_time": start_str,
-            "end_time": end_str,
-            "new_status": "reserved",
-            "user_info": user_info_for_socket,           # YENİ: Kullanıcı bilgisi
-            "reservations": reservations_data_for_socket # YENİ: ID'leri içeren liste
+            "reservations": reservations_data_for_socket
         }, broadcast=True)
 
-        # ---- GÜNCELLENEN BÖLÜM SONU ----
 
-        # Başarılı HTTP yanıtını döndür (Bu kısım değişmedi)
+        # Başarı yanıtını doğru toplam fiyatla döndür
         return jsonify({
             "success": True,
             "message": "Rezervasyon başarıyla oluşturuldu.",
@@ -205,18 +221,19 @@ def make_reservation():
                 "date": date_str,
                 "start_time": start_str,
                 "end_time": end_str,
-                "bed_count": len(bed_ids),
-                "total_price": beach.price * len(bed_ids) if beach.price else 0
+                "item_count": len(item_ids),
+                "total_price": float(total_price) # Decimal'i JSON uyumlu float'a çevir
             }
         })
 
     except IntegrityError:
         db.session.rollback()
-        return jsonify({"success": False, "message": "Üzgünüz, siz işlemi tamamlarken seçtiğiniz şezlonglardan biri rezerve edildi. Lütfen sayfayı yenileyip tekrar deneyin."}), 409
+        return jsonify({"success": False, "message": "Veritabanı hatası. Seçtiğiniz eşyalardan biri siz işlemi tamamlarken rezerve edilmiş olabilir. Lütfen sayfayı yenileyip tekrar deneyin."}), 409
     
     except Exception as e:
         db.session.rollback()
-        print(f"AN UNEXPECTED ERROR OCCURRED: {e}")
+        # Hata durumunda loglama yapmak önemlidir
+        current_app.logger.error(f"make_reservation sırasında beklenmedik hata: {e}")
         return jsonify({"success": False, "message": "Beklenmedik bir sunucu hatası oluştu. Lütfen daha sonra tekrar deneyin."}), 500
 
 @reservations_bp.route("/my-reservations")
