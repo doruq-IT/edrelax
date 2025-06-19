@@ -10,7 +10,7 @@
         </div>
         <div class="card-body">
             <form action="{{ url_for('beach_admin.add_item') }}" method="POST">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}"/>
                 <div class="row">
                     <div class="col-md-4">
                         <label for="item_type" class="form-label">Eşya Türü</label>
@@ -64,7 +64,7 @@
                             </td>
                             <td class="text-end">
                                 <form action="{{ url_for('beach_admin.delete_item', item_id=item.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Bu eşyayı silmek istediğinizden emin misiniz?');">
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}"/>
                                     <button type="submit" class="btn btn-sm btn-danger">Sil</button>
                                 </form>
                                 </td>
