@@ -213,35 +213,36 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             const response = await fetch("{{ url_for('beach_admin.update_item_status') }}", {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-Token': csrfToken
-                },
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
                 body: JSON.stringify(data)
             });
-
             const result = await response.json();
 
             if (result.success) {
-                // Arayüzü güncelle
-                activeCell.className = `time-slot status-${result.updated_data.new_status}`;
-                activeCell.dataset.status = result.updated_data.new_status;
-                if (result.updated_data.new_status !== 'free') {
-                    activeCell.textContent = result.updated_data.user_info;
-                    activeCell.dataset.userInfo = result.updated_data.user_info;
-                } else {
-                    activeCell.innerHTML = '&nbsp;';
-                    activeCell.dataset.userInfo = '';
-                    activeCell.dataset.reservationId = '';
-                }
-                alert(result.message); // Başarı mesajı
+                // --- YENİ VE AKILLI GÜNCELLEME MANTIĞI ---
+                const reservationId = data.reservationId;
+                // Aynı rezervasyona ait TÜM hücreleri bul
+                const allCellsForReservation = document.querySelectorAll(`td[data-reservation-id="${reservationId}"]`);
+
+                allCellsForReservation.forEach(cell => {
+                    // Her bir hücreyi yeni duruma göre güncelle
+                    cell.className = `time-slot status-${result.updated_data.new_status}`;
+                    cell.dataset.status = result.updated_data.new_status;
+                    
+                    // İptal edildiğinde metni de güncelle
+                    if (result.updated_data.new_status === 'cancelled') {
+                        cell.textContent = 'İptal Edildi';
+                    }
+                });
+                
+                showToast(result.message);
                 closeModal();
             } else {
-                alert('Hata: ' + result.message); // Hata mesajı
+                showToast(result.message, true);
             }
         } catch (error) {
             console.error('İstek gönderilirken hata:', error);
-            alert('Sunucuyla iletişim kurulamadı.');
+            showToast('Sunucuyla iletişim kurulamadı.', true);
         }
     }
 

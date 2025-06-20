@@ -393,7 +393,7 @@ def item_schedule():
     reservations = Reservation.query.filter(
         Reservation.beach_id == beach.id,
         Reservation.date == selected_date,
-        Reservation.status.in_(['reserved', 'used'])
+        Reservation.status.in_(['reserved', 'used', 'cancelled'])  # <-- 'cancelled' eklendi
     ).all()
     
     # Adım 5: Zaman aralıklarını oluşturalım. Bu kısım da benzer kalabilir.
