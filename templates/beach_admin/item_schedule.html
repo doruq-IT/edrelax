@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+
+{% block title %}Eşya Zaman Çizelgesi - {{ beach.name }}{% endblock %}
+
+{% block content %}
+<style>
+    /* Sadece temel renklendirme için basit stiller */
+    .schedule-table th, .schedule-table td {
+        min-width: 65px;
+        text-align: center;
+        vertical-align: middle;
+        font-size: 0.9rem;
+    }
+    .item-name-col {
+        min-width: 180px;
+        font-weight: bold;
+        text-align: left !important;
+    }
+    .slot-available {
+        background-color: #d1e7dd; /* Açık Yeşil */
+    }
+    .slot-booked {
+        background-color: #f8d7da; /* Açık Kırmızı */
+    }
+</style>
+
+<div class="container-fluid mt-4">
+    <h2 class="mb-4">Eşya Zaman Çizelgesi: <span class="text-primary">{{ beach.name }}</span></h2>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" action="{{ url_for('beach_admin.item_schedule') }}">
+                <div class="row align-items-end">
+                    <div class="col-md-4">
+                        <label for="date" class="form-label">Tarih Seçin</label>
+                        <input type="date" class="form-control" id="date" name="date" value="{{ selected_date_str }}">
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary w-100">Göster</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-bordered schedule-table">
+            <thead class="table-light">
+                <tr>
+                    <th class="item-name-col">Eşya</th>
+                    
+                    {% for hour in hours %}
+                        <th>{{ hour }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for item_id, data in schedule.items() %}
+                <tr>
+                    <td class="item-name-col">
+                        {{ data.item_info.item_type.replace('_', ' ').title() }} #{{ data.item_info.item_number }}
+                    </td>
+                    
+                    {% for hour_key, slot_info in data.slots.items() %}
+                        <td class="{% if slot_info.status == 'free' %}slot-available{% else %}slot-booked{% endif %}">
+                            &nbsp;
+                        </td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+
+                {% if not schedule %}
+                <tr>
+                    <td colspan="{{ hours|length + 1 }}" class="text-center p-4">Bu plaj için gösterilecek eşya bulunamadı.</td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

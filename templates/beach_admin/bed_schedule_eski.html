@@ -109,13 +109,13 @@ beach.name }}{% endblock %} {% block content %}
       <tbody>
         {% for bed_num, hour_map in bed_schedule.items() %}
         <tr>
-          <td><strong>{{ bed_num | to_alphanumeric_bed_id }}</strong></td>
+          <td><strong>{{ data.item_info.item_type.replace('_', ' ').title() }} #{{ data.item_info.item_number }}</strong></td>
           {% for hour_key in hours %} {% set slot_info = hour_map.get(hour_key,
           {"status": "free", "time": hour_key, "reservation_id": None,
           "user_info": None}) %}
           <td
             class="bed-slot status-{{ slot_info.status | lower | replace(' ', '-') }}"
-            data-bed-number="{{ bed_num }}"
+            data-item-id="{{ bed_num }}"
             data-time-slot="{{ hour_key }}"
             data-current-status="{{ slot_info.status }}"
             {%
@@ -191,7 +191,7 @@ beach.name }}{% endblock %} {% block content %}
               // Başlangıç ve bitiş saatleri arasındaki her bir saat dilimi için döngüye gir
               for (let h = startHour; h < endHour; h++) {
                   const time_slot = h.toString().padStart(2, '0') + ':00';
-                  const selector = `.bed-slot[data-bed-number="${bed_number}"][data-time-slot="${time_slot}"]`;
+                  const selector = `.bed-slot[data-item-id="${bed_number}"][data-time-slot="${time_slot}"]`;
                   const cellToUpdate = document.querySelector(selector);
 
                   if (cellToUpdate) {
@@ -246,7 +246,7 @@ beach.name }}{% endblock %} {% block content %}
     const toggleMultiSelectModeBtn = document.getElementById('toggleMultiSelectModeBtn');
     const applyToSelectedBtn = document.getElementById('applyToSelectedBtn');
     let isMultiSelectModeActive = false;
-    let currentSelectedBedNumberForMulti = null;
+    let currentSelecteditemIdForMulti = null;
     let currentlySelectedSlots = [];
 
     toggleMultiSelectModeBtn.addEventListener('click', function () {
@@ -278,7 +278,7 @@ beach.name }}{% endblock %} {% block content %}
       // Çoklu seçim sadece tek bir şezlong için geçerli olduğundan,
       // bir tanesinin bilgisi hepsi için yeterli olacaktır.
       const firstSlot = currentlySelectedSlots[0];
-      const bedNumber = firstSlot.dataset.bedNumber;
+      const itemId = firstSlot.dataset.itemId;
       const reservationId = firstSlot.dataset.reservationId;
       const userInfo = firstSlot.dataset.userInfo;
       const userEmail = firstSlot.dataset.userEmail;
@@ -296,7 +296,7 @@ beach.name }}{% endblock %} {% block content %}
       }
 
       Swal.fire({
-        title: `Şezlong #${bedNumber}`,
+        title: `Şezlong #${itemId}`,
         html: alertHtml, // Dinamik HTML içeriğini kullan
         input: 'select',
         inputOptions: statusOptions,
@@ -364,7 +364,7 @@ beach.name }}{% endblock %} {% block content %}
             const trueEndTime = endDateObj.toTimeString().slice(0, 5); // "HH:MM" formatı
             const updatePromises = currentlySelectedSlots.map((slotEl, index) => {
               const reservationId = slotEl.dataset.reservationId;
-              const bedNum = slotEl.dataset.bedNumber;
+              const bedNum = slotEl.dataset.itemId;
               
 
               return updateStatusOnServer(
@@ -414,7 +414,7 @@ beach.name }}{% endblock %} {% block content %}
           const mailBody = encodeURIComponent(
             `Merhaba ${userInfo || ''},\n\n` +
             `${currentBeachName} olarak şezlong rezervasyonunuzla ilgili size ulaşmak istedik.\n\n` +
-            `Rezervasyon Detayları:\nPlaj: ${currentBeachName}\nŞezlong: #${bedNumber}\nTarih: ${selectedDate}\nSaatler: ${timeSlotsString}\n\n` +
+            `Rezervasyon Detayları:\nPlaj: ${currentBeachName}\nŞezlong: #${itemId}\nTarih: ${selectedDate}\nSaatler: ${timeSlotsString}\n\n` +
             `Konuyla ilgili size yardımcı olabiliriz.\n\nSaygılarımızla,\n${currentBeachName} Ekibi`
           );
           window.location.href = `mailto:${userEmail}?subject=${mailSubject}&body=${mailBody}`;
@@ -424,14 +424,14 @@ beach.name }}{% endblock %} {% block content %}
 
     bedSlots.forEach(slot => {
       slot.addEventListener('click', function () {
-        const clickedBedNum = this.dataset.bedNumber;
+        const clickedBedNum = this.dataset.itemId;
 
         if (isMultiSelectModeActive) {
-          if (currentSelectedBedNumberForMulti === null) {
-            currentSelectedBedNumberForMulti = clickedBedNum;
-          } else if (currentSelectedBedNumberForMulti !== clickedBedNum) {
+          if (currentSelecteditemIdForMulti === null) {
+            currentSelecteditemIdForMulti = clickedBedNum;
+          } else if (currentSelecteditemIdForMulti !== clickedBedNum) {
             clearCurrentMultiSelection();
-            currentSelectedBedNumberForMulti = clickedBedNum;
+            currentSelecteditemIdForMulti = clickedBedNum;
           }
 
           const selectionIndex = currentlySelectedSlots.indexOf(this);
@@ -445,8 +445,8 @@ beach.name }}{% endblock %} {% block content %}
 
           updateApplyToSelectedButtonState();
         } else {
-          const bedNumber = this.dataset.bedNumber;
-          const bedDisplayId = this.dataset.bedDisplayId || `#${bedNumber}`;
+          const itemId = this.dataset.itemId;
+          const bedDisplayId = this.dataset.bedDisplayId || `#${itemId}`;
           const timeSlot = this.dataset.timeSlot;
           const currentStatus = this.dataset.currentStatus;
           const reservationId = this.dataset.reservationId;
@@ -479,7 +479,7 @@ beach.name }}{% endblock %} {% block content %}
           }).then((result) => {
             if (result.isConfirmed && result.value) {
               const newStatus = result.value;
-              updateStatusOnServer(this, reservationId, newStatus, bedNumber, timeSlot, selectedDate, beachId);
+              updateStatusOnServer(this, reservationId, newStatus, itemId, timeSlot, selectedDate, beachId);
             } else if (result.isDenied) {
               if (userEmail && userEmail !== 'None') {
                 const currentBeachName = document.getElementById('bedScheduleContainer').dataset.beachName || "Plajımız";
@@ -503,7 +503,7 @@ beach.name }}{% endblock %} {% block content %}
     function clearCurrentMultiSelection() {
       currentlySelectedSlots.forEach(s => s.classList.remove('slot-selected'));
       currentlySelectedSlots = [];
-      currentSelectedBedNumberForMulti = null;
+      currentSelecteditemIdForMulti = null;
     }
 
     function updateApplyToSelectedButtonState() {
@@ -524,11 +524,11 @@ beach.name }}{% endblock %} {% block content %}
       }
       return cookieValue;
   }
-    function updateStatusOnServer(cellElement, reservationId, newStatus, bedNumber, timeSlot, endTime, date, beachId, isBatchOperation = false, mailTrigger = false) {
+    function updateStatusOnServer(cellElement, reservationId, newStatus, itemId, timeSlot, endTime, date, beachId, isBatchOperation = false, mailTrigger = false) {
       return new Promise((resolve, reject) => {
         const payload = { 
           new_status: newStatus,
-          bed_number: parseInt(bedNumber),
+          bed_number: parseInt(itemId),
           beach_id: parseInt(beachId),
           date: date,
           time_slot: timeSlot
@@ -610,7 +610,7 @@ beach.name }}{% endblock %} {% block content %}
         cellElement.textContent = statusText;
 
         // 4. Title'ı (fareyle üzerine gelince çıkan yazı) güncelle
-        const bedDisplayForTitle = cellElement.dataset.bedDisplayId || `#${cellElement.dataset.bedNumber}`;
+        const bedDisplayForTitle = cellElement.dataset.bedDisplayId || `#${cellElement.dataset.itemId}`;
         let newTitle = `Durum: ${statusText} (${cellElement.dataset.timeSlot})`;
         if (reservationId && !['free', 'cancelled'].includes(newStatus)) {
             newTitle = `Kullanıcı: ${userInfo || 'Bilinmiyor'} | Durum: ${statusText} | ID: ${reservationId}`;
