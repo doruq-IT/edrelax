@@ -236,10 +236,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
                 
                 showToast(result.message);
-                closeModal();
             } else {
                 showToast(result.message, true);
             }
+            closeModal();
         } catch (error) {
             console.error('İstek gönderilirken hata:', error);
             showToast('Sunucuyla iletişim kurulamadı.', true);
