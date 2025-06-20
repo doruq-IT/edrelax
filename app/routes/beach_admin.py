@@ -410,9 +410,6 @@ def item_schedule():
             "slots": {hour: {"status": "free", "user_info": None} for hour in hours}
         }
 
-    # Adım 7: Rezervasyonları işleyerek zaman çizelgesini dolduralım.
-    # Artık her rezervasyon için UTC->Local dönüşümü yapmak yerine,
-    # veritabanındaki UTC saatleri doğrudan karşılaştırabiliriz. Bu daha basit ve güvenilirdir.
     for res in reservations:
         # Rezervasyonun hangi eşyaya ait olduğunu kontrol et
         if res.item_id in schedule_data:
@@ -424,7 +421,8 @@ def item_schedule():
                     user = User.query.get(res.user_id) # Kullanıcı bilgisini burada alalım
                     schedule_data[res.item_id]["slots"][hour_key] = {
                         "status": res.status,
-                        "user_info": f"{user.first_name} {user.last_name}" if user else "Bilinmiyor"
+                        "user_info": f"{user.first_name} {user.last_name}" if user else "Bilinmiyor",
+                        "reservation_id": res.id  # <-- EKSİK OLAN PARÇA BU
                     }
                 current_hour += 1
 
