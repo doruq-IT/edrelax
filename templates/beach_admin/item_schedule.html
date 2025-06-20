@@ -1,70 +1,101 @@
 {% extends 'base.html' %} {% block title %}Eşya Zaman Çizelgesi - {{ beach.name
 }}{% endblock %} {% block content %}
 <style>
-  /* Sadece temel renklendirme için basit stiller */
-  .schedule-table th,
-  .schedule-table td {
-    min-width: 65px;
-    text-align: center;
-    vertical-align: middle;
-    font-size: 0.9rem;
-  }
-  .item-name-col {
-    min-width: 180px;
-    font-weight: bold;
-    text-align: left !important;
-  }
-  .slot-available {
-    background-color: #d1e7dd; /* Açık Yeşil */
-  }
-  .slot-booked {
-    background-color: #f8d7da; /* Açık Kırmızı */
-  }
+    /* Genel Tablo Stilleri */
+    .schedule-table th,
+    .schedule-table td {
+        min-width: 65px;
+        text-align: center;
+        vertical-align: middle;
+        font-size: 0.9rem;
+        border: 1px solid #dee2e6; /* Hücreleri daha belirgin hale getirmek için kenarlık */
+    }
+    .item-name-col {
+        min-width: 180px;
+        font-weight: bold;
+        text-align: left !important;
+        background-color: #f8f9fa; /* Eşya isimlerinin olduğu sütunu hafifçe ayır */
+    }
 
-.modal-backdrop {
-    display: none; /* Varsayılan olarak gizli */
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background-color: rgba(0, 0, 0, 0.5);
-    z-index: 1040;
-}
-.modal-content {
-    display: none; /* Varsayılan olarak gizli */
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background-color: white;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
-    z-index: 1050;
-    width: 90%;
-    max-width: 500px;
-}
-.modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 1px solid #dee2e6;
-    padding-bottom: 10px;
-    margin-bottom: 15px;
-}
-.modal-body {
-    margin-bottom: 20px;
-}
-.modal-footer {
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px; /* Butonlar arası boşluk */
-    border-top: 1px solid #dee2e6;
-    padding-top: 15px;
-}
+    /* Durum Renkleri ve Metin Renkleri */
+    /* Daha iyi okunabilirlik için hem arkaplanı hem de metin rengini ayarlıyoruz */
+    .status-free {
+        background-color: #d1e7dd; /* Açık Yeşil */
+        color: #0f5132;
+    }
+    .status-reserved {
+        background-color: #f8d7da; /* Açık Kırmızı */
+        color: #842029;
+        font-weight: 500;
+    }
+    .status-used {
+        background-color: #cff4fc; /* Açık Mavi */
+        color: #055160;
+        font-weight: 500;
+    }
+    .status-cancelled {
+        background-color: #e9ecef; /* Açık Gri */
+        color: #495057;
+        text-decoration: line-through; /* Üstü çizili */
+    }
+
+    /* Fareyle Üzerine Gelme (Hover) Efekti */
+    .time-slot {
+        /* Efektlerin aniden değil, yumuşak bir geçişle olmasını sağlar */
+        transition: all 0.2s ease-in-out;
+    }
+
+    .time-slot:hover {
+        cursor: pointer; /* Farenin el işaretine dönüşmesini sağlar */
+        filter: brightness(105%); /* Mevcut rengi %5 daha parlak yaparak dikkat çeker */
+        transform: scale(0.98); /* Hücrenin hafifçe küçülerek tıklanma hissi vermesi için */
+        box-shadow: 0 0 15px rgba(0, 0, 0, 0.2) inset; /* İçeri doğru gölge */
+    }
+
+    /* Modal Stilleri */
+    .modal-backdrop {
+        display: none; /* Varsayılan olarak gizli */
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 1040;
+    }
+    .modal-content {
+        display: none; /* Varsayılan olarak gizli */
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background-color: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+        z-index: 1050;
+        width: 90%;
+        max-width: 500px;
+    }
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #dee2e6;
+        padding-bottom: 10px;
+        margin-bottom: 15px;
+    }
+    .modal-body {
+        margin-bottom: 20px;
+    }
+    .modal-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px; /* Butonlar arası boşluk */
+        border-top: 1px solid #dee2e6;
+        padding-top: 15px;
+    }
 </style>
-
 <div class="container-fluid mt-4">
   <h2 class="mb-4">
     Eşya Zaman Çizelgesi: <span class="text-primary">{{ beach.name }}</span>
