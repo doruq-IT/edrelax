@@ -91,7 +91,7 @@
           </a>
 
           {% if session.get('beach_id') %}
-            <a href="{{ url_for('beach_admin.bed_schedule', beach_id=session.get('beach_id')) }}" class="{% if request.path == url_for('beach_admin.bed_schedule', beach_id=session.get('beach_id')) %}active{% endif %}">
+            <a href="{{ url_for('beach_admin.item_schedule') }}" class="{% if request.path == url_for('beach_admin.item_schedule') %}active{% endif %}">
               ⏰ Saatlik Doluluk
             </a>
           {% endif %}
