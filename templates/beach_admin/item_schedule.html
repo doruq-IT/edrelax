@@ -20,6 +20,49 @@
   .slot-booked {
     background-color: #f8d7da; /* Açık Kırmızı */
   }
+
+.modal-backdrop {
+    display: none; /* Varsayılan olarak gizli */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1040;
+}
+.modal-content {
+    display: none; /* Varsayılan olarak gizli */
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+    z-index: 1050;
+    width: 90%;
+    max-width: 500px;
+}
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #dee2e6;
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+}
+.modal-body {
+    margin-bottom: 20px;
+}
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px; /* Butonlar arası boşluk */
+    border-top: 1px solid #dee2e6;
+    padding-top: 15px;
+}
 </style>
 
 <div class="container-fluid mt-4">
@@ -96,41 +139,93 @@
     </table>
   </div>
 </div>
+{# MODAL HTML YAPISI BURAYA EKLENECEK #}
+<div id="schedule-modal-backdrop" class="modal-backdrop"></div>
+<div id="schedule-modal" class="modal-content">
+    <div class="modal-header">
+        <h5 id="modal-title">Eşya Durumu</h5>
+        <button type="button" id="modal-close-btn" class="btn-close"></button>
+    </div>
+    <div id="modal-body" class="modal-body">
+        <p>İçerik buraya yüklenecek...</p>
+    </div>
+    <div id="modal-footer" class="modal-footer">
+        {# Butonlar JavaScript ile dinamik olarak buraya eklenecek #}
+    </div>
+</div>
 {% block scripts %}
 <script>
-  document.addEventListener("DOMContentLoaded", function () {
-    const scheduleTable = document.getElementById("schedule-table");
+document.addEventListener('DOMContentLoaded', function() {
+    // Modal elementlerini seç
+    const backdrop = document.getElementById('schedule-modal-backdrop');
+    const modal = document.getElementById('schedule-modal');
+    const modalTitle = document.getElementById('modal-title');
+    const modalBody = document.getElementById('modal-body');
+    const modalFooter = document.getElementById('modal-footer');
+    const closeBtn = document.getElementById('modal-close-btn');
+    const scheduleTable = document.getElementById('schedule-table');
+
+    // Modal'ı kapatma fonksiyonu
+    function closeModal() {
+        modal.style.display = 'none';
+        backdrop.style.display = 'none';
+    }
+
+    // Kapatma butonlarına ve arka plana tıklama olayı ekle
+    closeBtn.addEventListener('click', closeModal);
+    backdrop.addEventListener('click', closeModal);
 
     if (scheduleTable) {
-      scheduleTable.addEventListener("click", function (event) {
-        // Tıklanan elementin bir zaman hücresi olup olmadığını kontrol et
-        if (event.target.matches("td.time-slot")) {
-          const cell = event.target;
+        scheduleTable.addEventListener('click', function(event) {
+            if (event.target.matches('td.time-slot')) {
+                const cell = event.target;
+                const cellData = {
+                    itemId: cell.dataset.itemId,
+                    date: cell.dataset.date,
+                    time: cell.dataset.time,
+                    status: cell.dataset.status,
+                    reservationId: cell.dataset.reservationId,
+                    userInfo: cell.dataset.userInfo
+                };
+                
+                // --- MODAL'I DOLDURMA ---
+                const itemInfo = cell.closest('tr').querySelector('.item-name-col').textContent.trim();
+                modalTitle.textContent = `${itemInfo} - Saat: ${cellData.time}`;
 
-          // Hücrenin data-* niteliklerinden tüm bilgileri topla
-          const cellData = {
-            itemId: cell.dataset.itemId,
-            date: cell.dataset.date,
-            time: cell.dataset.time,
-            status: cell.dataset.status,
-            reservationId: cell.dataset.reservationId,
-            userInfo: cell.dataset.userInfo,
-          };
+                // Modal içeriğini oluştur
+                let bodyHtml = `<p><strong>Durum:</strong> <span class="text-capitalize">${cellData.status}</span></p>`;
+                if (cellData.userInfo) {
+                    bodyHtml += `<p><strong>Kullanıcı:</strong> ${cellData.userInfo}</p>`;
+                }
+                modalBody.innerHTML = bodyHtml;
 
-          // Geliştirme için konsola yazdır
-          console.log("Hücre Verisi:", cellData);
+                // Modal butonlarını duruma göre oluştur
+                modalFooter.innerHTML = ''; // Önceki butonları temizle
 
-          // Kullanıcıya basit bir geri bildirim göster
-          alert(
-            `Tıkladınız!\n\n` +
-              `Eşya ID: ${cellData.itemId}\n` +
-              `Tarih: ${cellData.date}\n` +
-              `Saat: ${cellData.time}\n` +
-              `Durum: ${cellData.status}`
-          );
-        }
-      });
+                if (cellData.status === 'free') {
+                    const reserveButton = document.createElement('button');
+                    reserveButton.className = 'btn btn-primary';
+                    reserveButton.textContent = 'Rezervasyon Yap';
+                    modalFooter.appendChild(reserveButton);
+                } else { // reserved veya used
+                    const useButton = document.createElement('button');
+                    useButton.className = 'btn btn-success';
+                    useButton.textContent = 'Kullanımda Yap';
+                    useButton.disabled = cellData.status === 'used'; // Zaten kullanımdaysa pasif yap
+                    modalFooter.appendChild(useButton);
+
+                    const cancelButton = document.createElement('button');
+                    cancelButton.className = 'btn btn-danger';
+                    cancelButton.textContent = 'Rezervasyonu İptal Et';
+                    modalFooter.appendChild(cancelButton);
+                }
+                
+                // --- MODAL'I GÖSTERME ---
+                modal.style.display = 'block';
+                backdrop.style.display = 'block';
+            }
+        });
     }
-  });
+});
 </script>
 {% endblock %} {% endblock %}
