@@ -187,7 +187,7 @@
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // --- Element Seçimleri (Aynı) ---
+    // --- Element Seçimleri ---
     const backdrop = document.getElementById('schedule-modal-backdrop');
     const modal = document.getElementById('schedule-modal');
     const modalTitle = document.getElementById('modal-title');
@@ -195,20 +195,40 @@ document.addEventListener('DOMContentLoaded', function() {
     const modalFooter = document.getElementById('modal-footer');
     const closeBtn = document.getElementById('modal-close-btn');
     const scheduleTable = document.getElementById('schedule-table');
-    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content'); // CSRF token'ı al
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    const toast = document.getElementById('toast-notification');
     
-    let activeCell = null; // Hangi hücreye tıkladığımızı hafızada tutmak için
+    let activeCell = null;
+    let toastTimeout;
 
-    // --- Modal Kapatma Fonksiyonu (Aynı) ---
+    // --- Toast Gösterme Fonksiyonu (EKSİK OLAN KISIM BUYDU) ---
+    function showToast(message, isError = false) {
+        if (!toast) return; // Toast elementi bulunamazsa hata vermemesi için
+        clearTimeout(toastTimeout);
+        toast.textContent = message;
+        toast.className = 'toast-notification';
+        if (isError) {
+            toast.classList.add('error');
+        }
+        toast.classList.add('show');
+        
+        toastTimeout = setTimeout(() => {
+            toast.classList.remove('show');
+        }, 3000);
+    }
+
+    // --- Modal Kapatma Fonksiyonu ---
     function closeModal() {
-        modal.style.display = 'none';
-        backdrop.style.display = 'none';
+        if (modal && backdrop) {
+            modal.style.display = 'none';
+            backdrop.style.display = 'none';
+        }
         activeCell = null;
     }
-    closeBtn.addEventListener('click', closeModal);
-    backdrop.addEventListener('click', closeModal);
+    if (closeBtn) closeBtn.addEventListener('click', closeModal);
+    if (backdrop) backdrop.addEventListener('click', closeModal);
 
-    // --- YENİ: Sunucuya Güncelleme İsteği Gönderme Fonksiyonu ---
+    // --- Sunucuya Güncelleme İsteği Gönderme Fonksiyonu ---
     async function sendUpdateRequest(data) {
         try {
             const response = await fetch("{{ url_for('beach_admin.update_item_status') }}", {
@@ -219,38 +239,33 @@ document.addEventListener('DOMContentLoaded', function() {
             const result = await response.json();
 
             if (result.success) {
-                // --- YENİ VE AKILLI GÜNCELLEME MANTIĞI ---
                 const reservationId = data.reservationId;
-                // Aynı rezervasyona ait TÜM hücreleri bul
                 const allCellsForReservation = document.querySelectorAll(`td[data-reservation-id="${reservationId}"]`);
 
                 allCellsForReservation.forEach(cell => {
-                    // Her bir hücreyi yeni duruma göre güncelle
                     cell.className = `time-slot status-${result.updated_data.new_status}`;
                     cell.dataset.status = result.updated_data.new_status;
-                    
-                    // İptal edildiğinde metni de güncelle
                     if (result.updated_data.new_status === 'cancelled') {
                         cell.textContent = 'İptal Edildi';
                     }
                 });
                 
                 showToast(result.message);
+                closeModal();
             } else {
                 showToast(result.message, true);
             }
-            closeModal();
         } catch (error) {
             console.error('İstek gönderilirken hata:', error);
             showToast('Sunucuyla iletişim kurulamadı.', true);
         }
     }
 
-    // --- Tablo Tıklama Olayı (GÜNCELLENDİ) ---
+    // --- Tablo Tıklama Olayı ---
     if (scheduleTable) {
         scheduleTable.addEventListener('click', function(event) {
             if (event.target.matches('td.time-slot')) {
-                activeCell = event.target; // Tıklanan hücreyi sakla
+                activeCell = event.target;
                 const cellData = {
                     itemId: activeCell.dataset.itemId,
                     date: activeCell.dataset.date,
@@ -268,21 +283,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 modalBody.innerHTML = bodyHtml;
                 modalFooter.innerHTML = ''; 
 
-                // Butonları oluştur ve olay dinleyicileri ekle
-                if (cellData.status === 'reserved') {
+                if (cellData.status === 'reserved' || cellData.status === 'used') {
                     const useButton = document.createElement('button');
                     useButton.className = 'btn btn-success';
                     useButton.textContent = 'Kullanımda Yap';
+                    useButton.disabled = cellData.status === 'used';
                     useButton.onclick = () => sendUpdateRequest({ ...cellData, newStatus: 'used' });
                     modalFooter.appendChild(useButton);
 
                     const cancelButton = document.createElement('button');
-                    cancelButton.className = 'btn btn-danger';
-                    cancelButton.textContent = 'Rezervasyonu İptal Et';
-                    cancelButton.onclick = () => sendUpdateRequest({ ...cellData, newStatus: 'cancelled' });
-                    modalFooter.appendChild(cancelButton);
-                } else if (cellData.status === 'used') {
-                     const cancelButton = document.createElement('button');
                     cancelButton.className = 'btn btn-danger';
                     cancelButton.textContent = 'Rezervasyonu İptal Et';
                     cancelButton.onclick = () => sendUpdateRequest({ ...cellData, newStatus: 'cancelled' });
