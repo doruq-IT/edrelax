@@ -410,19 +410,29 @@ def item_schedule():
             "slots": {hour: {"status": "free", "user_info": None} for hour in hours}
         }
 
+    local_tz = timezone("Europe/Istanbul")
+    utc_tz = utc # Dosyanın başında 'from pytz import utc' olduğundan emin olun
+
     for res in reservations:
-        # Rezervasyonun hangi eşyaya ait olduğunu kontrol et
         if res.item_id in schedule_data:
-            # Rezervasyonun saatlerini kullanarak ilgili slot'ları 'dolu' olarak işaretle
-            current_hour = res.start_time.hour
-            while current_hour < res.end_time.hour:
+            # Önce UTC datetime nesneleri oluştur (veritabanı saatleri naive'dir)
+            start_utc_dt = utc_tz.localize(datetime.combine(selected_date, res.start_time))
+            end_utc_dt = utc_tz.localize(datetime.combine(selected_date, res.end_time))
+            
+            # Sonra bu nesneleri yerel saate çevir
+            start_local_dt = start_utc_dt.astimezone(local_tz)
+            end_local_dt = end_utc_dt.astimezone(local_tz)
+
+            # Şimdi döngüyü yerel saatlere göre kur
+            current_hour = start_local_dt.hour
+            while current_hour < end_local_dt.hour:
                 hour_key = f"{current_hour:02d}:00"
                 if hour_key in schedule_data[res.item_id]["slots"]:
-                    user = User.query.get(res.user_id) # Kullanıcı bilgisini burada alalım
+                    user = User.query.get(res.user_id)
                     schedule_data[res.item_id]["slots"][hour_key] = {
                         "status": res.status,
                         "user_info": f"{user.first_name} {user.last_name}" if user else "Bilinmiyor",
-                        "reservation_id": res.id  # <-- EKSİK OLAN PARÇA BU
+                        "reservation_id": res.id
                     }
                 current_hour += 1
 
