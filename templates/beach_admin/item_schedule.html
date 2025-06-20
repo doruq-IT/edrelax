@@ -1,81 +1,136 @@
-{% extends 'base.html' %}
-
-{% block title %}Eşya Zaman Çizelgesi - {{ beach.name }}{% endblock %}
-
-{% block content %}
+{% extends 'base.html' %} {% block title %}Eşya Zaman Çizelgesi - {{ beach.name
+}}{% endblock %} {% block content %}
 <style>
-    /* Sadece temel renklendirme için basit stiller */
-    .schedule-table th, .schedule-table td {
-        min-width: 65px;
-        text-align: center;
-        vertical-align: middle;
-        font-size: 0.9rem;
-    }
-    .item-name-col {
-        min-width: 180px;
-        font-weight: bold;
-        text-align: left !important;
-    }
-    .slot-available {
-        background-color: #d1e7dd; /* Açık Yeşil */
-    }
-    .slot-booked {
-        background-color: #f8d7da; /* Açık Kırmızı */
-    }
+  /* Sadece temel renklendirme için basit stiller */
+  .schedule-table th,
+  .schedule-table td {
+    min-width: 65px;
+    text-align: center;
+    vertical-align: middle;
+    font-size: 0.9rem;
+  }
+  .item-name-col {
+    min-width: 180px;
+    font-weight: bold;
+    text-align: left !important;
+  }
+  .slot-available {
+    background-color: #d1e7dd; /* Açık Yeşil */
+  }
+  .slot-booked {
+    background-color: #f8d7da; /* Açık Kırmızı */
+  }
 </style>
 
 <div class="container-fluid mt-4">
-    <h2 class="mb-4">Eşya Zaman Çizelgesi: <span class="text-primary">{{ beach.name }}</span></h2>
+  <h2 class="mb-4">
+    Eşya Zaman Çizelgesi: <span class="text-primary">{{ beach.name }}</span>
+  </h2>
 
-    <div class="card mb-4">
-        <div class="card-body">
-            <form method="GET" action="{{ url_for('beach_admin.item_schedule') }}">
-                <div class="row align-items-end">
-                    <div class="col-md-4">
-                        <label for="date" class="form-label">Tarih Seçin</label>
-                        <input type="date" class="form-control" id="date" name="date" value="{{ selected_date_str }}">
-                    </div>
-                    <div class="col-md-2">
-                        <button type="submit" class="btn btn-primary w-100">Göster</button>
-                    </div>
-                </div>
-            </form>
+  <div class="card mb-4">
+    <div class="card-body">
+      <form method="GET" action="{{ url_for('beach_admin.item_schedule') }}">
+        <div class="row align-items-end">
+          <div class="col-md-4">
+            <label for="date" class="form-label">Tarih Seçin</label>
+            <input
+              type="date"
+              class="form-control"
+              id="date"
+              name="date"
+              value="{{ selected_date_str }}"
+            />
+          </div>
+          <div class="col-md-2">
+            <button type="submit" class="btn btn-primary w-100">Göster</button>
+          </div>
         </div>
+      </form>
     </div>
+  </div>
 
-    <div class="table-responsive">
-        <table class="table table-bordered schedule-table">
-            <thead class="table-light">
-                <tr>
-                    <th class="item-name-col">Eşya</th>
-                    
-                    {% for hour in hours %}
-                        <th>{{ hour }}</th>
-                    {% endfor %}
-                </tr>
-            </thead>
-            <tbody>
-                {% for item_id, data in schedule.items() %}
-                <tr>
-                    <td class="item-name-col">
-                        {{ data.item_info.item_type.replace('_', ' ').title() }} #{{ data.item_info.item_number }}
-                    </td>
-                    
-                    {% for hour_key, slot_info in data.slots.items() %}
-                        <td class="{% if slot_info.status == 'free' %}slot-available{% else %}slot-booked{% endif %}">
-                            &nbsp;
-                        </td>
-                    {% endfor %}
-                </tr>
-                {% endfor %}
+  <div class="table-responsive">
+    <table class="table table-bordered schedule-table" id="schedule-table">
+      <thead class="table-light">
+        <tr>
+          <th class="item-name-col">Eşya</th>
 
-                {% if not schedule %}
-                <tr>
-                    <td colspan="{{ hours|length + 1 }}" class="text-center p-4">Bu plaj için gösterilecek eşya bulunamadı.</td>
-                </tr>
-                {% endif %}
-            </tbody>
-        </table>
-    </div>
+          {% for hour in hours %}
+          <th>{{ hour }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for item_id, data in schedule.items() %}
+        <tr>
+          <td class="item-name-col">
+            {{ data.item_info.item_type.replace('_', ' ')|title }} #{{
+            data.item_info.item_number }}
+          </td>
+
+          {% for hour_key, slot_info in data.slots.items() %} {# --- GÜNCELLEME
+          BURADA BAŞLIYOR --- #}
+          <td
+            class="time-slot status-{{ slot_info.status|default('free') }}"
+            data-item-id="{{ item_id }}"
+            data-date="{{ selected_date_str }}"
+            data-time="{{ hour_key }}"
+            data-status="{{ slot_info.status|default('free') }}"
+            data-reservation-id="{{ slot_info.reservation_id or '' }}"
+            data-user-info="{{ slot_info.user_info or '' }}"
+          >
+            {# Doluysa, kimin rezerve ettiğini gösterelim #} {% if
+            slot_info.status != 'free' %} {{ slot_info.user_info or 'Dolu' }} {%
+            else %} &nbsp; {# Boşsa boş kalsın #} {% endif %}
+          </td>
+          {# --- GÜNCELLEME BURADA BİTİYOR --- #} {% endfor %}
+        </tr>
+        {% endfor %} {% if not schedule %}
+        <tr>
+          <td colspan="{{ hours|length + 1 }}" class="text-center p-4">
+            Bu plaj için gösterilecek eşya bulunamadı.
+          </td>
+        </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
 </div>
-{% endblock %}
+{% block scripts %}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const scheduleTable = document.getElementById("schedule-table");
+
+    if (scheduleTable) {
+      scheduleTable.addEventListener("click", function (event) {
+        // Tıklanan elementin bir zaman hücresi olup olmadığını kontrol et
+        if (event.target.matches("td.time-slot")) {
+          const cell = event.target;
+
+          // Hücrenin data-* niteliklerinden tüm bilgileri topla
+          const cellData = {
+            itemId: cell.dataset.itemId,
+            date: cell.dataset.date,
+            time: cell.dataset.time,
+            status: cell.dataset.status,
+            reservationId: cell.dataset.reservationId,
+            userInfo: cell.dataset.userInfo,
+          };
+
+          // Geliştirme için konsola yazdır
+          console.log("Hücre Verisi:", cellData);
+
+          // Kullanıcıya basit bir geri bildirim göster
+          alert(
+            `Tıkladınız!\n\n` +
+              `Eşya ID: ${cellData.itemId}\n` +
+              `Tarih: ${cellData.date}\n` +
+              `Saat: ${cellData.time}\n` +
+              `Durum: ${cellData.status}`
+          );
+        }
+      });
+    }
+  });
+</script>
+{% endblock %} {% endblock %}
