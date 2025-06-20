@@ -34,11 +34,11 @@
           <div class="col-md-4">
             <label for="date" class="form-label">Tarih Seçin</label>
             <input
-              type="date"
-              class="form-control"
-              id="date"
-              name="date"
-              value="{{ selected_date_str }}"
+                type="date"
+                class="form-control"
+                id="date"
+                name="date"
+                value="{{ selected_date }}"
             />
           </div>
           <div class="col-md-2">
@@ -73,7 +73,7 @@
           <td
             class="time-slot status-{{ slot_info.status|default('free') }}"
             data-item-id="{{ item_id }}"
-            data-date="{{ selected_date_str }}"
+            data-date="{{ selected_date }}"
             data-time="{{ hour_key }}"
             data-status="{{ slot_info.status|default('free') }}"
             data-reservation-id="{{ slot_info.reservation_id or '' }}"
