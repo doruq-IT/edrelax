@@ -668,7 +668,62 @@ def delayed_confirmation_check(app, reservation_id):
             db.session.rollback()
             app.logger.error(f"❌ delayed_confirmation_check içinde hata oluştu: {e}")
 
+@beach_admin_bp.route('/update-item-status', methods=['POST'])
+@beach_admin_required
+def update_item_status():
+    """
+    Zaman çizelgesinden gelen AJAX isteklerini işler, rezervasyon durumunu günceller.
+    """
+    data = request.get_json()
+    if not data:
+        return jsonify({"success": False, "message": "Geçersiz istek."}), 400
 
+    item_id = data.get('itemId')
+    new_status = data.get('newStatus')
+    
+    # Gerekli verilerin varlığını kontrol et
+    if not all([item_id, new_status]):
+        return jsonify({"success": False, "message": "Eksik bilgi: itemId ve newStatus zorunludur."}), 400
+
+    item = RentableItem.query.get_or_404(item_id)
+    
+    # Güvenlik Kontrolü: Yöneticinin bu eşyaya erişim yetkisi var mı?
+    if item.beach.manager_id != current_user.id:
+        return jsonify({"success": False, "message": "Bu işlem için yetkiniz yok."}), 403
+
+    # Bu örnekte sadece 'used' ve 'cancelled' (iptal) durumlarını ele alıyoruz.
+    # 'free' (boşaltma) ve 'reserved' (yeni rezervasyon) daha karmaşık mantık gerektirebilir.
+    try:
+        reservation_id = data.get('reservationId')
+        if not reservation_id:
+             return jsonify({"success": False, "message": "İşlem yapılacak rezervasyon bulunamadı."}), 404
+
+        reservation = Reservation.query.get(reservation_id)
+        if not reservation:
+            return jsonify({"success": False, "message": "Rezervasyon veritabanında bulunamadı."}), 404
+        
+        # Durumu güncelle
+        if new_status in ['used', 'cancelled']:
+            reservation.status = new_status
+            db.session.commit()
+            message = f"Rezervasyon durumu '{new_status}' olarak güncellendi."
+        else:
+             return jsonify({"success": False, "message": "Geçersiz durum güncellemesi."}), 400
+
+        # Başarılı yanıtı geri gönder
+        return jsonify({
+            "success": True, 
+            "message": message,
+            "updated_data": {
+                "new_status": reservation.status,
+                "user_info": f"{reservation.user.first_name} {reservation.user.last_name}"
+            }
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Durum güncelleme hatası: {e}")
+        return jsonify({"success": False, "message": "Sunucu hatası oluştu."}), 500
 
 
 

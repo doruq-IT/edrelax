@@ -156,7 +156,7 @@
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Modal elementlerini seç
+    // --- Element Seçimleri (Aynı) ---
     const backdrop = document.getElementById('schedule-modal-backdrop');
     const modal = document.getElementById('schedule-modal');
     const modalTitle = document.getElementById('modal-title');
@@ -164,63 +164,99 @@ document.addEventListener('DOMContentLoaded', function() {
     const modalFooter = document.getElementById('modal-footer');
     const closeBtn = document.getElementById('modal-close-btn');
     const scheduleTable = document.getElementById('schedule-table');
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content'); // CSRF token'ı al
+    
+    let activeCell = null; // Hangi hücreye tıkladığımızı hafızada tutmak için
 
-    // Modal'ı kapatma fonksiyonu
+    // --- Modal Kapatma Fonksiyonu (Aynı) ---
     function closeModal() {
         modal.style.display = 'none';
         backdrop.style.display = 'none';
+        activeCell = null;
     }
-
-    // Kapatma butonlarına ve arka plana tıklama olayı ekle
     closeBtn.addEventListener('click', closeModal);
     backdrop.addEventListener('click', closeModal);
 
+    // --- YENİ: Sunucuya Güncelleme İsteği Gönderme Fonksiyonu ---
+    async function sendUpdateRequest(data) {
+        try {
+            const response = await fetch("{{ url_for('beach_admin.update_item_status') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': csrfToken
+                },
+                body: JSON.stringify(data)
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                // Arayüzü güncelle
+                activeCell.className = `time-slot status-${result.updated_data.new_status}`;
+                activeCell.dataset.status = result.updated_data.new_status;
+                if (result.updated_data.new_status !== 'free') {
+                    activeCell.textContent = result.updated_data.user_info;
+                    activeCell.dataset.userInfo = result.updated_data.user_info;
+                } else {
+                    activeCell.innerHTML = '&nbsp;';
+                    activeCell.dataset.userInfo = '';
+                    activeCell.dataset.reservationId = '';
+                }
+                alert(result.message); // Başarı mesajı
+                closeModal();
+            } else {
+                alert('Hata: ' + result.message); // Hata mesajı
+            }
+        } catch (error) {
+            console.error('İstek gönderilirken hata:', error);
+            alert('Sunucuyla iletişim kurulamadı.');
+        }
+    }
+
+    // --- Tablo Tıklama Olayı (GÜNCELLENDİ) ---
     if (scheduleTable) {
         scheduleTable.addEventListener('click', function(event) {
             if (event.target.matches('td.time-slot')) {
-                const cell = event.target;
+                activeCell = event.target; // Tıklanan hücreyi sakla
                 const cellData = {
-                    itemId: cell.dataset.itemId,
-                    date: cell.dataset.date,
-                    time: cell.dataset.time,
-                    status: cell.dataset.status,
-                    reservationId: cell.dataset.reservationId,
-                    userInfo: cell.dataset.userInfo
+                    itemId: activeCell.dataset.itemId,
+                    date: activeCell.dataset.date,
+                    time: activeCell.dataset.time,
+                    status: activeCell.dataset.status,
+                    reservationId: activeCell.dataset.reservationId,
+                    userInfo: activeCell.dataset.userInfo
                 };
                 
-                // --- MODAL'I DOLDURMA ---
-                const itemInfo = cell.closest('tr').querySelector('.item-name-col').textContent.trim();
+                const itemInfo = activeCell.closest('tr').querySelector('.item-name-col').textContent.trim();
                 modalTitle.textContent = `${itemInfo} - Saat: ${cellData.time}`;
 
-                // Modal içeriğini oluştur
                 let bodyHtml = `<p><strong>Durum:</strong> <span class="text-capitalize">${cellData.status}</span></p>`;
-                if (cellData.userInfo) {
-                    bodyHtml += `<p><strong>Kullanıcı:</strong> ${cellData.userInfo}</p>`;
-                }
+                if (cellData.userInfo) { bodyHtml += `<p><strong>Kullanıcı:</strong> ${cellData.userInfo}</p>`; }
                 modalBody.innerHTML = bodyHtml;
+                modalFooter.innerHTML = ''; 
 
-                // Modal butonlarını duruma göre oluştur
-                modalFooter.innerHTML = ''; // Önceki butonları temizle
-
-                if (cellData.status === 'free') {
-                    const reserveButton = document.createElement('button');
-                    reserveButton.className = 'btn btn-primary';
-                    reserveButton.textContent = 'Rezervasyon Yap';
-                    modalFooter.appendChild(reserveButton);
-                } else { // reserved veya used
+                // Butonları oluştur ve olay dinleyicileri ekle
+                if (cellData.status === 'reserved') {
                     const useButton = document.createElement('button');
                     useButton.className = 'btn btn-success';
                     useButton.textContent = 'Kullanımda Yap';
-                    useButton.disabled = cellData.status === 'used'; // Zaten kullanımdaysa pasif yap
+                    useButton.onclick = () => sendUpdateRequest({ ...cellData, newStatus: 'used' });
                     modalFooter.appendChild(useButton);
 
                     const cancelButton = document.createElement('button');
                     cancelButton.className = 'btn btn-danger';
                     cancelButton.textContent = 'Rezervasyonu İptal Et';
+                    cancelButton.onclick = () => sendUpdateRequest({ ...cellData, newStatus: 'cancelled' });
+                    modalFooter.appendChild(cancelButton);
+                } else if (cellData.status === 'used') {
+                     const cancelButton = document.createElement('button');
+                    cancelButton.className = 'btn btn-danger';
+                    cancelButton.textContent = 'Rezervasyonu İptal Et';
+                    cancelButton.onclick = () => sendUpdateRequest({ ...cellData, newStatus: 'cancelled' });
                     modalFooter.appendChild(cancelButton);
                 }
                 
-                // --- MODAL'I GÖSTERME ---
                 modal.style.display = 'block';
                 backdrop.style.display = 'block';
             }
